@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AssetFlowCore.Application\AssetFlowCore.Application.csproj" />
+    <ProjectReference Include="..\AssetFlowCore.Domain\AssetFlowCore.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

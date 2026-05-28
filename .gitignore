@@ -1,0 +1,16 @@
+﻿################################################################################
+# Ce fichier .gitignore a été automatiquement créé par Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/AssetFlow_Core/.vs
+/AssetFlow_Core/AssetFlowCore.Application/bin/Debug/net8.0
+/AssetFlow_Core/AssetFlowCore.Application/obj
+/AssetFlow_Core/AssetFlowCore.Domain/bin/Debug/net8.0
+/AssetFlow_Core/AssetFlowCore.Domain/obj
+/AssetFlow_Core/AssetFlowCore.Infrastructure/bin/Debug/net8.0
+/AssetFlow_Core/AssetFlowCore.Infrastructure/obj
+/AssetFlow_Core/AssetFlowCore.Tests/bin/Debug/net8.0
+/AssetFlow_Core/AssetFlowCore.Tests/obj
+/AssetFlow_Core/AssetFlow_Core/bin/Debug/net8.0
+/AssetFlow_Core/AssetFlow_Core/obj

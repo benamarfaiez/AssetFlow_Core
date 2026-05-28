@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="AssetFlowCore.Application/AssetFlowCore.Application.csproj" />
+  <Project Path="AssetFlowCore.Domain/AssetFlowCore.Domain.csproj" />
+  <Project Path="AssetFlowCore.Infrastructure/AssetFlowCore.Infrastructure.csproj" />
+  <Project Path="AssetFlowCore.Tests/AssetFlowCore.Tests.csproj" />
+  <Project Path="AssetFlow_Core/AssetFlowCore.WebApi.csproj" />
+</Solution>
