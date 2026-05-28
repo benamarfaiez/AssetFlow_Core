@@ -3,7 +3,7 @@ using AssetFlowCore.Domain.Repositories;
 using AssetFlowCore.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace AssetFlowCore.Infrastructure.Repositories;
+namespace AssetFlowCore.Infrastructure.Persistence.Repositories;
 
 public class MaintenanceTicketRepository : IMaintenanceTicketRepository
 {
