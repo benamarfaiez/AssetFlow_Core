@@ -14,3 +14,13 @@
 /AssetFlow_Core/AssetFlowCore.Tests/obj
 /AssetFlow_Core/AssetFlow_Core/bin/Debug/net8.0
 /AssetFlow_Core/AssetFlow_Core/obj
+/AssetFlowCore.Application/bin/Debug/net8.0
+/AssetFlowCore.Application/obj
+/AssetFlowCore.Domain/bin/Debug/net8.0
+/AssetFlowCore.Domain/obj
+/AssetFlowCore.Infrastructure/bin/Debug/net8.0
+/AssetFlowCore.Infrastructure/obj
+/AssetFlowCore.Tests/bin/Debug/net8.0
+/AssetFlowCore.Tests/obj
+/AssetFlowCore.WebApi/bin/Debug/net8.0
+/AssetFlowCore.WebApi/obj
