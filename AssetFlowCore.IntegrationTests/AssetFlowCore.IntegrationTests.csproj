@@ -9,13 +9,6 @@
 	<PreserveCompilationContext>true</PreserveCompilationContext>
   </PropertyGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\AssetFlowCore.WebApi\AssetFlowCore.WebApi.csproj">
-			<ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</ProjectReference>
-	</ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
     <PackageReference Include="FluentAssertions" Version="8.10.0" />
