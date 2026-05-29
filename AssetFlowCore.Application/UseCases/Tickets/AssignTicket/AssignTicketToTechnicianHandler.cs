@@ -1,7 +1,9 @@
-﻿using AssetFlowCore.Domain.Exceptions;
+﻿using System;
+using System.Threading.Tasks;
 using AssetFlowCore.Domain.Repositories;
+using AssetFlowCore.Domain.Exceptions;
 
-namespace AssetFlowCore.Application.UseCases;
+namespace AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
 
 public class AssignTicketToTechnicianHandler
 {
@@ -16,18 +18,17 @@ public class AssignTicketToTechnicianHandler
         _unitOfWork = unitOfWork;
     }
 
-    public async Task ExecuteAsync(Guid ticketId)
+    public async Task ExecuteAsync(AssignTicketToTechnicianCommand command)
     {
-        var ticket = await _ticketRepository.GetByIdAsync(ticketId);
+        var ticket = await _ticketRepository.GetByIdAsync(command.TicketId);
         if (ticket == null) throw new DomainException("Ticket introuvable.");
 
         var asset = await _assetRepository.GetByIdAsync(ticket.AssetId);
         if (asset == null) throw new DomainException("Actif lié introuvable.");
 
         ticket.AssignToTechnician();
-        asset.MarkInMaintenance();
+        asset.MarkInMaintenance(); // Automate d'état en cascade
 
-        // Le catch de la DbUpdateConcurrencyException est délégué au middleware d'infrastructure/API
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(); // Si conflit de concurrence -> Déclenche DbUpdateConcurrencyException
     }
 }

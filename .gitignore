@@ -24,3 +24,5 @@
 /AssetFlowCore.Tests/obj
 /AssetFlowCore.WebApi/bin/Debug/net8.0
 /AssetFlowCore.WebApi/obj
+/AssetFlowCore.UnitTests/bin/Debug/net8.0
+/AssetFlowCore.UnitTests/obj
