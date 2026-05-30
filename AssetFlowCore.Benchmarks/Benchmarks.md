@@ -40,21 +40,7 @@ Ce projet mesure les performances de l'application **AssetFlowCore** de bout en 
 
 ---
 
-## 2. Prérequis et installation
-
-### Prérequis
-
-- .NET 8 SDK
-- Visual Studio 2022 / Rider / VS Code
-- Windows, Linux ou macOS
-
-### Ajouter le projet à la solution
-
-Depuis la racine de la solution (là où se trouve `AssetFlowCore.slnx`) :
-
-```bash
-dotnet sln add AssetFlowCore.Benchmarks/AssetFlowCore.Benchmarks.csproj
-```
+## 2. Installation
 
 ### Lancer les benchmarks
 
