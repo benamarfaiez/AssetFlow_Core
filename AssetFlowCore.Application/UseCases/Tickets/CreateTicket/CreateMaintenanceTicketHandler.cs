@@ -5,6 +5,7 @@ using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
+using FluentValidation;
 using System;
 using System.Threading.Tasks;
 
@@ -21,6 +22,7 @@ public class CreateMaintenanceTicketHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITicketAssignmentEngine _assignmentEngine;
     private readonly INotificationService _notificationService;
+    private readonly IValidator<CreateMaintenanceTicketCommand> _validator;
 
     /// <summary>
     /// Constructeur injectant uniquement des abstractions (Inversion des dépendances - SOLID "D").
@@ -30,13 +32,15 @@ public class CreateMaintenanceTicketHandler
         IMaintenanceTicketRepository ticketRepository,
         IUnitOfWork unitOfWork,
         ITicketAssignmentEngine assignmentEngine,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IValidator<CreateMaintenanceTicketCommand> validator)
     {
         _assetRepository = assetRepository;
         _ticketRepository = ticketRepository;
         _unitOfWork = unitOfWork;
         _assignmentEngine = assignmentEngine;
         _notificationService = notificationService;
+        _validator = validator;
     }
 
     /// <summary>
@@ -44,6 +48,18 @@ public class CreateMaintenanceTicketHandler
     /// </summary>
     public async Task<TicketResponseDto> HandleAsync(CreateMaintenanceTicketCommand command)
     {
+        // Valide toutes les propriétés — collecte toutes les erreurs en une fois
+        var validationResult = await _validator.ValidateAsync(command);
+
+        if (!validationResult.IsValid)
+        {
+            // Regroupe toutes les erreurs dans une seule DomainException lisible
+            var errors = string.Join(" | ", validationResult.Errors
+                .Select(e => e.ErrorMessage));
+
+            throw new DomainException(errors);
+        }
+
         // 1. Récupération de l'agrégat / entité cible
         var asset = await _assetRepository.GetByIdAsync(command.AssetId);
         if (asset == null)

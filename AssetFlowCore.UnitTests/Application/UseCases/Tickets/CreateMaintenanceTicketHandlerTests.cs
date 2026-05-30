@@ -1,12 +1,14 @@
-﻿using Moq;
-using FluentAssertions;
+﻿using AssetFlowCore.Application.Interfaces;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
-using AssetFlowCore.Domain.Repositories;
 using AssetFlowCore.Domain.Entities;
-using AssetFlowCore.Domain.ValueObjects;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
-using AssetFlowCore.Application.Interfaces;
+using AssetFlowCore.Domain.Repositories;
+using AssetFlowCore.Domain.ValueObjects;
+using FluentAssertions;
+using FluentValidation;
+using FluentValidation.Results;
+using Moq;
 
 namespace AssetFlowCore.UnitTests.Application.UseCases.Tickets;
 
@@ -19,14 +21,24 @@ public class CreateMaintenanceTicketHandlerTests
     private readonly Mock<INotificationService> _notifierMock = new();
     private readonly CreateMaintenanceTicketHandler _handler;
 
-    public CreateMaintenanceTicketHandlerTests() => _handler = new CreateMaintenanceTicketHandler(_assetRepoMock.Object, _ticketRepoMock.Object, _uowMock.Object, _engineMock.Object, _notifierMock.Object);
+    private readonly ValidationResult validationResult = new ValidationResult();
+    private readonly Mock<IValidator<CreateMaintenanceTicketCommand>> _validator = new();
+
+    public CreateMaintenanceTicketHandlerTests() => _handler = new CreateMaintenanceTicketHandler(_assetRepoMock.Object, _ticketRepoMock.Object, _uowMock.Object, _engineMock.Object, _notifierMock.Object, _validator.Object);
 
     [Fact]
     public async Task HandleAsync_WithValidAsset_ShouldCreateTicketAndNotify()
     {
         var asset = new Asset(Guid.NewGuid(), "Server", SerialNumber.Create("SRV123"), AssetType.Server);
-        _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id)).ReturnsAsync(asset);
-        _engineMock.Setup(e => e.ResolveTeam(It.IsAny<AssetType>(), It.IsAny<TicketCriticality>())).Returns("Team-Alpha");
+        _assetRepoMock
+            .Setup(r => r.GetByIdAsync(asset.Id))
+            .ReturnsAsync(asset);
+        _engineMock
+            .Setup(e => e.ResolveTeam(It.IsAny<AssetType>(), It.IsAny<TicketCriticality>()))
+            .Returns("Team-Alpha");
+        _validator
+            .Setup(v => v.ValidateAsync(It.IsAny<CreateMaintenanceTicketCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(validationResult);
 
         var command = new CreateMaintenanceTicketCommand(asset.Id, "Panne", "Détail", "High");
         var result = await _handler.HandleAsync(command);
@@ -42,8 +54,12 @@ public class CreateMaintenanceTicketHandlerTests
     {
         var asset = new Asset(Guid.NewGuid(), "Server", SerialNumber.Create("SRV123"), AssetType.Server);
         asset.Decommission();
-        _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id)).ReturnsAsync(asset);
-
+        _assetRepoMock
+            .Setup(r => r.GetByIdAsync(asset.Id))
+            .ReturnsAsync(asset);
+        _validator
+            .Setup(v => v.ValidateAsync(It.IsAny<CreateMaintenanceTicketCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(validationResult);
         var command = new CreateMaintenanceTicketCommand(asset.Id, "Panne", "Détail", "High");
         Func<Task> act = async () => await _handler.HandleAsync(command);
 

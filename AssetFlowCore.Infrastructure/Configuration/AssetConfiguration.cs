@@ -1,8 +1,9 @@
 ﻿using AssetFlowCore.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System.Reflection.Emit;
 
-namespace AssetFlowCore.Infrastructure.Persistence;
+namespace AssetFlowCore.Infrastructure.Configuration;
 
 public class AssetConfiguration : IEntityTypeConfiguration<Asset>
 {
