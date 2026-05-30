@@ -28,3 +28,10 @@
 /AssetFlowCore.UnitTests/obj
 /AssetFlowCore.IntegrationTests/bin/Debug/net8.0
 /AssetFlowCore.IntegrationTests/obj
+/AssetFlowCore.Application/bin/Release/net8.0/refs
+/AssetFlowCore.Application/bin/Release/net8.0
+/AssetFlowCore.Benchmarks/bin
+/AssetFlowCore.Benchmarks/obj
+/AssetFlowCore.Domain/bin/Release/net8.0
+/AssetFlowCore.Infrastructure/bin/Release/net8.0
+*.log
