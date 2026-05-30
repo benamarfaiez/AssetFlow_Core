@@ -476,73 +476,9 @@ C'est la décision architecturale qui apporte le plus de valeur : le cache hit e
 **FluentValidation — court-circuit efficace**
 Le chemin valide (1.1 µs) est 2× plus rapide que le chemin "tous invalides" (2.3 µs), ce qui confirme le comportement `StopOnFirstFailure` attendu.
 
-### ⚠️ Points d'attention
-
-**`ExistsWithSerialNumberAsync` se dégrade avec le volume**
-45 µs sur 10 assets, 640 µs sur 500 assets. Cette requête `AnyAsync` parcourt la table entière sur la base InMemory. Sur SQL Server sans index sur `SerialNumber`, la dégradation sera identique.
-
-**Concurrence — pas de gain sur InMemory**
-`Task.WhenAll` est légèrement plus lent que le séquentiel (overhead de planification sans I/O réel à masquer). Ce résultat est normal sur InMemory et s'inversera sur SQL Server.
-
-**Middleware — sérialisation JSON coûteuse**
-La sérialisation d'un `ProblemDetails` coûte ~600–800 ns, soit 15× le coût d'un dispatch switch (~4 ns). En régime d'erreurs fréquentes, cela peut représenter un overhead mesurable.
-
 ---
 
-## 8. Recommandations d'optimisation
-
-### Priorité haute
-
-**Ajouter un index SQL sur `SerialNumber`**
-
-Sans index, `ExistsWithSerialNumberAsync` effectue un scan complet à chaque `RegisterAsset`. Sur un parc de 10 000 assets, cette requête pourrait dépasser 10 ms.
-
-```csharp
-// AssetFlowDbContext.cs — dans OnModelCreating
-modelBuilder.Entity<Asset>()
-    .HasIndex(a => a.SerialNumber)
-    .IsUnique();
-```
-
-**Ajouter un index sur `(AssetId, Status)` pour `CountActiveTickets`**
-
-`CountActiveTicketsByAssetIdAsync` filtre sur deux colonnes. Un index composite évite le scan complet.
-
-```csharp
-modelBuilder.Entity<MaintenanceTicket>()
-    .HasIndex(t => new { t.AssetId, t.Status });
-```
-
-### Priorité moyenne
-
-**Mettre en cache `GetByIdAsync` pour les assets fréquemment consultés**
-
-Le `CachedAssetRepository` ne met en cache que `GetAllReadOnlyAsync`. Étendre le cache à `GetByIdAsync` réduirait le coût de `CreateTicket` (qui charge l'asset) de ~65–360 µs.
-
-**Configurer `StopOnFirstFailure` explicitement dans le validator**
-
-FluentValidation collecte toutes les erreurs par défaut. Pour les requêtes d'API, ajouter `CascadeMode = CascadeMode.Stop` réduit le coût des cas invalides.
-
-```csharp
-public class CreateMaintenanceTicketValidator : AbstractValidator<CreateMaintenanceTicketCommand>
-{
-    public CreateMaintenanceTicketValidator()
-    {
-        ClassLevelCascadeMode = CascadeMode.Stop;
-        // ...
-    }
-}
-```
-
-### Priorité basse
-
-**Utiliser `AsNoTracking` partout où l'entité n'est pas modifiée**
-
-`GetByIdAsync` charge l'asset avec tracking EF. Pour `CreateTicket`, l'asset est chargé uniquement pour lire son type — `AsNoTracking` réduirait l'allocation.
-
----
-
-## 9. Référence des attributs BenchmarkDotNet
+## 8. Référence des attributs BenchmarkDotNet
 
 | Attribut | Effet |
 |---|---|
