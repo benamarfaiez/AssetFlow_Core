@@ -8,22 +8,47 @@ using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 using AssetFlowCore.Domain.Repositories;
 using AssetFlowCore.Infrastructure.Cache;
+using AssetFlowCore.Infrastructure.Configuration;
 using AssetFlowCore.Infrastructure.Notifications;
 using AssetFlowCore.Infrastructure.Persistence;
 using AssetFlowCore.Infrastructure.Persistence.Repositories;
 using AssetFlowCore.WebApi.Middlewares;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+builder.Services.AddValidatorsFromAssembly(typeof(CreateMaintenanceTicketValidator).Assembly);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHealthChecks();
 
-// Infrastructure Données & Réseau
-builder.Services.AddDbContext<AssetFlowDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+var isIntegrationTesting = builder.Environment.IsEnvironment("Testing")
+                           || AppDomain.CurrentDomain.GetAssemblies().Any(a => a.FullName!.Contains("Microsoft.AspNetCore.Mvc.Testing"));
+
+if (isIntegrationTesting)
+{
+    builder.Services.AddDbContext<AssetFlowDbContext>(options =>
+    {
+        options.UseInMemoryDatabase("IntegrationTestsDb");
+    });
+}
+else
+{
+    builder.Services.AddDbContext<AssetFlowDbContext>(options =>
+    {
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    });
+}
+
+builder.Services.Configure<DatabaseOptions>(
+    builder.Configuration.GetSection(DatabaseOptions.SectionName));
+
+builder.Services.AddScoped<IDbContextFactory, SqlServerDbContextFactory>();
+
 builder.Services.AddMemoryCache();
 builder.Services.AddSignalR();
 
@@ -68,11 +93,5 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<TicketHub>("/ticketHub");
 
-// Initialisation "One-Click" : Application automatique des migrations
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
-    await dbContext.Database.MigrateAsync();
-}
-
 app.Run();
+public partial class Program { }

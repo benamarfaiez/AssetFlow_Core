@@ -1,7 +1,9 @@
 <Solution>
   <Project Path="AssetFlowCore.Application/AssetFlowCore.Application.csproj" />
+  <Project Path="AssetFlowCore.Benchmarks/AssetFlowCore.Benchmarks.csproj" Id="95dc1d0f-8f5c-42ec-98bd-20f5234c7343" />
   <Project Path="AssetFlowCore.Domain/AssetFlowCore.Domain.csproj" />
   <Project Path="AssetFlowCore.Infrastructure/AssetFlowCore.Infrastructure.csproj" />
+  <Project Path="AssetFlowCore.IntegrationTests/AssetFlowCore.IntegrationTests.csproj" Id="82b2350a-0fba-4236-8bbb-071bbe11de54" />
   <Project Path="AssetFlowCore.UnitTests/AssetFlowCore.UnitTests.csproj" />
   <Project Path="AssetFlowCore.WebApi/AssetFlowCore.WebApi.csproj" />
 </Solution>

@@ -12,24 +12,24 @@ public class CreateMaintenanceTicketValidator : AbstractValidator<CreateMaintena
 {
     public CreateMaintenanceTicketValidator()
     {
-        // 1. Validation de l'identifiant de l'actif
+        // Stoppe les règles en cascade sur UNE MÊME propriété
+        // Ex : si Title est vide → MaximumLength ne s'exécute pas
+        ClassLevelCascadeMode = CascadeMode.Stop;
+
         RuleFor(command => command.AssetId)
             .NotEmpty()
             .WithMessage("L'identifiant de l'actif cible (AssetId) est obligatoire.");
 
-        // 2. Validation du titre de l'incident
         RuleFor(command => command.Title)
             .NotEmpty()
             .WithMessage("Le titre du ticket est obligatoire.")
             .MaximumLength(150)
             .WithMessage("Le titre du ticket ne doit pas dépasser 150 caractères.");
 
-        // 3. Validation de la description
         RuleFor(command => command.Description)
             .NotEmpty()
             .WithMessage("La description détaillée de l'anomalie est obligatoire.");
 
-        // 4. Validation de la criticité par rapport à l'énumération du Domaine
         RuleFor(command => command.Criticality)
             .NotEmpty()
             .WithMessage("Le niveau de criticité est obligatoire.")

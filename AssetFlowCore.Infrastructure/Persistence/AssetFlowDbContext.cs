@@ -13,8 +13,7 @@ public class AssetFlowDbContext : DbContext, IUnitOfWork
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfiguration(new AssetConfiguration());
-        modelBuilder.ApplyConfiguration(new MaintenanceTicketConfiguration());
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AssetFlowDbContext).Assembly);
     }
 
     public async Task<int> SaveChangesAsync() => await base.SaveChangesAsync();

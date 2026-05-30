@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AssetFlowCore.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using AssetFlowCore.Domain.Entities;
 
-namespace AssetFlowCore.Infrastructure.Persistence;
+namespace AssetFlowCore.Infrastructure.Configuration;
 
 public class MaintenanceTicketConfiguration : IEntityTypeConfiguration<MaintenanceTicket>
 {
@@ -21,5 +21,8 @@ public class MaintenanceTicketConfiguration : IEntityTypeConfiguration<Maintenan
 
         // Gestion de la concurrence optimiste via jeton d'infrastructure
         builder.Property(t => t.RowVersion).HasColumnName("row_version").IsRowVersion();
+
+        builder.HasIndex(t => new { t.AssetId, t.Status })
+            .HasDatabaseName("IX_t_maintenance_tickets_asset_id_status"); ;
     }
 }
