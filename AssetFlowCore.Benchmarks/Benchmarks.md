@@ -13,8 +13,7 @@
    - 5.4 [Couche Infrastructure](#54-couche-infrastructure)
 6. [Résultats d'exécution](#6-résultats-dexécution)
 7. [Analyse et conclusions](#7-analyse-et-conclusions)
-8. [Recommandations d'optimisation](#8-recommandations-doptimisation)
-9. [Référence des attributs BenchmarkDotNet](#9-référence-des-attributs-benchmarkdotnet)
+8. [Référence des attributs BenchmarkDotNet](#8-référence-des-attributs-benchmarkdotnet)
 
 ---
 
