@@ -14,13 +14,14 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers;
 public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory) : IClassFixture<CustomWebApplicationFactory<Program>>
 {
     private readonly HttpClient _client = factory.CreateClient();
+    private readonly CustomWebApplicationFactory<Program> _factory = factory;
 
     [Fact]
     public async Task CreateTicket_WithValidAsset_ShouldMutateAssetAndReturnCreated()
     {
         // Arrange
         var assetId = Guid.NewGuid();
-        using (var scope = factory.Services.CreateScope())
+        using (var scope = _factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
             var asset = new Asset(assetId, "Laptop Intégration", SerialNumber.Create("LPT-INT-95"), AssetType.Laptop);
@@ -35,11 +36,9 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
             "Medium"
             );
 
-        // Act
         var response = await _client.PostAsJsonAsync("/api/tickets", payload);
 
         // Assert
-        // Vérification du code statut (Attendu: 201 Created)
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var ticket = await response.Content.ReadFromJsonAsync<TicketResponseDto>();

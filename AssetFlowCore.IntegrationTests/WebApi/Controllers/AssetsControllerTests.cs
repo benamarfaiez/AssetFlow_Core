@@ -3,31 +3,18 @@ using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.ValueObjects;
 using AssetFlowCore.Infrastructure.Persistence;
-using AssetFlowCore.WebApi.Controllers;
 using AssetFlowCore.WebApi.Requests;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.TestPlatform.TestHost;
-using System;
-using System.Collections.Generic;
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace AssetFlowCore.IntegrationTests.WebApi.Controllers;
 
-public class AssetsControllerTests : IClassFixture<CustomWebApplicationFactory<Program>>
+public class AssetsControllerTests(CustomWebApplicationFactory<Program> factory) : IClassFixture<CustomWebApplicationFactory<Program>>
 {
-    private readonly HttpClient _client;
-    private readonly CustomWebApplicationFactory<Program> _factory;
-
-    public AssetsControllerTests(CustomWebApplicationFactory<Program> factory)
-    {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
+    private readonly HttpClient _client = factory.CreateClient();
 
     [Fact]
     public async Task Register_WithValidPayload_ShouldReturnCreatedAndPersist()
@@ -51,7 +38,7 @@ public class AssetsControllerTests : IClassFixture<CustomWebApplicationFactory<P
     {
         // Arrange
         var assetId = Guid.NewGuid();
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
             context.Assets.RemoveRange(context.Assets); // Nettoyage pour isolation
