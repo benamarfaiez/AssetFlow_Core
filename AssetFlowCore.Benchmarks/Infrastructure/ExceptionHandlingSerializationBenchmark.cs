@@ -4,7 +4,6 @@ using BenchmarkDotNet.Order;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Text.Json;
 
 namespace AssetFlowCore.Benchmarks.Infrastructure;

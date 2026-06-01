@@ -2,7 +2,6 @@
 using AssetFlowCore.Domain.Exceptions;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
-using System.Threading.Tasks;
 
 namespace AssetFlowCore.Benchmarks.Application.UseCases;
 

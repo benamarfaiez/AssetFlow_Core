@@ -3,7 +3,6 @@ using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.ValueObjects;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
-using System;
 
 namespace AssetFlowCore.Benchmarks.Domain;
 

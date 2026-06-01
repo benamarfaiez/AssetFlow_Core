@@ -4,7 +4,6 @@ using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
 using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Tasks;
 
 namespace AssetFlowCore.Benchmarks.Infrastructure;
 
