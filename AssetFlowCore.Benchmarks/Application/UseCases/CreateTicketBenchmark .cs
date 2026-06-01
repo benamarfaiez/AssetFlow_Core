@@ -4,6 +4,7 @@ using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.ValueObjects;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
 using System;
 using System.Threading.Tasks;
@@ -19,70 +20,57 @@ namespace AssetFlowCore.Benchmarks.Application.UseCases;
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
 [RankColumn]
+[SimpleJob(RuntimeMoniker.Net80, warmupCount: 3, iterationCount: 10)]
 public class CreateTicketBenchmark : BenchmarkBase
 {
-    private Guid _serverAssetId;
-    private Guid _laptopAssetId;
-    private Guid _networkAssetId;
     private int _counter;
 
     [GlobalSetup]
-    public async Task Setup()
+    public void Setup() => SetupServices("Bench_CreateTicket");
+
+    private async Task<Guid> CreateFreshAsset(string prefix, AssetType type)
     {
-        SetupServices("Bench_CreateTicket");
-
-        _serverAssetId = Guid.NewGuid();
-        _laptopAssetId = Guid.NewGuid();
-        _networkAssetId = Guid.NewGuid();
-
-        DbContext.Assets.AddRange(
-            new Asset(_serverAssetId, "Serveur-Bench", SerialNumber.Create("SRV-BENCH-01"), AssetType.Server),
-            new Asset(_laptopAssetId, "Laptop-Bench", SerialNumber.Create("LPT-BENCH-01"), AssetType.Laptop),
-            new Asset(_networkAssetId, "Switch-Bench", SerialNumber.Create("SWI-BENCH-01"), AssetType.NetworkDevice)
-        );
-        await DbContext.SaveChangesAsync();
-    }
-
-    [IterationSetup]
-    public void ResetAssetStatus()
-    {
-        // Remet les assets en InService entre chaque itération
-        // (MarkAsDown() bloque un 2ème ticket sur le même asset)
-        foreach (var asset in DbContext.Assets)
-            asset.RestoreToService();
-        DbContext.SaveChanges();
+        var id = Guid.NewGuid();
         _counter++;
+        DbContext.Assets.Add(new Asset(id, $"{prefix}-{_counter}",
+            SerialNumber.Create($"{prefix}-{_counter:D6}"), type));
+        await DbContext.SaveChangesAsync();
+        return id;
     }
 
     [Benchmark(Baseline = true, Description = "Ticket Server High → Infrastructure-Serveurs")]
     public async Task<TicketResponseDto> CreateTicket_Server_High()
     {
+        var assetId = await CreateFreshAsset("SRV", AssetType.Server);
         var handler = Resolve<CreateMaintenanceTicketHandler>();
         return await handler.HandleAsync(new CreateMaintenanceTicketCommand(
-            _serverAssetId, $"Panne serveur {_counter}", "Disque HS", "High"));
+            assetId, $"Panne serveur {_counter}", "Disque HS", "High"));
     }
 
     [Benchmark(Description = "Ticket Laptop High → Support-VIP")]
     public async Task<TicketResponseDto> CreateTicket_Laptop_High()
     {
+        var assetId = await CreateFreshAsset("LPT", AssetType.Laptop);
         var handler = Resolve<CreateMaintenanceTicketHandler>();
         return await handler.HandleAsync(new CreateMaintenanceTicketCommand(
-            _laptopAssetId, $"Laptop VIP {_counter}", "Écran cassé", "High"));
+            assetId, $"Laptop VIP {_counter}", "Écran cassé", "High"));
     }
 
     [Benchmark(Description = "Ticket Laptop Medium → Support-Lectorat")]
     public async Task<TicketResponseDto> CreateTicket_Laptop_Medium()
     {
+        var assetId = await CreateFreshAsset("LPM", AssetType.Laptop);
         var handler = Resolve<CreateMaintenanceTicketHandler>();
         return await handler.HandleAsync(new CreateMaintenanceTicketCommand(
-            _laptopAssetId, $"Laptop Standard {_counter}", "Clavier HS", "Medium"));
+            assetId, $"Laptop Standard {_counter}", "Clavier HS", "Medium"));
     }
 
     [Benchmark(Description = "Ticket Network Low → Réseau-Télécom")]
     public async Task<TicketResponseDto> CreateTicket_Network_Low()
     {
+        var assetId = await CreateFreshAsset("SWI", AssetType.NetworkDevice);
         var handler = Resolve<CreateMaintenanceTicketHandler>();
         return await handler.HandleAsync(new CreateMaintenanceTicketCommand(
-            _networkAssetId, $"Switch {_counter}", "Port défaillant", "Low"));
+            assetId, $"Switch {_counter}", "Port défaillant", "Low"));
     }
 }

@@ -4,14 +4,9 @@ using Microsoft.Extensions.Options;
 
 namespace AssetFlowCore.Infrastructure.Persistence;
 
-public class SqlServerDbContextFactory : IDbContextFactory
+public class SqlServerDbContextFactory(IOptions<DatabaseOptions> options) : IDbContextFactory
 {
-    private readonly DatabaseOptions _options;
-
-    public SqlServerDbContextFactory(IOptions<DatabaseOptions> options)
-    {
-        _options = options.Value;
-    }
+    private readonly DatabaseOptions _options = options.Value;
 
     public AssetFlowDbContext Create()
     {

@@ -4,7 +4,7 @@ namespace AssetFlowCore.Domain.ValueObjects;
 
 public sealed class SerialNumber : IEquatable<SerialNumber>
 {
-    public string Value { get; }
+    public string Value { get; } = string.Empty;
 
     private SerialNumber(string value)
     {

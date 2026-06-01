@@ -5,6 +5,7 @@ using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.ValueObjects;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
 using System;
 using System.Threading.Tasks;
@@ -20,74 +21,67 @@ namespace AssetFlowCore.Benchmarks.Application.UseCases;
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
 [RankColumn]
+[SimpleJob(RuntimeMoniker.Net80, warmupCount: 3, iterationCount: 10)]
 public class DecommissionAssetBenchmark : BenchmarkBase
 {
-    private Guid _cleanAssetId;
-    private Guid _blockedAssetId;
     private int _counter;
 
     [Params(1, 5, 10)]
     public int ActiveTicketCount { get; set; }
 
     [GlobalSetup]
-    public async Task Setup()
+    public void Setup() => SetupServices($"Bench_Decommission_{ActiveTicketCount}");
+
+    // Crée un asset propre (sans tickets) — chemin succès
+    private async Task<Guid> CreateCleanAsset()
     {
-        SetupServices($"Bench_Decommission_{ActiveTicketCount}");
-
-        // Asset sans ticket — décommissionnement possible
-        _cleanAssetId = Guid.NewGuid();
-        DbContext.Assets.Add(new Asset(
-            _cleanAssetId, "Asset-Clean",
-            SerialNumber.Create("DEC-CLEAN-01"), AssetType.Server));
-
-        // Asset avec N tickets actifs — bloqué
-        _blockedAssetId = Guid.NewGuid();
-        var blockedAsset = new Asset(
-            _blockedAssetId, "Asset-Bloqué",
-            SerialNumber.Create("DEC-BLOCK-01"), AssetType.Server);
-        DbContext.Assets.Add(blockedAsset);
-
+        _counter++;
+        var id = Guid.NewGuid();
+        DbContext.Assets.Add(new Asset(id, $"Clean-{_counter}",
+            SerialNumber.Create($"CLN-{_counter:D6}"), AssetType.Server));
         await DbContext.SaveChangesAsync();
-
-        // Crée N tickets actifs sur l'asset bloqué
-        for (int i = 0; i < ActiveTicketCount; i++)
-        {
-            blockedAsset.RestoreToService(); // reset pour permettre MarkAsDown
-            var createHandler = Resolve<CreateMaintenanceTicketHandler>();
-            await createHandler.HandleAsync(new CreateMaintenanceTicketCommand(
-                _blockedAssetId, $"Ticket-{i}", "Description", "Low"));
-        }
+        return id;
     }
 
-    [IterationSetup]
-    public void RestoreCleanAsset()
+    // Crée un asset avec N tickets actifs — chemin bloqué
+    private async Task<Guid> CreateBlockedAsset()
     {
-        // Remet l'asset clean en InService pour le prochain benchmark
-        var asset = DbContext.Assets.Find(_cleanAssetId);
-        asset?.RestoreToService();
-        DbContext.SaveChanges();
         _counter++;
+        var id = Guid.NewGuid();
+        DbContext.Assets.Add(new Asset(id, $"Blocked-{_counter}",
+            SerialNumber.Create($"BLK-{_counter:D6}"), AssetType.Server));
+        await DbContext.SaveChangesAsync();
+
+        for (int i = 0; i < ActiveTicketCount; i++)
+        {
+            // Remet l'asset en InService avant chaque ticket
+            var asset = await DbContext.Assets.FindAsync(id);
+            asset!.RestoreToService();
+            await DbContext.SaveChangesAsync();
+
+            var handler = Resolve<CreateMaintenanceTicketHandler>();
+            await handler.HandleAsync(new CreateMaintenanceTicketCommand(
+                id, $"Ticket-{i}", "Description", "Low"));
+        }
+        return id;
     }
 
     [Benchmark(Baseline = true, Description = "Decommission — asset sans tickets (succès)")]
     public async Task Decommission_Success()
     {
-        // Crée un nouvel asset propre pour chaque itération
-        var freshId = Guid.NewGuid();
-        DbContext.Assets.Add(new Asset(freshId, $"Fresh-{_counter}", SerialNumber.Create($"FRH-{_counter:D5}"), AssetType.Laptop));
-        await DbContext.SaveChangesAsync();
-
+        var assetId = await CreateCleanAsset();
         var handler = Resolve<DecommissionAssetHandler>();
-        await handler.ExecuteAsync(new DecommissionAssetCommand(freshId));
+        await handler.ExecuteAsync(new DecommissionAssetCommand(assetId));
     }
 
     [Benchmark(Description = "Decommission — asset bloqué par tickets actifs (DomainException)")]
     public async Task Decommission_Blocked()
     {
+        var assetId = await CreateBlockedAsset();
         var handler = Resolve<DecommissionAssetHandler>();
         try
         {
-            await handler.ExecuteAsync(new DecommissionAssetCommand(_blockedAssetId));
+            await handler.ExecuteAsync(new DecommissionAssetCommand(assetId));
         }
         catch (DomainException)
         {

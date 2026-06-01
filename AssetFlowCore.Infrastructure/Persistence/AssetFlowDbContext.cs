@@ -4,12 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AssetFlowCore.Infrastructure.Persistence;
 
-public class AssetFlowDbContext : DbContext, IUnitOfWork
+public class AssetFlowDbContext(DbContextOptions<AssetFlowDbContext> options) : DbContext(options), IUnitOfWork
 {
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<MaintenanceTicket> Tickets => Set<MaintenanceTicket>();
-
-    public AssetFlowDbContext(DbContextOptions<AssetFlowDbContext> options) : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -13,13 +13,19 @@ using AssetFlowCore.Infrastructure.Notifications;
 using AssetFlowCore.Infrastructure.Persistence;
 using AssetFlowCore.Infrastructure.Persistence.Repositories;
 using AssetFlowCore.WebApi.Middlewares;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using FluentValidation;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Permet à l'API de convertir automatiquement les strings en Enums dans les requêtes/réponses
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 
 builder.Services.AddValidatorsFromAssembly(typeof(CreateMaintenanceTicketValidator).Assembly);
 builder.Services.AddEndpointsApiExplorer();

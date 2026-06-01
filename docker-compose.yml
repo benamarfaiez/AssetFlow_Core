@@ -1,0 +1,78 @@
+name: assetflow
+
+services:
+
+  # ── API AssetFlowCore ───────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    container_name: assetflow-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # API REST
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+
+      # Connection string vers le service sqlserver défini ci-dessous
+      # En production, remplacer par des secrets Docker ou Azure Key Vault
+      ConnectionStrings__DefaultConnection: >-
+        Server=sqlserver,1433;
+        Database=AssetFlowDb;
+        User Id=sa;
+        Password=${SQL_SA_PASSWORD};
+        TrustServerCertificate=True;
+        Encrypt=True;
+        Connection Timeout=30;
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - assetflow-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ── SQL Server 2022 ─────────────────────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: assetflow-sqlserver
+    restart: unless-stopped
+    ports:
+      - "1433:1433"   # Exposé pour les outils externes (SSMS, Azure Data Studio)
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD}
+      MSSQL_PID: Developer   # Licence développeur gratuite
+    volumes:
+      - sqlserver-data:/var/opt/mssql   # Persistance des données
+    networks:
+      - assetflow-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - |
+          /opt/mssql-tools18/bin/sqlcmd
+          -S localhost -U sa -P "$$MSSQL_SA_PASSWORD"
+          -Q "SELECT 1" -No -C
+          || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+# ── Volumes ─────────────────────────────────────────────────────────────────
+volumes:
+  sqlserver-data:
+    driver: local
+
+# ── Réseau interne ───────────────────────────────────────────────────────────
+networks:
+  assetflow-net:
+    driver: bridge

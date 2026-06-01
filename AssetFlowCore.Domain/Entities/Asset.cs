@@ -13,7 +13,7 @@ public class Asset
     public AssetStatus Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
-    private readonly List<MaintenanceTicket> _tickets = new();
+    private readonly List<MaintenanceTicket> _tickets = [];
     public IReadOnlyCollection<MaintenanceTicket> Tickets => _tickets.AsReadOnly();
 
     // Pour EF Core
