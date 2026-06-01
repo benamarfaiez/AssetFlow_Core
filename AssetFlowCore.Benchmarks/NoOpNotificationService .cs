@@ -11,6 +11,6 @@ namespace AssetFlowCore.Benchmarks;
 /// </summary>
 public sealed class NoOpNotificationService : INotificationService
 {
-    public Task NotifyTeamNewTicketAsync(string team, TicketResponseDto ticket)
+    public Task NotifyTeamNewTicketAsync(string teamName, TicketResponseDto ticket)
         => Task.CompletedTask;
 }

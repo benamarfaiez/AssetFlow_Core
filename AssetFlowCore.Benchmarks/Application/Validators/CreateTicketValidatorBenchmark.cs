@@ -1,9 +1,6 @@
 ﻿using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
-using FluentValidation;
-using System;
-using System.Threading.Tasks;
 
 namespace AssetFlowCore.Benchmarks.Application.Validators;
 

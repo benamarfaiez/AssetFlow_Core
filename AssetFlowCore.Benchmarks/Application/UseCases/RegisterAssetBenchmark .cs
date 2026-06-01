@@ -1,7 +1,6 @@
 ﻿using AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
-using System.Threading.Tasks;
 
 namespace AssetFlowCore.Benchmarks.Application.UseCases;
 
