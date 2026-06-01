@@ -21,7 +21,7 @@ public class CreateMaintenanceTicketHandlerTests
     private readonly Mock<INotificationService> _notifierMock = new();
     private readonly CreateMaintenanceTicketHandler _handler;
 
-    private readonly ValidationResult validationResult = new ValidationResult();
+    private readonly ValidationResult validationResult = new();
     private readonly Mock<IValidator<CreateMaintenanceTicketCommand>> _validator = new();
 
     public CreateMaintenanceTicketHandlerTests() => _handler = new CreateMaintenanceTicketHandler(_assetRepoMock.Object, _ticketRepoMock.Object, _uowMock.Object, _engineMock.Object, _notifierMock.Object, _validator.Object);

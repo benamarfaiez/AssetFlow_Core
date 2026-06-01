@@ -36,3 +36,6 @@
 /AssetFlowCore.Infrastructure/bin/Release/net8.0
 *.log
 *.env
+/AssetFlowCore.IntegrationTests/bin/Release/net8.0
+/AssetFlowCore.UnitTests/bin/Release/net8.0
+/AssetFlowCore.WebApi/bin/Release/net8.0

@@ -4,14 +4,11 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace AssetFlowCore.Infrastructure.Notifications;
 
-public class SignalRNotificationService : INotificationService
+public class SignalRNotificationService(IHubContext<TicketHub> hubContext) : INotificationService
 {
-    private readonly IHubContext<TicketHub> _hubContext;
-    public SignalRNotificationService(IHubContext<TicketHub> hubContext) => _hubContext = hubContext;
-
     public async Task NotifyTeamNewTicketAsync(string teamName, TicketResponseDto ticket)
     {
         // Diffuse le message exclusivement au groupe de l'équipe assignée
-        await _hubContext.Clients.Group(teamName).SendAsync("ReceiveNewTicket", ticket);
+        await hubContext.Clients.Group(teamName).SendAsync("ReceiveNewTicket", ticket);
     }
 }

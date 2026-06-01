@@ -7,13 +7,13 @@ public class MaintenanceTicket
     public Guid Id { get; private set; }
     public Guid AssetId { get; private set; }
     public string Title { get; private set; }
-    public string Description { get; private set; }
+    public string? Description { get; private set; }
     public TicketCriticality Criticality { get; private set; }
     public TicketStatus Status { get; private set; }
     public string AssignedTeam { get; private set; }
     public string? ResolutionComment { get; private set; }
     public DateTime CreatedAt { get; private set; }
-    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
+    public byte[] RowVersion { get; private set; } = [];
 
     private MaintenanceTicket() { }
 

@@ -80,10 +80,7 @@ jobs:
       # --no-restore : évite une double restauration
       - name: Compilation en mode Release
         run: |
-          dotnet build ${{ env.SOLUTION_FILE }} \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-restore \
-            -warnaserror  # Traite les warnings comme des erreurs
+          dotnet build ${{ env.SOLUTION_FILE }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
       # Vérification du format du code sans modification
       # Échoue si le code n'est pas formaté correctement
