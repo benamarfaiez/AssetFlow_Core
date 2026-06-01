@@ -108,7 +108,7 @@ jobs:
   # Exécute les tests unitaires avec collecte de couverture de code (Cobertura)
   # ===========================================================================
   test-unit:
-    name: 🧪 Tests unitaires
+    name: Tests unitaires
     runs-on: ubuntu-latest
     needs: build  # Attend la réussite du build
 
@@ -187,7 +187,7 @@ jobs:
   # Exécute les tests d'intégration avec WebApplicationFactory + InMemory DB
   # ===========================================================================
   test-integration:
-    name: 🔗 Tests d'intégration
+    name: Tests d'intégration
     runs-on: ubuntu-latest
     needs: build  # Attend la réussite du build
 
@@ -315,7 +315,7 @@ jobs:
   # Dépend des deux jobs de tests pour consolider la couverture
   # ===========================================================================
   quality:
-    name: 🔍 Analyse qualité (SonarCloud)
+    name: Analyse qualité (SonarCloud)
     runs-on: ubuntu-latest
     needs: [test-unit, test-integration]  # Requiert les deux rapports de couverture
 
@@ -398,7 +398,7 @@ jobs:
   # Conditionnel : uniquement sur la branche main après réussite de quality
   # ===========================================================================
   deploy:
-    name: Déploiement (main uniquement)
+    name: Déploiement
     runs-on: ubuntu-latest
     needs: quality  # Attend la réussite de l'analyse qualité
 

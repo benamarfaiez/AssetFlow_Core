@@ -8,6 +8,7 @@ using AssetFlowCore.WebApi.Requests;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestPlatform.TestHost;
+using Microsoft.VisualStudio.TestPlatform.Utilities;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -36,7 +37,7 @@ public class TicketsControllerTests : IClassFixture<CustomWebApplicationFactory<
         using (var scope = _factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
-            var asset = new Asset(assetId, "Laptop Intégration", SerialNumber.Create("LPT-INT-01"), AssetType.Laptop);
+            var asset = new Asset(assetId, "Laptop Intégration", SerialNumber.Create("LPT-INT-95"), AssetType.Laptop);
             await context.Assets.AddAsync(asset);
             await context.SaveChangesAsync();
         }
