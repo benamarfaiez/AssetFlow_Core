@@ -35,3 +35,4 @@
 /AssetFlowCore.Domain/bin/Release/net8.0
 /AssetFlowCore.Infrastructure/bin/Release/net8.0
 *.log
+*.env

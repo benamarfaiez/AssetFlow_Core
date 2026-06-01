@@ -1,13 +1,10 @@
 ﻿using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.Application.Interfaces;
-using AssetFlowCore.Application.Services;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
 using FluentValidation;
-using System;
-using System.Threading.Tasks;
 
 namespace AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 
@@ -92,8 +89,6 @@ public class CreateMaintenanceTicketHandler
         await _ticketRepository.AddAsync(ticket);
 
         // 8. PERSISTANCE ATOMIQUE (Unit of Work)
-        // C'est ici que SQL Server ouvre une transaction, applique les deux modifications (UPDATE + INSERT)
-        // et valide le COMMIT. Si l'un des deux échoue, la base reste intacte.
         await _unitOfWork.SaveChangesAsync();
 
         // 9. Traduction manuelle en DTO de surface (Zéro réflexion CPU au runtime)

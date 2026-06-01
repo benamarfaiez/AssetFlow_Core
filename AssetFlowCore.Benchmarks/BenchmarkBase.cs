@@ -10,6 +10,7 @@ using AssetFlowCore.Domain.Repositories;
 using AssetFlowCore.Infrastructure.Cache;
 using AssetFlowCore.Infrastructure.Persistence;
 using AssetFlowCore.Infrastructure.Persistence.Repositories;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +43,9 @@ public abstract class BenchmarkBase
                                          .InMemoryEventId.TransactionIgnoredWarning)));
 
         services.AddMemoryCache();
+
+        //    Requis depuis l'ajout de IValidator<T> dans les handlers
+        services.AddValidatorsFromAssemblyContaining<CreateMaintenanceTicketValidator>();
 
         // Unit of Work
         services.AddScoped<IUnitOfWork>(p => p.GetRequiredService<AssetFlowDbContext>());

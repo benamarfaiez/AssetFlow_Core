@@ -1,0 +1,46 @@
+# =============================================================================
+# .dockerignore — Exclut les fichiers inutiles du contexte de build Docker
+# Réduit la taille du contexte envoyé au daemon Docker
+# =============================================================================
+
+# Dossiers de build .NET
+**/bin/
+**/obj/
+
+# Projets de tests (non nécessaires dans l'image de production)
+AssetFlowCore.UnitTests/
+AssetFlowCore.IntegrationTests/
+AssetFlowCore.Benchmarks/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+.env
+.env.*
+!.env.example
+
+# Documentation
+README.md
+BENCHMARKS.md
+docs/
+
+# Logs
+**/*.log
+**/logs/
+
+# Secrets locaux
+**/appsettings.Development.json
+**/appsettings.Local.json
