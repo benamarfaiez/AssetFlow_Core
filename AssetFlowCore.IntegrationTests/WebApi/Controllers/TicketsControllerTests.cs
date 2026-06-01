@@ -44,7 +44,12 @@ public class TicketsControllerTests : IClassFixture<CustomWebApplicationFactory<
             await context.SaveChangesAsync();
         }
 
-        var payload = new CreateTicketRequest(assetId, "Clavier bloqué", "Touches HS", "Medium");
+        var payload = new CreateTicketRequest(
+            assetId,
+            "Correction dysfonctionnement clavier matériel",
+            "Le clavier présente plusieurs touches complètement hors service suite à un incident.",
+            "Medium"
+            );
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/tickets", payload);
