@@ -4,7 +4,6 @@ using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
-using FluentValidation;
 
 namespace AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 
@@ -20,8 +19,7 @@ public class CreateMaintenanceTicketHandler(
     IMaintenanceTicketRepository ticketRepository,
     IUnitOfWork unitOfWork,
     ITicketAssignmentEngine assignmentEngine,
-    INotificationService notificationService,
-    IValidator<CreateMaintenanceTicketCommand> validator)
+    INotificationService notificationService)
 {
 
     /// <summary>
@@ -29,18 +27,6 @@ public class CreateMaintenanceTicketHandler(
     /// </summary>
     public async Task<TicketResponseDto> HandleAsync(CreateMaintenanceTicketCommand command)
     {
-        // Valide toutes les propriétés — collecte toutes les erreurs en une fois
-        var validationResult = await validator.ValidateAsync(command);
-
-        if (!validationResult.IsValid)
-        {
-            // Regroupe toutes les erreurs dans une seule DomainException lisible
-            var errors = string.Join(" | ", validationResult.Errors
-                .Select(e => e.ErrorMessage));
-
-            throw new DomainException(errors);
-        }
-
         // 1. Récupération de l'agrégat / entité cible
         var asset = await assetRepository.GetByIdAsync(command.AssetId) ?? throw new DomainException($"L'actif cible {command.AssetId} n'existe pas.");
 

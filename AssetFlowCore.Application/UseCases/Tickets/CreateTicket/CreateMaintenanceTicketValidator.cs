@@ -1,6 +1,4 @@
 ﻿using FluentValidation;
-using AssetFlowCore.Domain.Enums;
-using System;
 
 namespace AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 
@@ -33,7 +31,6 @@ public class CreateMaintenanceTicketValidator : AbstractValidator<CreateMaintena
         RuleFor(command => command.Criticality)
             .NotEmpty()
             .WithMessage("Le niveau de criticité est obligatoire.")
-            .IsEnumName(typeof(TicketCriticality), caseSensitive: false)
             .WithMessage("La criticité fournie n'est pas valide. Valeurs autorisées : Low, Medium, High.");
     }
 }

@@ -24,7 +24,7 @@ public class CreateMaintenanceTicketHandlerTests
     private readonly ValidationResult validationResult = new();
     private readonly Mock<IValidator<CreateMaintenanceTicketCommand>> _validator = new();
 
-    public CreateMaintenanceTicketHandlerTests() => _handler = new CreateMaintenanceTicketHandler(_assetRepoMock.Object, _ticketRepoMock.Object, _uowMock.Object, _engineMock.Object, _notifierMock.Object, _validator.Object);
+    public CreateMaintenanceTicketHandlerTests() => _handler = new CreateMaintenanceTicketHandler(_assetRepoMock.Object, _ticketRepoMock.Object, _uowMock.Object, _engineMock.Object, _notifierMock.Object);
 
     [Fact]
     public async Task HandleAsync_WithValidAsset_ShouldCreateTicketAndNotify()
