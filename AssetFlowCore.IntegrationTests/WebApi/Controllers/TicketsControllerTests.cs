@@ -1,10 +1,12 @@
 ﻿using AssetFlowCore.Application.DTOs;
+using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.ValueObjects;
 using AssetFlowCore.Infrastructure.Persistence;
 using AssetFlowCore.WebApi.Controllers;
 using AssetFlowCore.WebApi.Requests;
+using Azure.Core;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestPlatform.TestHost;

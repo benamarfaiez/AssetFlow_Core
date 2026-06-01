@@ -12,6 +12,7 @@ namespace AssetFlowCore.WebApi.Controllers;
 public class AssetsController : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyCollection<AssetResponseDto>))]
     public async Task<ActionResult<IEnumerable<AssetResponseDto>>> GetAll([FromServices] GetAllAssetsHandler handler)
     {
         var query = new GetAllAssetsQuery();
@@ -20,6 +21,8 @@ public class AssetsController : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(AssetResponseDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<AssetResponseDto>> Register(
         [FromBody] RegisterAssetRequest request,
         [FromServices] RegisterAssetHandler handler)
@@ -27,10 +30,12 @@ public class AssetsController : ControllerBase
         // Traduction de la Request HTTP en Command Applicative
         var command = new RegisterAssetCommand(request.Name, request.SerialNumber, request.Type);
         var result = await handler.HandleAsync(command);
-        return CreatedAtAction(nameof(GetAll), new { id = result.Id }, result);
+        return StatusCode(StatusCodes.Status201Created, result);
     }
 
     [HttpPut("{id:guid}/decommission")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Decommission(Guid id, [FromServices] DecommissionAssetHandler handler)
     {
         var command = new DecommissionAssetCommand(id);
