@@ -39,7 +39,7 @@ env:
   SOLUTION_FILE: "AssetFlowCore.slnx"
   BUILD_CONFIGURATION: "Release"
   DOCKER_IMAGE_NAME: "assetflow-api"
-  ENV: "dev"
+  ENV_NAME: "dev"
 
 # =============================================================================
 # JOB 1 — BUILD
@@ -319,7 +319,7 @@ jobs:
     name: Analyse qualité (SonarCloud)
     runs-on: ubuntu-latest
     needs: [test-unit, test-integration]  # Requiert les deux rapports de couverture
-    environment: ${{ env.ENV }}
+    environment: ${{ env.ENV_NAME }}
 
     steps:
       - name: Checkout du code source
