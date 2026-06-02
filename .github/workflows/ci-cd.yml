@@ -318,6 +318,7 @@ jobs:
       # Fin et envoi des résultats à SonarCloud
       - name: Envoi des résultats à SonarCloud 
         env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
   # ===========================================================================
