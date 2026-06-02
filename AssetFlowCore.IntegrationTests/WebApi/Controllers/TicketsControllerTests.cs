@@ -95,9 +95,8 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         }
         var response = await client.GetAsync($"/api/tickets/{ticketId}");
 
-        var assets = await response.Content.ReadFromJsonAsync<IEnumerable<TicketResponseDto>>();
+        var assets = await response.Content.ReadFromJsonAsync<TicketResponseDto>();
         assets.Should().NotBeNull();
-        assets.Should().ContainSingle(a => a.Id == ticketId);
-
+        assets.Id.Should().Be(ticketId);
     }
 }
