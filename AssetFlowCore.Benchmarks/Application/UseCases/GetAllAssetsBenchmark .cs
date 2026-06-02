@@ -34,7 +34,7 @@ public class GetAllAssetsBenchmark : BenchmarkBase
             {
                 0 => AssetType.Server,
                 1 => AssetType.Laptop,
-                _ => AssetType.NetworkDevice 
+                3 => AssetType.NetworkDevice
             };
 
             DbContext.Assets.Add(new Asset(
