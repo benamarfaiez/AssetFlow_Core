@@ -7,61 +7,46 @@
 # -----------------------------------------------------------------------------
 # STAGE 1 — restore
 # Restaure les packages NuGet en isolant les fichiers .csproj
-# Avantage : Docker cache cette couche tant que les dépendances n'ont pas changé
 # -----------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS restore
-
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS restore
 WORKDIR /src
 
 # Copie uniquement les fichiers projet pour maximiser le cache Docker
-COPY AssetFlowCore.Domain/AssetFlowCore.Domain.csproj               AssetFlowCore.Domain/
-COPY AssetFlowCore.Application/AssetFlowCore.Application.csproj     AssetFlowCore.Application/
+COPY AssetFlowCore.Domain/AssetFlowCore.Domain.csproj                 AssetFlowCore.Domain/
+COPY AssetFlowCore.Application/AssetFlowCore.Application.csproj       AssetFlowCore.Application/
 COPY AssetFlowCore.Infrastructure/AssetFlowCore.Infrastructure.csproj AssetFlowCore.Infrastructure/
-COPY AssetFlowCore.WebApi/AssetFlowCore.WebApi.csproj               AssetFlowCore.WebApi/
+COPY AssetFlowCore.WebApi/AssetFlowCore.WebApi.csproj                 AssetFlowCore.WebApi/
 
-# Restaure toutes les dépendances NuGet
+# Restaure toutes les dépendances NuGet en spécifiant le runtime cible (Alpine)
 RUN dotnet restore AssetFlowCore.WebApi/AssetFlowCore.WebApi.csproj \
     --runtime linux-musl-x64 \
     /p:PublishReadyToRun=false
 
 # -----------------------------------------------------------------------------
-# STAGE 2 — build
-# Compile le projet en Release
+# STAGE 2 — publish
+# Copie le code source et compile/publie en une seule étape optimisée
 # -----------------------------------------------------------------------------
-FROM restore AS build
-
+FROM restore AS publish
 WORKDIR /src
 
-# Copie tout le code source
-COPY AssetFlowCore.Domain/        AssetFlowCore.Domain/
-COPY AssetFlowCore.Application/   AssetFlowCore.Application/
+# Copie tout le reste du code source
+COPY AssetFlowCore.Domain/         AssetFlowCore.Domain/
+COPY AssetFlowCore.Application/    AssetFlowCore.Application/
 COPY AssetFlowCore.Infrastructure/ AssetFlowCore.Infrastructure/
-COPY AssetFlowCore.WebApi/        AssetFlowCore.WebApi/
+COPY AssetFlowCore.WebApi/         AssetFlowCore.WebApi/
 
-RUN dotnet build AssetFlowCore.WebApi/AssetFlowCore.WebApi.csproj \
-    --configuration Release \
-    --no-restore \
-    --runtime linux-musl-x64 \
-    -o /app/build
-
-# -----------------------------------------------------------------------------
-# STAGE 3 — publish
-# Produit les artefacts de publication optimisés (ReadyToRun désactivé pour Alpine)
-# -----------------------------------------------------------------------------
-FROM build AS publish
-
+# Publication directe : supprime le conflit de dossiers et le flag --no-build
 RUN dotnet publish AssetFlowCore.WebApi/AssetFlowCore.WebApi.csproj \
     --configuration Release \
     --no-restore \
-    --no-build \
     --runtime linux-musl-x64 \
     --self-contained false \
     -o /app/publish \
     /p:UseAppHost=false
 
 # -----------------------------------------------------------------------------
-# STAGE 4 — final (image de production)
-# Image finale légère : uniquement le runtime ASP.NET, sans le SDK
+# STAGE 3 — final (image de production)
+# Image finale ultra-légère durcie pour la sécurité
 # -----------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
 
@@ -78,9 +63,6 @@ ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
 # ── Dépendances système (Alpine) ────────────────────────────────────────────
-# icu-libs  : requis pour la globalisation .NET (dates, cultures)
-# tzdata    : fuseaux horaires (migrations EF avec DateTimeOffset)
-# ca-certificates : SSL/TLS vers SQL Server
 RUN apk add --no-cache \
     icu-libs \
     tzdata \
@@ -93,15 +75,13 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 
 # ── Sécurité : utilisateur non-root ─────────────────────────────────────────
-# Crée un utilisateur dédié sans shell ni home directory
 RUN addgroup -S assetflow \
     && adduser -S assetflow -G assetflow -H -s /sbin/nologin \
     && chown -R assetflow:assetflow /app
 
 USER assetflow
 
-# ── Port exposé ─────────────────────────────────────────────────────────────
-# Port interne 8080 (non-root ne peut pas binder < 1024)
+# ── Port exposé (Non-root) ──────────────────────────────────────────────────
 EXPOSE 8080
 
 # ── Health check ────────────────────────────────────────────────────────────
