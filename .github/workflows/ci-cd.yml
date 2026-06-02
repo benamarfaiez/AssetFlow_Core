@@ -292,19 +292,6 @@ jobs:
       - name: Installation de SonarCloud Scanner
         run: dotnet tool install --global dotnet-sonarscanner
 
-      # Récupération des rapports de couverture générés par les jobs de tests
-      - name: Récupération des rapports de couverture (tests unitaires)
-        uses: actions/download-artifact@v4
-        with:
-          name: unit-test-results
-          path: ./TestResults/Unit
-
-      - name: Récupération des rapports de couverture (tests d'intégration)
-        uses: actions/download-artifact@v4
-        with:
-          name: integration-test-results
-          path: ./TestResults/Integration
-
       - name: Restauration des dépendances NuGet
         run: dotnet restore ${{ env.SOLUTION_FILE }}
 
