@@ -4,6 +4,7 @@ using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.ValueObjects;
 using AssetFlowCore.Infrastructure.Persistence;
 using AssetFlowCore.WebApi.Requests;
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
@@ -44,5 +45,39 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         var ticket = await response.Content.ReadFromJsonAsync<TicketResponseDto>();
         Assert.NotNull(ticket);
         Assert.Equal("Support-Lectorat", ticket.AssignedTeam);
+    }
+
+    [Fact]
+    public async Task TransferTicket_Should_ReturnNoContent_And_UpdateDatabase()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var ticketId = Guid.NewGuid();
+        var requestPayload = new TransferTicketRequest("Infra-Réseaux", "Problème de switch");
+
+        // --- Préparation de la base de données ---
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            // Attention: Utiliser le vrai constructeur de ton entité
+            dbContext.Tickets.Add(new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "description", TicketCriticality.Low, "Support-Local"));
+            await dbContext.SaveChangesAsync();
+        }
+
+        // Act : Appel du endpoint API réel
+        var response = await client.PostAsJsonAsync($"/api/tickets/{ticketId}/transfer", requestPayload);
+
+        // Assert : Vérification de la réponse HTTP
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent); // 204
+
+        // Assert : Vérification que la base de données a VRAIMENT changé
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            var updatedTicket = await dbContext.Tickets.FindAsync(ticketId);
+
+            updatedTicket.Should().NotBeNull();
+            updatedTicket!.AssignedTeam.Should().Be("Infra-Réseaux");
+        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using AssetFlowCore.Domain.Enums;
+using AssetFlowCore.Domain.Exceptions;
 
 namespace AssetFlowCore.Domain.Entities;
 
@@ -51,5 +52,17 @@ public class MaintenanceTicket
 
         ResolutionComment = resolutionComment.Trim();
         Status = TicketStatus.Closed;
+    }
+
+    public void TransferToTeam(string targetTeam, string reason)
+    {
+        if (Status == TicketStatus.Closed)
+            throw new DomainException("Impossible de transférer un ticket clôturé.");
+
+        if (string.Equals(AssignedTeam, targetTeam, StringComparison.OrdinalIgnoreCase))
+            throw new DomainException($"Le ticket est déjà assigné à l'équipe '{targetTeam}'.");
+
+        AssignedTeam = targetTeam;
+        Description += $"\n\n---\n\n**Motif du transfert :** {reason}";
     }
 }

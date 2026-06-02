@@ -1,0 +1,73 @@
+﻿using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
+using AssetFlowCore.Domain.Entities;
+using AssetFlowCore.Domain.Enums;
+using AssetFlowCore.Domain.Exceptions;
+using AssetFlowCore.Domain.Repositories;
+using AssetFlowCore.Domain.ValueObjects;
+using FluentAssertions;
+using Moq;
+
+namespace AssetFlowCore.UnitTests.Application.UseCases.Tickets;
+
+public class RequestTicketTransferCommandHandlerTests
+{
+    private readonly Mock<IMaintenanceTicketRepository> _ticketRepositoryMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly RequestTicketTransferCommandHandler _handler;
+
+    public RequestTicketTransferCommandHandlerTests()
+    {
+        _ticketRepositoryMock = new Mock<IMaintenanceTicketRepository>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+
+        _handler = new RequestTicketTransferCommandHandler(
+            _ticketRepositoryMock.Object,
+            _unitOfWorkMock.Object);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Should_PersistChanges_When_TicketExistsAndValid()
+    {
+        // Arrange
+        var command = new RequestTicketTransferCommand(Guid.NewGuid(), "Nouvelle-Equipe", "Motif valide");
+
+        var asset = new Asset(Guid.NewGuid(), "PC", SerialNumber.Create("SRV999"), AssetType.Laptop);
+        asset.MarkAsDown();
+        asset.MarkInMaintenance();
+
+        var existingTicket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Title", "Desc", TicketCriticality.Low, "Team");
+
+        _ticketRepositoryMock
+            .Setup(repo => repo.GetByIdWithTrackingAsync(command.TicketId))
+            .ReturnsAsync(existingTicket);
+
+        // Act
+        await _handler.ExecuteAsync(command);
+
+        // Assert
+        // On vérifie que la sauvegarde a bien été appelée exactement 1 fois
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(), Times.Once);
+        existingTicket.AssignedTeam.Should().Be("Nouvelle-Equipe");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Should_ThrowDomainException_When_TicketNotFound()
+    {
+        // Arrange
+        var command = new RequestTicketTransferCommand(Guid.NewGuid(), "Nouvelle-Equipe", "Motif valide");
+
+        _ticketRepositoryMock
+            .Setup(repo => repo.GetByIdWithTrackingAsync(command.TicketId))
+            .ReturnsAsync((MaintenanceTicket?)null); // Simule un retour vide de la BDD
+
+        // Act
+        Func<Task> action = async () => await _handler.ExecuteAsync(command);
+
+        // Assert
+        await action.Should().ThrowAsync<DomainException>()
+                    .WithMessage("Ticket introuvable.");
+
+        // On s'assure que SaveChanges n'a JAMAIS été appelé
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(), Times.Never);
+    }
+}
