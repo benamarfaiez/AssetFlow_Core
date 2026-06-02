@@ -2,6 +2,7 @@
 using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
+using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
 using AssetFlowCore.WebApi.Requests;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,6 +25,19 @@ public class TicketsController : ControllerBase
         var command = new CreateMaintenanceTicketCommand(request.AssetId, request.Title, request.Description, request.Criticality);
         var result = await handler.HandleAsync(command);
         return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+
+    [HttpPost("{id:guid}/transfer")]
+    public async Task<IActionResult> TransferTicket(
+        Guid id,
+        [FromBody] TransferTicketRequest request,
+        [FromServices] RequestTicketTransferCommandHandler handler)
+    {
+        var command = new RequestTicketTransferCommand(id, request.TargetTeam, request.Reason);
+
+        await handler.ExecuteAsync(command);
+        return NoContent();
     }
 
     /// <summary>

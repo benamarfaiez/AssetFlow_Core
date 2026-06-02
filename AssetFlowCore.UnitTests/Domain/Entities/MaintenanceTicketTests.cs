@@ -1,5 +1,6 @@
 ﻿using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
+using AssetFlowCore.Domain.Exceptions;
 using FluentAssertions;
 
 namespace AssetFlowCore.UnitTests.Domain.Entities;
@@ -68,5 +69,34 @@ public class MaintenanceTicketTests
 
         Action act = () => ticket.Close(invalidComment!);
         act.Should().Throw<ArgumentException>().WithMessage("*Un commentaire de résolution est obligatoire*");
+    }
+
+    [Fact]
+    public void TransferToTeam_Should_UpdateAssignedTeam_When_RuleIsValid()
+    {
+        // Arrange
+        var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Description", TicketCriticality.High, "Equipe-A");
+        var newTeam = "Infrastructures-Réseaux";
+
+        // Act
+        ticket.TransferToTeam(newTeam, "Besoin d'une expertise réseau.");
+
+        // Assert
+        ticket.AssignedTeam.Should().Be(newTeam);
+    }
+
+    [Fact]
+    public void TransferToTeam_Should_ThrowDomainException_When_TargetTeamIsSame()
+    {
+        // Arrange
+        var team = "Support-Lectorat";
+        var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Description", TicketCriticality.High, team);
+
+        // Act
+        var action = () => ticket.TransferToTeam(team, "Motif");
+
+        // Assert
+        action.Should().Throw<DomainException>()
+              .WithMessage($"Le ticket est déjà assigné à l'équipe '{team}'.");
     }
 }
