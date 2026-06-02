@@ -3,6 +3,7 @@ using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.ValueObjects;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
 
 namespace AssetFlowCore.Benchmarks.Application;
@@ -15,6 +16,7 @@ namespace AssetFlowCore.Benchmarks.Application;
 /// </summary>
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
+[SimpleJob(RuntimeMoniker.Net80, warmupCount: 1, iterationCount: 3)]
 [RankColumn]
 public class MappingBenchmark
 {
@@ -22,7 +24,7 @@ public class MappingBenchmark
     private MaintenanceTicket _ticket = null!;
     private List<Asset> _assetList = null!;
 
-    [Params(1, 50, 200)]
+    [Params(5, 20, 50)]
     public int ListSize { get; set; }
 
     [GlobalSetup]

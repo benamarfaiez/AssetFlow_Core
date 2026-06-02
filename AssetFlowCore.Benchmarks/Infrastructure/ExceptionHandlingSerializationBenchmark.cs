@@ -1,5 +1,6 @@
 ﻿using AssetFlowCore.Domain.Exceptions;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +16,7 @@ namespace AssetFlowCore.Benchmarks.Infrastructure;
 /// </summary>
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
+[SimpleJob(RuntimeMoniker.Net80, warmupCount: 1, iterationCount: 3)]
 [RankColumn]
 public class ExceptionHandlingSerializationBenchmark
 {

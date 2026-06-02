@@ -4,6 +4,7 @@ using AssetFlowCore.Domain.ValueObjects;
 using AssetFlowCore.Infrastructure.Persistence;
 using AssetFlowCore.Infrastructure.Persistence.Repositories;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,7 @@ namespace AssetFlowCore.Benchmarks.Infrastructure;
 /// </summary>
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
+[SimpleJob(RuntimeMoniker.Net80, warmupCount: 1, iterationCount: 3)]
 [RankColumn]
 public class AssetRepositoryBenchmark
 {
@@ -22,7 +24,7 @@ public class AssetRepositoryBenchmark
     private Guid _knownAssetId;
     private string _existingSerial = null!;
 
-    [Params(10, 100, 500)]
+    [Params(5, 20, 50)]
     public int AssetCount { get; set; }
 
     [GlobalSetup]
