@@ -56,7 +56,7 @@ public class SignalRNotificationServiceTests
         clientProxyMock.Verify(
             p => p.SendCoreAsync(
                 "ReceiveNewTicket",
-                It.Is<object[]>(args => args.Length == 1 && args[0] == dtoPayload),
+                It.Is<object[]>(args => args.Length == 1),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

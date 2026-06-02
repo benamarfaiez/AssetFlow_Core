@@ -30,7 +30,10 @@ public class AssetTests
     [InlineData(null)]
     public void Constructor_WithInvalidName_ShouldThrowArgumentException(string? invalidName)
     {
-        Action act = () => new Asset(Guid.NewGuid(), invalidName!, SerialNumber.Create("SRV-12345"), AssetType.Server);
+        Action act = () =>
+        {
+            Asset asset = new(Guid.NewGuid(), invalidName!, SerialNumber.Create("SRV-12345"), AssetType.Server);
+        };
         act.Should().Throw<ArgumentException>().WithMessage("*Le nom de l'actif ne peut pas être vide*");
     }
 

@@ -25,7 +25,7 @@ public class CachedRepositoryBenchmark
 {
     private AssetRepository _rawRepository = null!;
     private CachedAssetRepository _cachedRepository = null!;
-    private IMemoryCache _cache = null!;
+    private MemoryCache _cache = null!;
 
     [Params(5, 20, 50)]
     public int AssetCount { get; set; }

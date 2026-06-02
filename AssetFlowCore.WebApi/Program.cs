@@ -17,7 +17,6 @@ using AssetFlowCore.WebApi.Middlewares;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,5 +100,5 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<TicketHub>("/ticketHub");
 
-app.Run();
+await app.RunAsync();
 public partial class Program { }

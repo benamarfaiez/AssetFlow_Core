@@ -24,7 +24,10 @@ public class MaintenanceTicketTests
     [InlineData("Titre", "Desc", null)]
     public void Constructor_WithMissingParameters_ShouldThrowArgumentException(string? title, string? desc, string? team)
     {
-        Action act = () => new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), title!, desc!, TicketCriticality.Low, team!);
+        Action act = () =>
+        {
+            MaintenanceTicket maintenanceTicket = new(Guid.NewGuid(), Guid.NewGuid(), title!, desc!, TicketCriticality.Low, team!);
+        };
         act.Should().Throw<ArgumentException>();
     }
 
@@ -69,6 +72,26 @@ public class MaintenanceTicketTests
 
         Action act = () => ticket.Close(invalidComment!);
         act.Should().Throw<ArgumentException>().WithMessage("*Un commentaire de résolution est obligatoire*");
+    }
+
+    [Fact]
+    public void Close_WithInvalidStatus_ShouldThrowArgumentException()
+    {
+        var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, "Team");
+
+        Action act = () => ticket.Close("Résolu");
+        act.Should().Throw<InvalidOperationException>().WithMessage("Seul un ticket en cours peut être clôturé.");
+    }
+
+    [Fact]
+    public void TransferToTeam_ShouldThrowDomainException()
+    {
+        var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, "Team");
+        ticket.AssignToTechnician();
+        ticket.Close("Résolu");
+
+        Action act = () => ticket.TransferToTeam("Team B", "Reason");
+        act.Should().Throw<DomainException>().WithMessage("Impossible de transférer un ticket clôturé.");
     }
 
     [Fact]

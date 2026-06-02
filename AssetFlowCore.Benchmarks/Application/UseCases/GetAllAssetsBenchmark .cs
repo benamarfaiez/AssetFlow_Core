@@ -30,13 +30,18 @@ public class GetAllAssetsBenchmark : BenchmarkBase
         // Pré-populate la base avec N assets
         for (int i = 0; i < AssetCount; i++)
         {
+            var assetType = (i % 3) switch
+            {
+                0 => AssetType.Server,
+                1 => AssetType.Laptop,
+                _ => AssetType.NetworkDevice 
+            };
+
             DbContext.Assets.Add(new Asset(
                 Guid.NewGuid(),
                 $"Asset-{i}",
                 SerialNumber.Create($"SN-{i:D6}"),
-                i % 3 == 0 ? AssetType.Server
-              : i % 3 == 1 ? AssetType.Laptop
-                            : AssetType.NetworkDevice));
+                assetType));
         }
         await DbContext.SaveChangesAsync();
     }
@@ -45,7 +50,7 @@ public class GetAllAssetsBenchmark : BenchmarkBase
     public async Task<List<AssetResponseDto>> GetAll_CacheMiss()
     {
         var handler = Resolve<GetAllAssetsHandler>();
-        return (await handler.HandleAsync(new GetAllAssetsQuery())).ToList();
+        return [.. (await handler.HandleAsync(new GetAllAssetsQuery()))];
     }
 
     [Benchmark(Description = "GetAll — cache hit (appels suivants)")]
@@ -53,6 +58,6 @@ public class GetAllAssetsBenchmark : BenchmarkBase
     {
         var handler = Resolve<GetAllAssetsHandler>();
         await handler.HandleAsync(new GetAllAssetsQuery()); // chauffe
-        return (await handler.HandleAsync(new GetAllAssetsQuery())).ToList();
+        return [.. (await handler.HandleAsync(new GetAllAssetsQuery()))];
     }
 }

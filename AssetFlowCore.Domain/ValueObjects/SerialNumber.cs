@@ -1,10 +1,8 @@
-﻿using System;
-
-namespace AssetFlowCore.Domain.ValueObjects;
+﻿namespace AssetFlowCore.Domain.ValueObjects;
 
 public sealed class SerialNumber : IEquatable<SerialNumber>
 {
-    public string Value { get; } = string.Empty;
+    public string Value { get; }
 
     private SerialNumber(string value)
     {

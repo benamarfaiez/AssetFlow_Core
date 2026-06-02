@@ -22,7 +22,7 @@ public class MaintenanceTicketRepositoryBenchmark
 {
     private MaintenanceTicketRepository _repository = null!;
     private Guid _assetId;
-    private Guid _knownTicketId;
+    private readonly Guid _knownTicketId = Guid.NewGuid();
 
     [Params(5, 20, 50)]
     public int TotalTickets { get; set; }
@@ -61,7 +61,8 @@ public class MaintenanceTicketRepositoryBenchmark
 
         // 1 ticket connu pour GetByIdAsync
         var known = new MaintenanceTicket(
-            _knownTicketId = Guid.NewGuid(), _assetId,
+            _knownTicketId,
+            _assetId,
             "Ticket Connu", "Description connue",
             TicketCriticality.High, "Support-VIP");
         db.Tickets.Add(known);

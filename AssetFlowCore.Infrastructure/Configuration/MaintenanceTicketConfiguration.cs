@@ -23,6 +23,6 @@ public class MaintenanceTicketConfiguration : IEntityTypeConfiguration<Maintenan
         builder.Property(t => t.RowVersion).HasColumnName("row_version").IsRowVersion();
 
         builder.HasIndex(t => new { t.AssetId, t.Status })
-            .HasDatabaseName("IX_t_maintenance_tickets_asset_id_status"); ;
+            .HasDatabaseName("IX_t_maintenance_tickets_asset_id_status");
     }
 }
