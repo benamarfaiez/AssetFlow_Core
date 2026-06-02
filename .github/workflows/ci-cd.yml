@@ -132,55 +132,12 @@ jobs:
       - name: Restauration des dépendances NuGet
         run: dotnet restore ${{ env.SOLUTION_FILE }}
 
-      # Exécution des tests unitaires avec :
-      # - Collecte de couverture via coverlet (format Cobertura pour SonarCloud)
-      # - Rapport TRX pour l'affichage dans GitHub Actions
-      # - Exclusion des projets non pertinents pour la couverture
+      # Exécution des tests unitaires
       - name: Exécution des tests unitaires avec couverture
         run: |
           dotnet test AssetFlowCore.UnitTests/AssetFlowCore.UnitTests.csproj \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-restore \
-            --logger "trx;LogFileName=unit-tests-results.trx" \
-            --results-directory ./TestResults/Unit \
-            --collect:"XPlat Code Coverage" \
-            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura \
-               DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude="[*.Tests]*,[*.IntegrationTests]*,[*.Benchmarks]*" \
-               DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Include="[AssetFlowCore.Domain]*,[AssetFlowCore.Application]*,[AssetFlowCore.Infrastructure]*"
-
-      # Publication du rapport de couverture en HTML (optionnel, pour revue PR)
-      - name: Génération du rapport de couverture HTML
-        uses: danielpalme/ReportGenerator-GitHub-Action@5
-        with:
-          reports: "./TestResults/Unit/**/coverage.cobertura.xml"
-          targetdir: "./TestResults/Unit/CoverageReport"
-          reporttypes: "HtmlInline;Cobertura;Badges"
-          verbosity: "Warning"
-
-      # Téléversement des résultats TRX pour affichage dans l'onglet Tests
-      - name: Publication des résultats de tests
-        uses: actions/upload-artifact@v4
-        if: always()  # Publie même en cas d'échec pour diagnostic
-        with:
-          name: unit-test-results
-          path: |
-            ./TestResults/Unit/**/*.trx
-            ./TestResults/Unit/**/coverage.cobertura.xml
-            ./TestResults/Unit/CoverageReport/
-          retention-days: 7
-
-      # Affichage du rapport de couverture dans le résumé du job
-      - name: Affichage du résumé de couverture
-        uses: irongut/CodeCoverageSummary@v1.3.0
-        with:
-          filename: "./TestResults/Unit/**/coverage.cobertura.xml"
-          badge: true
-          format: markdown
-          hide_branch_rate: false
-          hide_complexity: false
-          indicators: true
-          output: both
-          thresholds: "60 80"  # Seuil warning : 60%, Seuil erreur : 80%
+            --no-restore
 
   # ===========================================================================
   # JOB 3 — TESTS D'INTÉGRATION
@@ -218,25 +175,10 @@ jobs:
         run: |
           dotnet test AssetFlowCore.IntegrationTests/AssetFlowCore.IntegrationTests.csproj \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-restore \
-            --logger "trx;LogFileName=integration-tests-results.trx" \
-            --results-directory ./TestResults/Integration \
-            --collect:"XPlat Code Coverage" \
-            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+            --no-restore
         env:
           # Variables d'environnement pour les tests d'intégration
           ASPNETCORE_ENVIRONMENT: Testing
-
-      # Publication des résultats pour diagnostic en cas d'échec
-      - name: Publication des résultats des tests d'intégration
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: integration-test-results
-          path: |
-            ./TestResults/Integration/**/*.trx
-            ./TestResults/Integration/**/coverage.cobertura.xml
-          retention-days: 7
 
   # ===========================================================================
   # JOB 4 — BENCHMARKS
@@ -350,19 +292,6 @@ jobs:
       - name: Installation de SonarCloud Scanner
         run: dotnet tool install --global dotnet-sonarscanner
 
-      # Récupération des rapports de couverture générés par les jobs de tests
-      - name: Récupération des rapports de couverture (tests unitaires)
-        uses: actions/download-artifact@v4
-        with:
-          name: unit-test-results
-          path: ./TestResults/Unit
-
-      - name: Récupération des rapports de couverture (tests d'intégration)
-        uses: actions/download-artifact@v4
-        with:
-          name: integration-test-results
-          path: ./TestResults/Integration
-
       - name: Restauration des dépendances NuGet
         run: dotnet restore ${{ env.SOLUTION_FILE }}
 
@@ -376,8 +305,6 @@ jobs:
             /o:"${{ secrets.SONAR_ORGANIZATION }}" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
-            /d:sonar.cs.opencover.reportsPaths="./TestResults/Unit/**/coverage.cobertura.xml,./TestResults/Integration/**/coverage.cobertura.xml" \
-            /d:sonar.cs.vstest.reportsPaths="./TestResults/**/*.trx" \
             /d:sonar.coverage.exclusions="**/*.Tests/**,**/*.Benchmarks/**,**/Migrations/**,**/Program.cs" \
             /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**" \
             /d:sonar.qualitygate.wait=true
@@ -391,6 +318,8 @@ jobs:
 
       # Fin et envoi des résultats à SonarCloud
       - name: Envoi des résultats à SonarCloud
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
   # ===========================================================================
