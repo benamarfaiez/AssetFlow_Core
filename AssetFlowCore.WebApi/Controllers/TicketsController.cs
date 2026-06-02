@@ -2,6 +2,7 @@
 using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
+using AssetFlowCore.Application.UseCases.Tickets.GetTicket;
 using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
 using AssetFlowCore.WebApi.Requests;
 using Microsoft.AspNetCore.Mvc;
@@ -45,6 +46,7 @@ public class TicketsController : ControllerBase
     /// </summary>
     [HttpPut("{id:guid}/assign")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Assign(Guid id, [FromServices] AssignTicketToTechnicianHandler handler)
     {
@@ -68,5 +70,19 @@ public class TicketsController : ControllerBase
         var command = new CloseTicketCommand(id, request.ResolutionComment);
         await handler.ExecuteAsync(command);
         return NoContent();
+    }
+
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TicketResponseDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetTicket(
+        Guid id,
+        [FromServices] GetTicketHandler handler)
+    {
+        var query = new GetTicketQuery(id);
+        var response = await handler.ExecuteAsync(query);
+
+        return Ok(response);
     }
 }

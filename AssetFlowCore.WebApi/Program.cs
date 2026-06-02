@@ -6,6 +6,7 @@ using AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
 using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
+using AssetFlowCore.Application.UseCases.Tickets.GetTicket;
 using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
 using AssetFlowCore.Domain.Repositories;
 using AssetFlowCore.Infrastructure.Cache;
@@ -84,6 +85,7 @@ builder.Services.AddScoped<CreateMaintenanceTicketHandler>();
 builder.Services.AddScoped<AssignTicketToTechnicianHandler>();
 builder.Services.AddScoped<CloseTicketHandler>();
 builder.Services.AddScoped<RequestTicketTransferCommandHandler>();
+builder.Services.AddScoped<GetTicketHandler>();
 
 var app = builder.Build();
 
