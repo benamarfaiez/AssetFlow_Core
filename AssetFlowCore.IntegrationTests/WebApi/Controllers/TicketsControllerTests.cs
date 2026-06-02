@@ -80,4 +80,24 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
             updatedTicket!.AssignedTeam.Should().Be("Infra-Réseaux");
         }
     }
+
+    [Fact]
+    public async Task GetTicket_WithValidId_ShouldReturn200OkAndPayload()
+    {
+        var client = _factory.CreateClient();
+        var ticketId = Guid.NewGuid();
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            // Attention: Utiliser le vrai constructeur de ton entité
+            dbContext.Tickets.Add(new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "description", TicketCriticality.Low, "Support-Local"));
+            await dbContext.SaveChangesAsync();
+        }
+        var response = await client.GetAsync($"/api/tickets/{ticketId}");
+
+        var assets = await response.Content.ReadFromJsonAsync<IEnumerable<TicketResponseDto>>();
+        assets.Should().NotBeNull();
+        assets.Should().ContainSingle(a => a.Id == ticketId);
+
+    }
 }
