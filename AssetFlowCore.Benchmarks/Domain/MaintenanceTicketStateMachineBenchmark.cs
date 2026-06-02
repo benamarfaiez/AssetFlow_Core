@@ -29,14 +29,14 @@ public class MaintenanceTicketStateMachineBenchmark
     [Benchmark(Description = "Ticket.AssignToTechnician() — Opened → InProgress")]
     public void AssignToTechnician()
     {
-        var t = new MaintenanceTicket(Guid.NewGuid(), _assetId, "Titre", "Desc", TicketCriticality.Medium, "Support-VIP");
+        var t = new MaintenanceTicket(Guid.NewGuid(), _assetId, "Titre-1", "Desc", TicketCriticality.Medium, "Support-VIP");
         t.AssignToTechnician();
     }
 
     [Benchmark(Description = "Ticket.Close() — InProgress → Closed")]
     public void Close()
     {
-        var t = new MaintenanceTicket(Guid.NewGuid(), _assetId, "Titre", "Desc", TicketCriticality.Low, "Support-Lectorat");
+        var t = new MaintenanceTicket(Guid.NewGuid(), _assetId, "Titre-2", "Desc", TicketCriticality.Low, "Support-Lectorat");
         t.AssignToTechnician();
         t.Close("Problème résolu.");
     }
@@ -53,8 +53,8 @@ public class MaintenanceTicketStateMachineBenchmark
     [Benchmark(Description = "Ticket — criticality Low vs High construction cost")]
     public (MaintenanceTicket low, MaintenanceTicket high) CriticalityVariants()
     {
-        var low = new MaintenanceTicket(Guid.NewGuid(), _assetId, "Titre", "Desc", TicketCriticality.Low, "Team-A");
-        var high = new MaintenanceTicket(Guid.NewGuid(), _assetId, "Titre", "Desc", TicketCriticality.High, "Team-B");
+        var low = new MaintenanceTicket(Guid.NewGuid(), _assetId, "Titre-3", "Desc", TicketCriticality.Low, "Team-A");
+        var high = new MaintenanceTicket(Guid.NewGuid(), _assetId, "Titre-4", "Desc", TicketCriticality.High, "Team-B");
         return (low, high);
     }
 }

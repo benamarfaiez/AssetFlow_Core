@@ -21,7 +21,7 @@ namespace AssetFlowCore.Benchmarks.Infrastructure;
 public class AssetRepositoryBenchmark
 {
     private AssetRepository _repository = null!;
-    private Guid _knownAssetId;
+    private Guid _knownAssetId = Guid.NewGuid();
     private string _existingSerial = null!;
 
     [Params(5, 20, 50)]
@@ -44,7 +44,7 @@ public class AssetRepositoryBenchmark
         for (int i = 0; i < AssetCount; i++)
         {
             db.Assets.Add(new Asset(
-                i == 0 ? (_knownAssetId = Guid.NewGuid()) : Guid.NewGuid(),
+                i == 0 ? _knownAssetId : Guid.NewGuid(),
                 $"Asset-{i}",
                 SerialNumber.Create($"SN-{i:D6}"),
                 (AssetType)(i % 3)));

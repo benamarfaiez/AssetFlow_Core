@@ -10,10 +10,10 @@ public class SqlServerDbContextFactory(IOptions<DatabaseOptions> options) : IDbC
 
     public AssetFlowDbContext Create()
     {
-        var options = new DbContextOptionsBuilder<AssetFlowDbContext>()
+        var contextOptions = new DbContextOptionsBuilder<AssetFlowDbContext>()
             .UseSqlServer(_options.ConnectionString)
             .Options;
 
-        return new AssetFlowDbContext(options);
+        return new AssetFlowDbContext(contextOptions);
     }
 }

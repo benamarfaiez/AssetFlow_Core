@@ -34,10 +34,9 @@ public class MappingBenchmark
         _asset = new Asset(assetId, "Serveur-Mapping", SerialNumber.Create("MAP-SRV-01"), AssetType.Server);
         _ticket = new MaintenanceTicket(Guid.NewGuid(), assetId, "Test Mapping", "Description", TicketCriticality.High, "Infrastructure-Serveurs");
 
-        _assetList = Enumerable.Range(0, ListSize)
+        _assetList = [.. Enumerable.Range(0, ListSize)
             .Select(i => new Asset(Guid.NewGuid(), $"Asset-{i}", SerialNumber.Create($"SN-{i:D5}"),
-                (AssetType)(i % 3)))
-            .ToList();
+                (AssetType)(i % 3)))];
     }
 
     [Benchmark(Baseline = true, Description = "Asset.ToDto() — mapping unitaire")]
@@ -48,5 +47,5 @@ public class MappingBenchmark
 
     [Benchmark(Description = "Liste assets.Select(ToDto) — mapping en masse")]
     public List<AssetResponseDto> MapAssetList()
-        => _assetList.Select(a => a.ToDto()).ToList();
+        => [.. _assetList.Select(a => a.ToDto())];
 }

@@ -6,7 +6,7 @@ namespace AssetFlowCore.IntegrationTests;
 
 public abstract class IntegrationTestBase
 {
-    protected AssetFlowDbContext CreateInMemoryDbContext(string? databaseName = null)
+    protected static AssetFlowDbContext CreateInMemoryDbContext(string? databaseName = null)
     {
         var name = databaseName ?? Guid.NewGuid().ToString();
 
