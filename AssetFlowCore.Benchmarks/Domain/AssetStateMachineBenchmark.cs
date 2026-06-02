@@ -2,6 +2,7 @@
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.ValueObjects;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
 
 namespace AssetFlowCore.Benchmarks.Domain;
@@ -13,6 +14,7 @@ namespace AssetFlowCore.Benchmarks.Domain;
 /// </summary>
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
+[SimpleJob(RuntimeMoniker.Net80, warmupCount: 1, iterationCount: 3)]
 [RankColumn]
 public class AssetStateMachineBenchmark
 {

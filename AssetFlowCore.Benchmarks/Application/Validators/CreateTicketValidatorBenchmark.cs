@@ -1,5 +1,6 @@
 ﻿using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
 
 namespace AssetFlowCore.Benchmarks.Application.Validators;
@@ -11,6 +12,7 @@ namespace AssetFlowCore.Benchmarks.Application.Validators;
 /// </summary>
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
+[SimpleJob(RuntimeMoniker.Net80, warmupCount: 1, iterationCount: 3)]
 [RankColumn]
 public class CreateTicketValidatorBenchmark
 {

@@ -19,7 +19,7 @@ namespace AssetFlowCore.Benchmarks.Application.UseCases;
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
 [RankColumn]
-[SimpleJob(RuntimeMoniker.Net80, warmupCount: 3, iterationCount: 10)]
+[SimpleJob(RuntimeMoniker.Net80, warmupCount: 3, iterationCount: 3)]
 public class CloseTicketBenchmark : BenchmarkBase
 {
     private int _counter;

@@ -42,8 +42,6 @@ env:
 
 # =============================================================================
 # JOB 1 — BUILD
-# Restaure les dépendances NuGet, compile la solution en Release
-# et vérifie que le code respecte les règles de formatage .NET
 # =============================================================================
 jobs:
   build:
@@ -51,19 +49,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Récupération du code source
       - name: Checkout du code source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Historique complet requis pour SonarCloud
+          fetch-depth: 0
 
-      # Installation du SDK .NET 8
       - name: Installation du SDK .NET ${{ env.DOTNET_VERSION }}
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # Mise en cache des packages NuGet pour accélérer les runs suivants
       - name: Mise en cache des packages NuGet
         uses: actions/cache@v4
         with:
@@ -72,18 +67,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      # Restauration de toutes les dépendances NuGet
       - name: Restauration des dépendances NuGet
         run: dotnet restore ${{ env.SOLUTION_FILE }}
 
-      # Compilation de la solution en mode Release
-      # --no-restore : évite une double restauration
       - name: Compilation en mode Release
         run: |
           dotnet build ${{ env.SOLUTION_FILE }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
-      # Vérification du format du code sans modification
-      # Échoue si le code n'est pas formaté correctement
       - name: Vérification du format du code (dotnet format)
         run: |
           dotnet format ${{ env.SOLUTION_FILE }} \
@@ -92,8 +82,6 @@ jobs:
             --severity warn
         continue-on-error: false
 
-      # Publication des artefacts de build pour les jobs suivants
-      # Évite de recompiler dans chaque job
       - name: Publication des artefacts de build
         uses: actions/upload-artifact@v4
         with:
@@ -105,12 +93,12 @@ jobs:
 
   # ===========================================================================
   # JOB 2 — TESTS UNITAIRES
-  # Exécute les tests unitaires avec collecte de couverture de code (Cobertura)
+  # ✅ CORRIGÉ : génération du rapport de couverture OpenCover + upload artefact
   # ===========================================================================
   test-unit:
     name: Tests unitaires
     runs-on: ubuntu-latest
-    needs: build  # Attend la réussite du build
+    needs: build
 
     steps:
       - name: Checkout du code source
@@ -132,21 +120,32 @@ jobs:
       - name: Restauration des dépendances NuGet
         run: dotnet restore ${{ env.SOLUTION_FILE }}
 
-      # Exécution des tests unitaires
+      # ✅ Collecte de couverture au format OpenCover (requis par SonarCloud)
       - name: Exécution des tests unitaires avec couverture
         run: |
           dotnet test AssetFlowCore.UnitTests/AssetFlowCore.UnitTests.csproj \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-restore
+            --no-restore \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage-unit \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      # ✅ Upload du rapport pour le job quality
+      - name: Upload du rapport de couverture unitaire
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: ./coverage-unit/**/coverage.opencover.xml
+          retention-days: 1
 
   # ===========================================================================
   # JOB 3 — TESTS D'INTÉGRATION
-  # Exécute les tests d'intégration avec WebApplicationFactory + InMemory DB
+  # ✅ CORRIGÉ : génération du rapport de couverture OpenCover + upload artefact
   # ===========================================================================
   test-integration:
     name: Tests d'intégration
     runs-on: ubuntu-latest
-    needs: build  # Attend la réussite du build
+    needs: build
 
     steps:
       - name: Checkout du code source
@@ -168,29 +167,33 @@ jobs:
       - name: Restauration des dépendances NuGet
         run: dotnet restore ${{ env.SOLUTION_FILE }}
 
-      # Les tests d'intégration utilisent WebApplicationFactory + EF InMemory
-      # Pas besoin de SQL Server — la base InMemory est configurée dans
-      # CustomWebApplicationFactory (voir AssetFlowCore.IntegrationTests)
-      - name: Exécution des tests d'intégration
+      # ✅ Collecte de couverture au format OpenCover (requis par SonarCloud)
+      - name: Exécution des tests d'intégration avec couverture
         run: |
           dotnet test AssetFlowCore.IntegrationTests/AssetFlowCore.IntegrationTests.csproj \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-restore
+            --no-restore \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage-integration \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
         env:
-          # Variables d'environnement pour les tests d'intégration
           ASPNETCORE_ENVIRONMENT: Testing
+
+      # ✅ Upload du rapport pour le job quality
+      - name: Upload du rapport de couverture d'intégration
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-integration
+          path: ./coverage-integration/**/coverage.opencover.xml
+          retention-days: 1
 
   # ===========================================================================
   # JOB 4 — BENCHMARKS
-  # Exécute les benchmarks BenchmarkDotNet en mode Release
-  # Les résultats sont publiés comme artefacts pour comparaison historique
   # ===========================================================================
   benchmark:
     name: Benchmarks de performance
     runs-on: ubuntu-latest
-    needs: build  # Attend la réussite du build
-
-    # Les benchmarks sont longs — timeout à 60 minutes
+    needs: build
     timeout-minutes: 60
 
     steps:
@@ -213,10 +216,6 @@ jobs:
       - name: Restauration des dépendances NuGet
         run: dotnet restore AssetFlowCore.Benchmarks/AssetFlowCore.Benchmarks.csproj
 
-      # Exécution des benchmarks en Release (obligatoire pour BenchmarkDotNet)
-      # --filter '*' : lance tous les benchmarks
-      # --exporters json,html : génère les rapports d'export
-      # Les résultats sont écrits dans BenchmarkDotNet.Artifacts/
       - name: Exécution des benchmarks (Release uniquement)
         run: |
           dotnet run \
@@ -229,17 +228,14 @@ jobs:
         env:
           DOTNET_ENVIRONMENT: Production
 
-      # Publication des rapports de benchmark comme artefacts
-      # Permet la comparaison entre les runs pour détecter les régressions
       - name: Publication des rapports de benchmark
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: benchmark-results-${{ github.sha }}
           path: ./BenchmarkResults/
-          retention-days: 30  # Conservation 30 jours pour comparaison historique
+          retention-days: 30
 
-      # Résumé des benchmarks dans le rapport du job
       - name: Résumé des résultats de benchmark
         if: always()
         run: |
@@ -253,20 +249,19 @@ jobs:
 
   # ===========================================================================
   # JOB 5 — QUALITÉ DU CODE
-  # Analyse statique SonarCloud + vérification du format
-  # Dépend des deux jobs de tests pour consolider la couverture
+  # ✅ CORRIGÉ : téléchargement des rapports de couverture + transmission à Sonar
   # ===========================================================================
   quality:
     name: Analyse qualité (SonarCloud)
     runs-on: ubuntu-latest
     environment: dev
-    needs: [test-unit, test-integration]  # Requiert les deux rapports de couverture
-    
+    needs: [test-unit, test-integration]
+
     steps:
       - name: Checkout du code source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Historique complet requis pour SonarCloud (blame, annotations)
+          fetch-depth: 0
 
       - name: Installation du SDK .NET ${{ env.DOTNET_VERSION }}
         uses: actions/setup-dotnet@v4
@@ -281,23 +276,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      # Installation de Java (requis par le scanner SonarCloud)
       - name: Installation de Java 17 (requis par SonarCloud)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      # Installation du scanner SonarCloud pour .NET
       - name: Installation de SonarCloud Scanner
         run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Restauration des dépendances NuGet
         run: dotnet restore ${{ env.SOLUTION_FILE }}
 
-      # Démarrage de l'analyse SonarCloud
-      # Les secrets SONAR_TOKEN et SONAR_ORGANIZATION doivent être configurés
-      # dans Settings → Secrets → Actions du dépôt GitHub
+      # ✅ Téléchargement des deux rapports de couverture uploadés par test-unit et test-integration
+      - name: Téléchargement des rapports de couverture
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+          path: ./coverage
+
+      # ✅ sonar.cs.opencover.reportsPaths pointe vers les rapports téléchargés
       - name: Démarrage de l'analyse SonarCloud
         run: |
           dotnet sonarscanner begin \
@@ -305,11 +304,11 @@ jobs:
             /o:"${{ secrets.SONAR_ORGANIZATION }}" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.cs.opencover.reportsPaths="./coverage/**/coverage.opencover.xml" \
             /d:sonar.coverage.exclusions="**/*.Tests/**,**/*.Benchmarks/**,**/Migrations/**,**/Program.cs" \
             /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**" \
             /d:sonar.qualitygate.wait=true
 
-      # Compilation pour que SonarCloud collecte les métriques
       - name: Compilation pour analyse SonarCloud
         run: |
           dotnet build ${{ env.SOLUTION_FILE }} \
@@ -317,39 +316,32 @@ jobs:
             --no-restore
 
       # Fin et envoi des résultats à SonarCloud
-      - name: Envoi des résultats à SonarCloud
+      - name: Envoi des résultats à SonarCloud 
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
   # ===========================================================================
   # JOB 6 — DÉPLOIEMENT
-  # Build Docker + push vers GitHub Container Registry (GHCR)
-  # Conditionnel : uniquement sur la branche main après réussite de quality
   # ===========================================================================
   deploy:
     name: Déploiement
     runs-on: ubuntu-latest
-    needs: quality  # Attend la réussite de l'analyse qualité
+    needs: quality
 
-    # Condition stricte : uniquement sur push vers main (pas les PR)
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-    # Environnement GitHub (optionnel — active les approbations manuelles)
     environment:
       name: production
       url: https://github.com/${{ github.repository }}/pkgs/container/assetflow-api
 
     permissions:
       contents: read
-      packages: write  # Requis pour pousser vers GHCR
+      packages: write
 
     steps:
       - name: Checkout du code source
         uses: actions/checkout@v4
 
-      # Extraction des métadonnées Docker (tags, labels)
-      # Génère automatiquement les tags : latest, sha-xxxxxxx, v1.0.0 (si tag git)
       - name: Extraction des métadonnées Docker
         id: meta
         uses: docker/metadata-action@v5
@@ -361,20 +353,16 @@ jobs:
             type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # Authentification sur GitHub Container Registry
       - name: Connexion à GitHub Container Registry (GHCR)
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  # Token automatique GitHub Actions
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Activation de Docker Buildx pour le cache et le multi-platform
       - name: Configuration de Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Build et push de l'image Docker multi-stage
-      # Cache activé pour accélérer les builds suivants (GitHub Actions cache)
       - name: Build et push de l'image Docker
         uses: docker/build-push-action@v6
         with:
@@ -383,13 +371,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha            # Utilise le cache GitHub Actions
-          cache-to: type=gha,mode=max     # Sauvegarde le cache pour les prochains runs
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           build-args: |
             BUILD_VERSION=${{ github.sha }}
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
 
-      # Résumé du déploiement dans le rapport du job
       - name: Résumé du déploiement
         run: |
           echo "## Déploiement réussi" >> $GITHUB_STEP_SUMMARY

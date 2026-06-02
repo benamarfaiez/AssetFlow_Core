@@ -18,7 +18,7 @@ namespace AssetFlowCore.Benchmarks.Application.UseCases;
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
 [RankColumn]
-[SimpleJob(RuntimeMoniker.Net80, warmupCount: 3, iterationCount: 10)]
+[SimpleJob(RuntimeMoniker.Net80, warmupCount: 3, iterationCount: 5)]
 public class TicketLifecycleBenchmark : BenchmarkBase
 {
     private int _counter;

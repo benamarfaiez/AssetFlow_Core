@@ -4,6 +4,7 @@ using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.ValueObjects;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
 
 namespace AssetFlowCore.Benchmarks.Application.UseCases;
@@ -14,10 +15,11 @@ namespace AssetFlowCore.Benchmarks.Application.UseCases;
 /// </summary>
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
+[SimpleJob(RuntimeMoniker.Net80, warmupCount: 3, iterationCount: 3)]
 [RankColumn]
 public class GetAllAssetsBenchmark : BenchmarkBase
 {
-    [Params(10, 100, 500)]
+    [Params(5, 20, 50)]
     public int AssetCount { get; set; }
 
     [GlobalSetup]
