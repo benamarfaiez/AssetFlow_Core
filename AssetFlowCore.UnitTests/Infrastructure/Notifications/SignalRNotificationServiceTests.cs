@@ -43,7 +43,8 @@ public class SignalRNotificationServiceTests
             Title: "Écran cassé",
             Criticality: "High",
             Status: "Opened",
-            AssignedTeam: targetTeam
+            AssignedTeamId: Guid.NewGuid(),
+            AssignedTeamName: targetTeam
         );
 
         // Act

@@ -22,20 +22,24 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
     {
         // Arrange
         var assetId = Guid.NewGuid();
+        var teamName= "Team A";
         using (var scope = _factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
             var asset = new Asset(assetId, "Laptop Intégration", SerialNumber.Create("LPT-INT-95"), AssetType.Laptop);
+            var team = new Team(teamName, AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Description de la Team A");
+
             await context.Assets.AddAsync(asset);
+            await context.Teams.AddAsync(team);
             await context.SaveChangesAsync();
         }
 
         var payload = new CreateTicketRequest(
             assetId,
             "Correction dysfonctionnement clavier matériel",
-            "Le clavier présente plusieurs touches complètement hors service suite à un incident.",
+            "Laptop présente plusieurs touches complètement hors service suite à un incident.",
             "Medium"
-            );
+        );
 
         var response = await _client.PostAsJsonAsync("/api/tickets", payload);
 
@@ -44,7 +48,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
 
         var ticket = await response.Content.ReadFromJsonAsync<TicketResponseDto>();
         Assert.NotNull(ticket);
-        Assert.Equal("Support-Lectorat", ticket.AssignedTeam);
+        Assert.Equal(teamName, ticket.AssignedTeamName);
     }
 
     [Fact]
@@ -53,14 +57,22 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         // Arrange
         var client = _factory.CreateClient();
         var ticketId = Guid.NewGuid();
-        var requestPayload = new TransferTicketRequest("Infra-Réseaux", "Problème de switch");
+        var teamName = "Infra-Réseaux";
+        var requestPayload = new TransferTicketRequest(teamName, "Problème de switch");
+        var teamNew = new Team(teamName, AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Description de la Team");
 
         // --- Préparation de la base de données ---
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
-            // Attention: Utiliser le vrai constructeur de ton entité
-            dbContext.Tickets.Add(new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "description", TicketCriticality.Low, "Support-Local"));
+
+            var teamOld= new Team("Equipe A", AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Description de la Team A");
+
+            var ticket = new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "description", TicketCriticality.Low, teamOld.Id);
+
+            await dbContext.Tickets.AddAsync(ticket);
+            await dbContext.Teams.AddAsync(teamNew);
+            await dbContext.Teams.AddAsync(teamOld);
             await dbContext.SaveChangesAsync();
         }
 
@@ -77,7 +89,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
             var updatedTicket = await dbContext.Tickets.FindAsync(ticketId);
 
             updatedTicket.Should().NotBeNull();
-            updatedTicket!.AssignedTeam.Should().Be("Infra-Réseaux");
+            updatedTicket.AssignedTeamId.Should().Be(teamNew.Id);
         }
     }
 
@@ -86,11 +98,13 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
     {
         var client = _factory.CreateClient();
         var ticketId = Guid.NewGuid();
+        
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
-            // Attention: Utiliser le vrai constructeur de ton entité
-            dbContext.Tickets.Add(new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "description", TicketCriticality.Low, "Support-Local"));
+            var team = new Team("teamName", AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Description de la Team A");
+            dbContext.Teams.Add(team);
+            dbContext.Tickets.Add(new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "description", TicketCriticality.Low, team.Id));
             await dbContext.SaveChangesAsync();
         }
         var response = await client.GetAsync($"/api/tickets/{ticketId}");

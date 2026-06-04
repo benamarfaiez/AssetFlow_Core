@@ -23,6 +23,7 @@ public class MappingBenchmark
     private Asset _asset = null!;
     private MaintenanceTicket _ticket = null!;
     private List<Asset> _assetList = null!;
+    private readonly string _teamName = "Serveur-Mapping"!;
 
     [Params(5, 20, 50)]
     public int ListSize { get; set; }
@@ -31,8 +32,9 @@ public class MappingBenchmark
     public void Setup()
     {
         var assetId = Guid.NewGuid();
-        _asset = new Asset(assetId, "Serveur-Mapping", SerialNumber.Create("MAP-SRV-01"), AssetType.Server);
-        _ticket = new MaintenanceTicket(Guid.NewGuid(), assetId, "Test Mapping", "Description", TicketCriticality.High, "Infrastructure-Serveurs");
+        var assignedTeamId = Guid.NewGuid();
+        _asset = new Asset(assetId, _teamName, SerialNumber.Create("MAP-SRV-01"), AssetType.Server);
+        _ticket = new MaintenanceTicket(Guid.NewGuid(), assetId, "Test Mapping", "Description", TicketCriticality.High, assignedTeamId);
 
         _assetList = [.. Enumerable.Range(0, ListSize)
             .Select(i => new Asset(Guid.NewGuid(), $"Asset-{i}", SerialNumber.Create($"SN-{i:D5}"),
@@ -43,7 +45,7 @@ public class MappingBenchmark
     public AssetResponseDto MapSingleAsset() => _asset.ToDto();
 
     [Benchmark(Description = "Ticket.ToDto() — mapping unitaire")]
-    public TicketResponseDto MapSingleTicket() => _ticket.ToDto();
+    public TicketResponseDto MapSingleTicket() => _ticket.ToDto(_teamName);
 
     [Benchmark(Description = "Liste assets.Select(ToDto) — mapping en masse")]
     public List<AssetResponseDto> MapAssetList()

@@ -3,6 +3,7 @@ using AssetFlowCore.Application.Services;
 using AssetFlowCore.Application.UseCases.Assets.DecommissionAsset;
 using AssetFlowCore.Application.UseCases.Assets.GetAllAssets;
 using AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
+using AssetFlowCore.Application.UseCases.Team.CreateTeam;
 using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
@@ -29,6 +30,7 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddValidatorsFromAssembly(typeof(CreateMaintenanceTicketValidator).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(CreateTeamCommandValidator).Assembly);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
@@ -68,13 +70,15 @@ builder.Services.AddScoped<IAssetRepository>(provider =>
     return new CachedAssetRepository(rawRepo, provider.GetRequiredService<IMemoryCache>());
 });
 builder.Services.AddScoped<IMaintenanceTicketRepository, MaintenanceTicketRepository>();
+builder.Services.AddScoped<ITeamRepository, TeamRepository>();
 
 // Moteur d'aiguillage automatique (Stratégies isolées - OCP)
-builder.Services.AddSingleton<IAssignmentStrategy, ServerAssignmentStrategy>();
-builder.Services.AddSingleton<IAssignmentStrategy, NetworkAssignmentStrategy>();
-builder.Services.AddSingleton<IAssignmentStrategy, LaptopHighCriticalityStrategy>();
-builder.Services.AddSingleton<IAssignmentStrategy, LaptopStandardStrategy>();
-builder.Services.AddSingleton<ITicketAssignmentEngine, TicketAssignmentEngine>();
+// ⚠️ Scoped et non plus Singleton — ITeamRepository est Scoped
+builder.Services.AddScoped<IAssignmentStrategy, ServerAssignmentStrategy>();
+builder.Services.AddScoped<IAssignmentStrategy, NetworkAssignmentStrategy>();
+builder.Services.AddScoped<IAssignmentStrategy, LaptopHighCriticalityStrategy>();
+builder.Services.AddScoped<IAssignmentStrategy, LaptopStandardStrategy>();
+builder.Services.AddScoped<ITicketAssignmentEngine, TicketAssignmentEngine>();
 builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
 
 // Enregistrement explicite des Handlers de Cas d'Usages (Vertical Slices Applicatives)
@@ -86,6 +90,7 @@ builder.Services.AddScoped<AssignTicketToTechnicianHandler>();
 builder.Services.AddScoped<CloseTicketHandler>();
 builder.Services.AddScoped<RequestTicketTransferCommandHandler>();
 builder.Services.AddScoped<GetTicketHandler>();
+builder.Services.AddScoped<CreateTeamCommandHandler>();
 
 var app = builder.Build();
 

@@ -17,7 +17,7 @@ public class GetAllAssetsHandlerTests
     public async Task HandleAsync_ShouldReturnAllAssetsMappedAsDtos()
     {
         var repoMock = new Mock<IAssetRepository>();
-        var list = new List<Asset> { new Asset(Guid.NewGuid(), "Name", SerialNumber.Create("SERIALX"), AssetType.Server) };
+        var list = new List<Asset> { new(Guid.NewGuid(), "Name", SerialNumber.Create("SERIALX"), AssetType.Server) };
         repoMock.Setup(r => r.GetAllReadOnlyAsync()).ReturnsAsync(list);
 
         var handler = new GetAllAssetsHandler(repoMock.Object);

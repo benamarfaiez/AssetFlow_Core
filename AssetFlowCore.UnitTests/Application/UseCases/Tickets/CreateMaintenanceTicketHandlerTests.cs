@@ -19,12 +19,13 @@ public class CreateMaintenanceTicketHandlerTests
     private readonly Mock<IUnitOfWork> _uowMock = new();
     private readonly Mock<ITicketAssignmentEngine> _engineMock = new();
     private readonly Mock<INotificationService> _notifierMock = new();
+    private readonly Mock<ITeamRepository> _teamMock= new();
     private readonly CreateMaintenanceTicketHandler _handler;
 
     private readonly ValidationResult validationResult = new();
     private readonly Mock<IValidator<CreateMaintenanceTicketCommand>> _validator = new();
 
-    public CreateMaintenanceTicketHandlerTests() => _handler = new CreateMaintenanceTicketHandler(_assetRepoMock.Object, _ticketRepoMock.Object, _uowMock.Object, _engineMock.Object, _notifierMock.Object);
+    public CreateMaintenanceTicketHandlerTests() => _handler = new CreateMaintenanceTicketHandler(_assetRepoMock.Object, _ticketRepoMock.Object, _uowMock.Object, _engineMock.Object, _notifierMock.Object, _teamMock.Object);
 
     [Fact]
     public async Task HandleAsync_WithValidAsset_ShouldCreateTicketAndNotify()
@@ -34,8 +35,16 @@ public class CreateMaintenanceTicketHandlerTests
             .Setup(r => r.GetByIdAsync(asset.Id))
             .ReturnsAsync(asset);
         _engineMock
-            .Setup(e => e.ResolveTeam(It.IsAny<AssetType>(), It.IsAny<TicketCriticality>()))
-            .Returns("Team-Alpha");
+            .Setup(e => e.ResolveTeamIdAsync(It.IsAny<AssetType>(), It.IsAny<TicketCriticality>()))
+            .ReturnsAsync("Team-Alpha");
+        _validator
+            .Setup(v => v.ValidateAsync(It.IsAny<CreateMaintenanceTicketCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(validationResult);
+        var team = new Team("Team-Alpha", "Server", "High", "Description");
+
+        _teamMock
+            .Setup(r => r.GetByNameAsync("Team-Alpha"))
+            .ReturnsAsync(team);
         _validator
             .Setup(v => v.ValidateAsync(It.IsAny<CreateMaintenanceTicketCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(validationResult);

@@ -1,14 +1,11 @@
-﻿using Xunit;
-using Moq;
-using FluentAssertions;
-using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
-using AssetFlowCore.Domain.Repositories;
+﻿using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
 using AssetFlowCore.Domain.Entities;
-using AssetFlowCore.Domain.ValueObjects;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
-using System;
-using System.Threading.Tasks;
+using AssetFlowCore.Domain.Repositories;
+using AssetFlowCore.Domain.ValueObjects;
+using FluentAssertions;
+using Moq;
 
 namespace AssetFlowCore.UnitTests.Application.UseCases.Tickets;
 
@@ -26,7 +23,7 @@ public class AssignTicketToTechnicianHandlerTests
     {
         var asset = new Asset(Guid.NewGuid(), "Laptop", SerialNumber.Create("SRV112"), AssetType.Laptop);
         asset.MarkAsDown();
-        var ticket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Title", "Desc", TicketCriticality.Low, "Team");
+        var ticket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Title", "Desc", TicketCriticality.Low, Guid.NewGuid());
 
         _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id)).ReturnsAsync(ticket);
         _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id)).ReturnsAsync(asset);

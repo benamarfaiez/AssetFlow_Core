@@ -21,7 +21,7 @@ namespace AssetFlowCore.Benchmarks.Infrastructure;
 public class AssetRepositoryBenchmark
 {
     private AssetRepository _repository = null!;
-    private Guid _knownAssetId = Guid.NewGuid();
+    private readonly Guid _knownAssetId = Guid.NewGuid();
     private string _existingSerial = null!;
 
     [Params(5, 20, 50)]
@@ -55,7 +55,7 @@ public class AssetRepositoryBenchmark
 
     [Benchmark(Baseline = true, Description = "GetAllReadOnlyAsync — AsNoTracking (N assets)")]
     public async Task<List<Asset>> GetAllReadOnly()
-        => (await _repository.GetAllReadOnlyAsync()).ToList();
+        => [.. (await _repository.GetAllReadOnlyAsync())];
 
     [Benchmark(Description = "GetByIdAsync — asset connu avec tickets inclus")]
     public async Task<Asset?> GetById_Found()

@@ -42,3 +42,4 @@
 /AssetFlowCore.IntegrationTests/TestResults/b09fad07-c91b-4cd2-91a4-e87022a12f7b
 /AssetFlowCore.IntegrationTests/TestResults
 /BenchmarkDotNet.Artifacts
+/AssetFlowCore.Benchmarks/BenchmarkDotNet.Artifacts/results

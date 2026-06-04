@@ -5,5 +5,5 @@ namespace AssetFlowCore.Application.Interfaces;
 public interface IAssignmentStrategy
 {
     bool IsMatch(AssetType assetType, TicketCriticality criticality);
-    string GetTeam();
+    Task<string> GetTeamNameAsync(string assetType, string criticality);
 }

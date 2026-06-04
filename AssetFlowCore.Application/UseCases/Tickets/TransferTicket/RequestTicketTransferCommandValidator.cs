@@ -7,6 +7,6 @@ public class RequestTicketTransferCommandValidator : AbstractValidator<RequestTi
     public RequestTicketTransferCommandValidator()
     {
         RuleFor(x => x.TicketId).NotEmpty().WithMessage("L'identifiant du ticket est requis.");
-        RuleFor(x => x.TargetTeam).NotEmpty().WithMessage("L'équipe cible est requise.");
+        RuleFor(x => x.TeamName).NotEmpty().WithMessage("L'équipe cible est requise.");
     }
 }

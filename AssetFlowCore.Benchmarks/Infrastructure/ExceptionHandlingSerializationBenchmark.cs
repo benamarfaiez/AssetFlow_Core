@@ -62,7 +62,7 @@ public class ExceptionHandlingSerializationBenchmark
         => JsonSerializer.Serialize(_serverErrorProblem);
 
     [Benchmark(Description = "Switch pattern dispatch — DomainException")]
-    public static int Dispatch_DomainException()
+    public int Dispatch_DomainException()
     {
         Exception ex = new DomainException("Série déjà enregistrée");
         return ex switch
@@ -74,7 +74,7 @@ public class ExceptionHandlingSerializationBenchmark
     }
 
     [Benchmark(Description = "Switch pattern dispatch — DbUpdateConcurrencyException")]
-    public static int Dispatch_ConcurrencyException()
+    public int Dispatch_ConcurrencyException()
     {
         Exception ex = new DbUpdateConcurrencyException();
         return ex switch

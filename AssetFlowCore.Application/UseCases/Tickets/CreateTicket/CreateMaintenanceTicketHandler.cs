@@ -19,7 +19,8 @@ public class CreateMaintenanceTicketHandler(
     IMaintenanceTicketRepository ticketRepository,
     IUnitOfWork unitOfWork,
     ITicketAssignmentEngine assignmentEngine,
-    INotificationService notificationService)
+    INotificationService notificationService,
+    ITeamRepository teamRepository)
 {
 
     /// <summary>
@@ -38,32 +39,37 @@ public class CreateMaintenanceTicketHandler(
         var criticality = Enum.Parse<TicketCriticality>(command.Criticality, ignoreCase: true);
 
         // 4. Utilisation du moteur algorithmique pour résoudre l'équipe technique d'astreinte (Pattern Strategy)
-        string assignedTeam = assignmentEngine.ResolveTeam(asset.Type, criticality);
+        var teamName = await assignmentEngine.ResolveTeamIdAsync(asset.Type, criticality);
 
-        // 5. Instanciation de la nouvelle entité de maintenance
+        // 5. Résolution de l'entité Team depuis le nom (lecture base de données)
+        var team = await teamRepository.GetByNameAsync(teamName) ?? throw new DomainException(
+                $"L'équipe '{teamName}' n'existe pas dans la base de données. " +
+                "Vérifiez que les données de référence ont bien été insérées via la migration.");
+
+        // 6. Instanciation de la nouvelle entité de maintenance
         var ticket = new MaintenanceTicket(
             id: Guid.NewGuid(),
             assetId: asset.Id,
             title: command.Title,
             description: command.Description,
             criticality: criticality,
-            assignedTeam: assignedTeam
+            assignedTeamId: team.Id
         );
 
-        // 6. Déclenchement de l'automate d'état en cascade (L'actif passe automatiquement à "Down")
+        // 7. Déclenchement de l'automate d'état en cascade (L'actif passe automatiquement à "Down")
         asset.MarkAsDown();
 
-        // 7. Notification des repositories (Suivi en mémoire par le Change Tracker d'EF Core)
+        // 8. Notification des repositories (Suivi en mémoire par le Change Tracker d'EF Core)
         await ticketRepository.AddAsync(ticket);
 
-        // 8. PERSISTANCE ATOMIQUE (Unit of Work)
+        // 9. Traduction manuelle en DTO de surface (Zéro réflexion CPU au runtime)
+        var dto = ticket.ToDto(teamName);
+
+        // 10. PERSISTANCE ATOMIQUE (Unit of Work)
         await unitOfWork.SaveChangesAsync();
 
-        // 9. Traduction manuelle en DTO de surface (Zéro réflexion CPU au runtime)
-        var dto = ticket.ToDto();
-
-        // 10. Notification Temps Réel asynchrone et découplée (SignalR WebSockets)
-        await notificationService.NotifyTeamNewTicketAsync(assignedTeam, dto);
+        // 11. Notification Temps Réel asynchrone et découplée (SignalR WebSockets)
+        await notificationService.NotifyTeamNewTicketAsync(teamName, dto);
 
         return dto;
     }

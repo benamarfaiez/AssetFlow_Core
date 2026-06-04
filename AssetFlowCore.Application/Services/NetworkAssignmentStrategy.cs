@@ -1,10 +1,11 @@
 ﻿using AssetFlowCore.Application.Interfaces;
 using AssetFlowCore.Domain.Enums;
+using AssetFlowCore.Domain.Repositories;
 
 namespace AssetFlowCore.Application.Services;
 
-public class NetworkAssignmentStrategy : IAssignmentStrategy
+public class NetworkAssignmentStrategy(ITeamRepository teamRepository) : AssignmentStrategyBase(teamRepository)
 {
-    public bool IsMatch(AssetType assetType, TicketCriticality criticality) => assetType == AssetType.NetworkDevice;
-    public string GetTeam() => "Réseau-Télécom";
+    public override bool IsMatch(AssetType assetType, TicketCriticality criticality)
+        => assetType == AssetType.NetworkDevice;
 }

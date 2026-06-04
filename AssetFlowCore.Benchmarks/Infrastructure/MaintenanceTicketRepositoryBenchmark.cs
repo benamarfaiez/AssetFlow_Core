@@ -48,7 +48,8 @@ public class MaintenanceTicketRepositoryBenchmark
                 Guid.NewGuid(), _assetId,
                 $"Ticket-{i}", "Description",
                 (TicketCriticality)(i % 3),
-                "Team-Test");
+                Guid.NewGuid()
+                );
 
             if (i % 10 == 0)          // 10% InProgress
             {
@@ -64,7 +65,7 @@ public class MaintenanceTicketRepositoryBenchmark
             _knownTicketId,
             _assetId,
             "Ticket Connu", "Description connue",
-            TicketCriticality.High, "Support-VIP");
+            TicketCriticality.High, Guid.NewGuid());
         db.Tickets.Add(known);
 
         await db.SaveChangesAsync();
