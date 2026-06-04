@@ -4,6 +4,7 @@ using AssetFlowCore.Application.UseCases.Assets.DecommissionAsset;
 using AssetFlowCore.Application.UseCases.Assets.GetAllAssets;
 using AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
 using AssetFlowCore.Application.UseCases.Team.CreateTeam;
+using AssetFlowCore.Application.UseCases.Team.GetTeam;
 using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
@@ -91,6 +92,7 @@ builder.Services.AddScoped<CloseTicketHandler>();
 builder.Services.AddScoped<RequestTicketTransferCommandHandler>();
 builder.Services.AddScoped<GetTicketHandler>();
 builder.Services.AddScoped<CreateTeamCommandHandler>();
+builder.Services.AddScoped<GetTeamHandler>();
 
 var app = builder.Build();
 
