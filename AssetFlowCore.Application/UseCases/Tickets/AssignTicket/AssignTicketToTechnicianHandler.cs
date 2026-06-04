@@ -18,7 +18,7 @@ public class AssignTicketToTechnicianHandler
         _unitOfWork = unitOfWork;
     }
 
-    public async Task ExecuteAsync(AssignTicketToTechnicianCommand command)
+    public async ValueTask ExecuteAsync(AssignTicketToTechnicianCommand command)
     {
         var ticket = await _ticketRepository.GetByIdAsync(command.TicketId);
         if (ticket == null) throw new DomainException("Ticket introuvable.");

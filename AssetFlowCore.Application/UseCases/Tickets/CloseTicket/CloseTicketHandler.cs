@@ -7,7 +7,7 @@ namespace AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
 
 public class CloseTicketHandler(IMaintenanceTicketRepository ticketRepository, IAssetRepository assetRepository, IUnitOfWork unitOfWork)
 {
-    public async Task ExecuteAsync(CloseTicketCommand command)
+    public async ValueTask ExecuteAsync(CloseTicketCommand command)
     {
         var ticket = await ticketRepository.GetByIdAsync(command.TicketId) ?? throw new DomainException("Ticket introuvable.");
         var asset = await assetRepository.GetByIdAsync(ticket.AssetId) ?? throw new DomainException("Actif associé introuvable.");
