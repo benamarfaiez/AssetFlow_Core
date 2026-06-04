@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Application.DTOs;
+using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.ValueObjects;
@@ -22,10 +22,11 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
     {
         // Arrange
         var assetId = Guid.NewGuid();
-        var teamName= "Team A";
+        var teamName = "Team A";
         using (var scope = _factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            await context.Database.EnsureDeletedAsync();
             var asset = new Asset(assetId, "Laptop Intégration", SerialNumber.Create("LPT-INT-95"), AssetType.Laptop);
             var team = new Team(teamName, AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Description de la Team A");
 
@@ -65,8 +66,9 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            await dbContext.Database.EnsureDeletedAsync();
 
-            var teamOld= new Team("Equipe A", AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Description de la Team A");
+            var teamOld = new Team("Equipe A", AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Description de la Team A");
 
             var ticket = new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "description", TicketCriticality.Low, teamOld.Id);
 
@@ -98,10 +100,11 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
     {
         var client = _factory.CreateClient();
         var ticketId = Guid.NewGuid();
-        
+
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            await dbContext.Database.EnsureDeletedAsync();
             var team = new Team("teamName", AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Description de la Team A");
             dbContext.Teams.Add(team);
             dbContext.Tickets.Add(new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "description", TicketCriticality.Low, team.Id));

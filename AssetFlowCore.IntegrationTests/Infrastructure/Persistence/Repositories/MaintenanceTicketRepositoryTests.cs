@@ -1,10 +1,8 @@
-﻿using Xunit;
-using FluentAssertions;
-using AssetFlowCore.Infrastructure.Persistence.Repositories;
-using AssetFlowCore.Domain.Entities;
+﻿using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
-using System;
-using System.Threading.Tasks;
+using AssetFlowCore.Infrastructure.Persistence.Repositories;
+using FluentAssertions;
+using Xunit;
 
 namespace AssetFlowCore.IntegrationTests.Infrastructure.Persistence.Repositories;
 

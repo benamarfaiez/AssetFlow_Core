@@ -99,7 +99,7 @@ public class MaintenanceTicketTests
     {
         // Arrange
         var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Description", TicketCriticality.High, Guid.NewGuid());
-        var newTeam = new Team("name","asset","Low","desc");
+        var newTeam = new Team("name", "asset", "Low", "desc");
 
         // Act
         ticket.TransferToTeam(newTeam, "Besoin d'une expertise réseau.");

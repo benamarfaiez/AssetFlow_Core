@@ -12,7 +12,7 @@ namespace AssetFlowCore.UnitTests.Application.UseCases.Tickets;
 public class RequestTicketTransferCommandHandlerTests
 {
     private readonly Mock<IMaintenanceTicketRepository> _ticketRepositoryMock;
-    private readonly Mock<ITeamRepository> _teamRepositoryMock;    
+    private readonly Mock<ITeamRepository> _teamRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly RequestTicketTransferCommandHandler _handler;
 

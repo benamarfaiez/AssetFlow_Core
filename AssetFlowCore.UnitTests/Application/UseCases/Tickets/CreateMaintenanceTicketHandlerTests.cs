@@ -19,7 +19,7 @@ public class CreateMaintenanceTicketHandlerTests
     private readonly Mock<IUnitOfWork> _uowMock = new();
     private readonly Mock<ITicketAssignmentEngine> _engineMock = new();
     private readonly Mock<INotificationService> _notifierMock = new();
-    private readonly Mock<ITeamRepository> _teamMock= new();
+    private readonly Mock<ITeamRepository> _teamMock = new();
     private readonly CreateMaintenanceTicketHandler _handler;
 
     private readonly ValidationResult validationResult = new();

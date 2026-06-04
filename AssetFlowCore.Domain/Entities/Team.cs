@@ -1,13 +1,4 @@
-﻿// =============================================================================
-// AssetFlowCore.Domain/Entities/Team.cs
-// =============================================================================
-// Entité de domaine représentant une équipe technique de maintenance.
-// Remplace le simple string "AssignedTeam" par une entité riche avec identité.
-// =============================================================================
-
-using AssetFlowCore.Domain.Enums;
-
-namespace AssetFlowCore.Domain.Entities;
+﻿namespace AssetFlowCore.Domain.Entities;
 
 public class Team
 {
@@ -48,7 +39,7 @@ public class Team
         Description = description?.Trim();
         IsActive = true;
         AssetType = assetType.Trim();
-        TicketCriticality= ticketCriticality.Trim();
+        TicketCriticality = ticketCriticality.Trim();
         CreatedAt = DateTime.UtcNow;
     }
 

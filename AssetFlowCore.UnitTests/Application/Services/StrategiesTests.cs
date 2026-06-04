@@ -79,7 +79,7 @@ public class StrategiesTests
         var assetType = AssetType.NetworkDevice.ToString();
         var criticality = TicketCriticality.Medium;
         var team = new Team("ServerAssignment", assetType, criticality.ToString(), "description");
-        
+
         _teamRepository
             .Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(team);
