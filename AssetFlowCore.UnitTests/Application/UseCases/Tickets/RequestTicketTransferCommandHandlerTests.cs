@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
+using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
@@ -6,6 +6,7 @@ using AssetFlowCore.Domain.Repositories;
 using AssetFlowCore.Domain.ValueObjects;
 using FluentAssertions;
 using Moq;
+using DomainTeam = AssetFlowCore.Domain.Entities.Team;
 
 namespace AssetFlowCore.UnitTests.Application.UseCases.Tickets;
 
@@ -32,7 +33,7 @@ public class RequestTicketTransferCommandHandlerTests
     public async Task ExecuteAsync_Should_PersistChanges_When_TicketExistsAndValid()
     {
         // Arrange
-        var team = new Team("Nouvelle-Equipe", "Server", TicketCriticality.Low.ToString(), "Description");
+        var team = new DomainTeam("Nouvelle-Equipe", "Server", TicketCriticality.Low.ToString(), "Description");
 
         _teamRepositoryMock
             .Setup(r => r.GetByNameAsync(team.Name))

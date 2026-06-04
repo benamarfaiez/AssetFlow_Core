@@ -1,10 +1,11 @@
-﻿using AssetFlowCore.Application.UseCases.Tickets.GetTicket;
+using AssetFlowCore.Application.UseCases.Tickets.GetTicket;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
 using FluentAssertions;
 using Moq;
+using DomainTeam = AssetFlowCore.Domain.Entities.Team;
 
 namespace AssetFlowCore.UnitTests.Application.UseCases.Tickets;
 
@@ -19,7 +20,7 @@ public class GetTicketHandlerTests
     [Fact]
     public async Task ExecuteAsync_WhenTicketExists_ShouldReturnCorrectTicketResponse()
     {
-        var team = new Team("Team-Alpha", "Server", TicketCriticality.Low.ToString(), "Description");
+        var team = new DomainTeam("Team-Alpha", "Server", TicketCriticality.Low.ToString(), "Description");
 
         var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Title", "Desc", TicketCriticality.Low, team.Id);
 

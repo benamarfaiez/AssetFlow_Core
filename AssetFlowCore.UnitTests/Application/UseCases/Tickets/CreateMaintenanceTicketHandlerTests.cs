@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Application.Interfaces;
+using AssetFlowCore.Application.Interfaces;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
@@ -9,6 +9,7 @@ using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
 using Moq;
+using DomainTeam = AssetFlowCore.Domain.Entities.Team;
 
 namespace AssetFlowCore.UnitTests.Application.UseCases.Tickets;
 
@@ -40,7 +41,7 @@ public class CreateMaintenanceTicketHandlerTests
         _validator
             .Setup(v => v.ValidateAsync(It.IsAny<CreateMaintenanceTicketCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(validationResult);
-        var team = new Team("Team-Alpha", "Server", "High", "Description");
+        var team = new DomainTeam("Team-Alpha", "Server", "High", "Description");
 
         _teamMock
             .Setup(r => r.GetByNameAsync("Team-Alpha"))
