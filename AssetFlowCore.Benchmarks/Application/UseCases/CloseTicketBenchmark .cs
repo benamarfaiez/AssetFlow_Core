@@ -19,7 +19,7 @@ namespace AssetFlowCore.Benchmarks.Application.UseCases;
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
 [RankColumn]
-[SimpleJob(RuntimeMoniker.Net80, warmupCount: 3, iterationCount: 3)]
+[SimpleJob(RuntimeMoniker.Net80, warmupCount: 2, iterationCount: 3, invocationCount: 10)]
 public class CloseTicketBenchmark : BenchmarkBase
 {
     private int _counter;
@@ -32,16 +32,17 @@ public class CloseTicketBenchmark : BenchmarkBase
     {
         _counter++;
 
-        // Crée un asset frais par itération — pas de [IterationSetup]
         var assetId = Guid.NewGuid();
-        DbContext.Assets.Add(new Asset(assetId, $"Asset-Close-{_counter}",
-            SerialNumber.Create($"CLO-{_counter:D6}"), AssetType.Server));
+        var asset = new Asset(assetId, $"Asset-Close-{_counter}", SerialNumber.Create($"CLO-{_counter:D6}"), AssetType.Server);
+        // Met l'actif en panne pour permettre l'entrée en maintenance lors de l'assignation du ticket
+        asset.MarkAsDown();
+
+        await DbContext.Assets.AddAsync(asset);
         await DbContext.SaveChangesAsync();
 
         // Crée le ticket
         var create = Resolve<CreateMaintenanceTicketHandler>();
-        var ticket = await create.HandleAsync(new CreateMaintenanceTicketCommand(
-            assetId, $"Ticket-{_counter}", "Description", "Medium"));
+        var ticket = await create.HandleAsync(new CreateMaintenanceTicketCommand(assetId, $"Ticket-{_counter}", "Description", "Medium"));
 
         // Assigne le ticket
         var assign = Resolve<AssignTicketToTechnicianHandler>();

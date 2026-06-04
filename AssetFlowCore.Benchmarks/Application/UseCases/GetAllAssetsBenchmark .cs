@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Application.DTOs;
+using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.Application.UseCases.Assets.GetAllAssets;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
@@ -34,7 +34,7 @@ public class GetAllAssetsBenchmark : BenchmarkBase
             {
                 0 => AssetType.Server,
                 1 => AssetType.Laptop,
-                3 => AssetType.NetworkDevice,
+                2 => AssetType.NetworkDevice,
                 _ => throw new NotImplementedException()
             };
 

@@ -8,7 +8,6 @@ public class MaintenanceTicketRepository(AssetFlowDbContext context) : IMaintena
 {
     public async Task<MaintenanceTicket?> GetByIdAsync(Guid id)
         => await context.Tickets
-        .AsNoTracking()
         .FirstOrDefaultAsync(t => t.Id == id);
 
     public async Task<MaintenanceTicket?> GetByIdWithTrackingAsync(Guid id)
