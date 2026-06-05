@@ -23,7 +23,11 @@ public class Team
     private readonly List<MaintenanceTicket> _tickets = [];
 
     // Constructeur privé requis par EF Core pour la matérialisation
-    private Team() { }
+    private Team()
+    {
+        AssetType = null!;
+        TicketCriticality = null!;
+    }
 
     public Team(string name, string assetType, string ticketCriticality, string? description = null)
     {

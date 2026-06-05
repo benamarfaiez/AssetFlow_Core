@@ -17,7 +17,11 @@ public class Asset
     public IReadOnlyCollection<MaintenanceTicket> Tickets => _tickets.AsReadOnly();
 
     // Pour EF Core
-    private Asset() { }
+    private Asset() 
+    {
+        SerialNumber = null!;
+        Name = null!;
+    }
 
     public Asset(Guid id, string name, SerialNumber serialNumber, AssetType type)
     {

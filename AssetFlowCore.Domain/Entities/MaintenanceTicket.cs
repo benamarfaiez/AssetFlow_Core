@@ -21,7 +21,11 @@ public class MaintenanceTicket
     public DateTime CreatedAt { get; private set; }
     public byte[] RowVersion { get; private set; } = [];
 
-    private MaintenanceTicket() { }
+    private MaintenanceTicket()
+    {
+        Description = null!;
+        Title = null!;
+    }
 
     public MaintenanceTicket(
         Guid id,

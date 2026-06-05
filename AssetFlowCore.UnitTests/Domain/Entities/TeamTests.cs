@@ -5,10 +5,6 @@ namespace AssetFlowCore.UnitTests.Domain.Entities;
 
 public class TeamTests
 {
-    // ──────────────────────────────────────────────────────────────────────
-    // Constructor – happy path
-    // ──────────────────────────────────────────────────────────────────────
-
     [Fact]
     public void Constructor_WithValidParameters_ShouldInitializeCorrectly()
     {
@@ -52,10 +48,6 @@ public class TeamTests
         team1.Id.Should().NotBe(team2.Id);
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Constructor – Name validation
-    // ──────────────────────────────────────────────────────────────────────
-
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -68,10 +60,6 @@ public class TeamTests
            .WithParameterName("name")
            .WithMessage("*Le nom de l'équipe est obligatoire*");
     }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Constructor – AssetType validation
-    // ──────────────────────────────────────────────────────────────────────
 
     [Theory]
     [InlineData("")]
@@ -87,10 +75,6 @@ public class TeamTests
            .WithMessage("*Le assetType de l'équipe est obligatoire*");
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Constructor – TicketCriticality validation
-    // ──────────────────────────────────────────────────────────────────────
-
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -104,10 +88,6 @@ public class TeamTests
            .WithParameterName("ticketCriticality")
            .WithMessage("*Le ticketCriticality de l'équipe est obligatoire*");
     }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Deactivate / Activate
-    // ──────────────────────────────────────────────────────────────────────
 
     [Fact]
     public void Deactivate_WhenActive_ShouldSetIsActiveToFalse()
@@ -150,10 +130,6 @@ public class TeamTests
 
         team.IsActive.Should().BeFalse();
     }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // UpdateDescription
-    // ──────────────────────────────────────────────────────────────────────
 
     [Fact]
     public void UpdateDescription_WithValidValue_ShouldUpdateDescription()
