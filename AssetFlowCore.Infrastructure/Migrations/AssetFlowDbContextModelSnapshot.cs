@@ -64,13 +64,12 @@ namespace AssetFlowCore.Infrastructure.Migrations
                         .HasColumnName("id");
 
                     b.Property<Guid>("AssetId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("asset_id");
 
-                    b.Property<string>("AssignedTeam")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("assigned_team");
+                    b.Property<Guid>("AssignedTeamId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("assigned_team_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
@@ -112,9 +111,64 @@ namespace AssetFlowCore.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AssetId");
+                    b.HasIndex("AssignedTeamId")
+                        .HasDatabaseName("IX_t_tickets_assigned_team_id");
+
+                    b.HasIndex("AssetId", "Status")
+                        .HasDatabaseName("IX_t_maintenance_tickets_asset_id_status");
 
                     b.ToTable("t_maintenance_tickets", (string)null);
+                });
+
+            modelBuilder.Entity("AssetFlowCore.Domain.Entities.Team", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AssetType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("asset_type");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("TicketCriticality")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ticket_criticality");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("IX_t_teams_is_active");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_t_teams_name");
+
+                    b.ToTable("t_teams", (string)null);
                 });
 
             modelBuilder.Entity("AssetFlowCore.Domain.Entities.Asset", b =>
@@ -147,14 +201,29 @@ namespace AssetFlowCore.Infrastructure.Migrations
 
             modelBuilder.Entity("AssetFlowCore.Domain.Entities.MaintenanceTicket", b =>
                 {
-                    b.HasOne("AssetFlowCore.Domain.Entities.Asset", null)
+                    b.HasOne("AssetFlowCore.Domain.Entities.Asset", "Asset")
                         .WithMany("Tickets")
                         .HasForeignKey("AssetId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("AssetFlowCore.Domain.Entities.Team", "AssignedTeam")
+                        .WithMany("Tickets")
+                        .HasForeignKey("AssignedTeamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Asset");
+
+                    b.Navigation("AssignedTeam");
                 });
 
             modelBuilder.Entity("AssetFlowCore.Domain.Entities.Asset", b =>
+                {
+                    b.Navigation("Tickets");
+                });
+
+            modelBuilder.Entity("AssetFlowCore.Domain.Entities.Team", b =>
                 {
                     b.Navigation("Tickets");
                 });

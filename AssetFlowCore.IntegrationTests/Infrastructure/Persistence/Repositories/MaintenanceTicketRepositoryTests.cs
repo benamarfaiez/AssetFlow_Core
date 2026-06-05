@@ -1,10 +1,8 @@
-﻿using Xunit;
-using FluentAssertions;
-using AssetFlowCore.Infrastructure.Persistence.Repositories;
-using AssetFlowCore.Domain.Entities;
+﻿using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
-using System;
-using System.Threading.Tasks;
+using AssetFlowCore.Infrastructure.Persistence.Repositories;
+using FluentAssertions;
+using Xunit;
 
 namespace AssetFlowCore.IntegrationTests.Infrastructure.Persistence.Repositories;
 
@@ -18,11 +16,12 @@ public class MaintenanceTicketRepositoryTests : IntegrationTestBase
 
         using (var writeContext = CreateInMemoryDbContext(dbName))
         {
-            var t1 = new MaintenanceTicket(Guid.NewGuid(), assetId, "Ticket 1", "Desc", TicketCriticality.Low, "Team");
-            var t2 = new MaintenanceTicket(Guid.NewGuid(), assetId, "Ticket 2", "Desc", TicketCriticality.Low, "Team");
+            var teamId = Guid.NewGuid();
+            var t1 = new MaintenanceTicket(Guid.NewGuid(), assetId, "Ticket 1", "Desc", TicketCriticality.Low, teamId);
+            var t2 = new MaintenanceTicket(Guid.NewGuid(), assetId, "Ticket 2", "Desc", TicketCriticality.Low, teamId);
             t2.AssignToTechnician();
 
-            var t3 = new MaintenanceTicket(Guid.NewGuid(), assetId, "Ticket 3", "Desc", TicketCriticality.Low, "Team");
+            var t3 = new MaintenanceTicket(Guid.NewGuid(), assetId, "Ticket 3", "Desc", TicketCriticality.Low, teamId);
             t3.AssignToTechnician();
             t3.Close("Resolved");
 
@@ -30,12 +29,10 @@ public class MaintenanceTicketRepositoryTests : IntegrationTestBase
             await writeContext.SaveChangesAsync();
         }
 
-        using (var readContext = CreateInMemoryDbContext(dbName))
-        {
-            var repository = new MaintenanceTicketRepository(readContext);
-            var activeCount = await repository.CountActiveTicketsByAssetIdAsync(assetId);
+        using var readContext = CreateInMemoryDbContext(dbName);
+        var repository = new MaintenanceTicketRepository(readContext);
+        var activeCount = await repository.CountActiveTicketsByAssetIdAsync(assetId);
 
-            activeCount.Should().Be(2);
-        }
+        activeCount.Should().Be(2);
     }
 }

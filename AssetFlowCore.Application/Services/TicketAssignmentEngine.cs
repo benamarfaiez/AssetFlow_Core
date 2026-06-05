@@ -5,9 +5,11 @@ namespace AssetFlowCore.Application.Services;
 
 public class TicketAssignmentEngine(IEnumerable<IAssignmentStrategy> strategies) : ITicketAssignmentEngine
 {
-    public string ResolveTeam(AssetType assetType, TicketCriticality criticality)
+    public async Task<string> ResolveTeamIdAsync(AssetType assetType, TicketCriticality criticality)
     {
-        var strategy = strategies.FirstOrDefault(s => s.IsMatch(assetType, criticality));
-        return strategy?.GetTeam() ?? "Support-Général";
+        var strategy = strategies.FirstOrDefault(s => s.IsMatch(assetType, criticality))
+            ?? strategies.First(s => s is LaptopStandardStrategy); // fallback explicite
+
+        return await strategy.GetTeamNameAsync(assetType.ToString(), criticality.ToString());
     }
 }

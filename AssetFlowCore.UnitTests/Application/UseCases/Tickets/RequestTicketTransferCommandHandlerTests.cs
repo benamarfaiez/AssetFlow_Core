@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
+using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
@@ -6,22 +6,26 @@ using AssetFlowCore.Domain.Repositories;
 using AssetFlowCore.Domain.ValueObjects;
 using FluentAssertions;
 using Moq;
+using DomainTeam = AssetFlowCore.Domain.Entities.Team;
 
 namespace AssetFlowCore.UnitTests.Application.UseCases.Tickets;
 
 public class RequestTicketTransferCommandHandlerTests
 {
     private readonly Mock<IMaintenanceTicketRepository> _ticketRepositoryMock;
+    private readonly Mock<ITeamRepository> _teamRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly RequestTicketTransferCommandHandler _handler;
 
     public RequestTicketTransferCommandHandlerTests()
     {
         _ticketRepositoryMock = new Mock<IMaintenanceTicketRepository>();
+        _teamRepositoryMock = new Mock<ITeamRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
 
         _handler = new RequestTicketTransferCommandHandler(
             _ticketRepositoryMock.Object,
+            _teamRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
 
@@ -29,13 +33,19 @@ public class RequestTicketTransferCommandHandlerTests
     public async Task ExecuteAsync_Should_PersistChanges_When_TicketExistsAndValid()
     {
         // Arrange
-        var command = new RequestTicketTransferCommand(Guid.NewGuid(), "Nouvelle-Equipe", "Motif valide");
+        var team = new DomainTeam("Nouvelle-Equipe", "Server", TicketCriticality.Low.ToString(), "Description");
+
+        _teamRepositoryMock
+            .Setup(r => r.GetByNameAsync(team.Name))
+            .ReturnsAsync(team);
+
+        var command = new RequestTicketTransferCommand(Guid.NewGuid(), team.Name, "Motif valide");
 
         var asset = new Asset(Guid.NewGuid(), "PC", SerialNumber.Create("SRV999"), AssetType.Laptop);
         asset.MarkAsDown();
         asset.MarkInMaintenance();
 
-        var existingTicket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Title", "Desc", TicketCriticality.Low, "Team");
+        var existingTicket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Title", "Desc", TicketCriticality.Low, Guid.NewGuid());
 
         _ticketRepositoryMock
             .Setup(repo => repo.GetByIdWithTrackingAsync(command.TicketId))
@@ -47,7 +57,7 @@ public class RequestTicketTransferCommandHandlerTests
         // Assert
         // On vérifie que la sauvegarde a bien été appelée exactement 1 fois
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(), Times.Once);
-        existingTicket.AssignedTeam.Should().Be("Nouvelle-Equipe");
+        existingTicket.AssignedTeam.Name.Should().Be(team.Name);
     }
 
     [Fact]

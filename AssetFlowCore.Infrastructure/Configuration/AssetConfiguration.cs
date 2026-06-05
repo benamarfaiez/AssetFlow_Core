@@ -1,7 +1,6 @@
 ﻿using AssetFlowCore.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using System.Reflection.Emit;
 
 namespace AssetFlowCore.Infrastructure.Configuration;
 
@@ -24,6 +23,5 @@ public class AssetConfiguration : IEntityTypeConfiguration<Asset>
         builder.Property(a => a.Status).HasColumnName("status").HasMaxLength(30).HasConversion<string>();
         builder.Property(a => a.CreatedAt).HasColumnName("created_at").HasColumnType("datetime2");
 
-        builder.HasMany(a => a.Tickets).WithOne().HasForeignKey(t => t.AssetId).OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -24,7 +24,7 @@ public class CloseTicketHandlerTests
         asset.MarkAsDown();
         asset.MarkInMaintenance();
 
-        var ticket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Title", "Desc", TicketCriticality.Low, "Team");
+        var ticket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Title", "Desc", TicketCriticality.Low, Guid.NewGuid());
         ticket.AssignToTechnician();
 
         _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id)).ReturnsAsync(ticket);

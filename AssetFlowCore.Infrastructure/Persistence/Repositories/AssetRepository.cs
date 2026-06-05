@@ -8,7 +8,6 @@ public class AssetRepository(AssetFlowDbContext context) : IAssetRepository
 {
     public async Task<Asset?> GetByIdAsync(Guid id)
         => await context.Assets
-        .AsNoTracking()
         .Include(a => a.Tickets)
         .FirstOrDefaultAsync(a => a.Id == id);
 

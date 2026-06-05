@@ -15,7 +15,15 @@ public class MaintenanceTicketConfiguration : IEntityTypeConfiguration<Maintenan
         builder.Property(t => t.Description).HasColumnName("description").HasColumnType("nvarchar(max)").IsRequired();
         builder.Property(t => t.Criticality).HasColumnName("criticality").HasMaxLength(20).HasConversion<string>();
         builder.Property(t => t.Status).HasColumnName("status").HasMaxLength(30).HasConversion<string>();
-        builder.Property(t => t.AssignedTeam).HasColumnName("assigned_team").HasMaxLength(50).IsRequired();
+
+        builder.Property(t => t.AssignedTeamId)
+            .HasColumnName("assigned_team_id")
+            .IsRequired();
+
+        builder.Property(t => t.AssetId)
+            .HasColumnName("asset_id")
+            .IsRequired();
+
         builder.Property(t => t.ResolutionComment).HasColumnName("resolution_comment").HasColumnType("nvarchar(max)");
         builder.Property(t => t.CreatedAt).HasColumnName("created_at").HasColumnType("datetime2");
 
@@ -24,5 +32,20 @@ public class MaintenanceTicketConfiguration : IEntityTypeConfiguration<Maintenan
 
         builder.HasIndex(t => new { t.AssetId, t.Status })
             .HasDatabaseName("IX_t_maintenance_tickets_asset_id_status");
+
+        builder.HasIndex(t => t.AssignedTeamId)
+            .HasDatabaseName("IX_t_tickets_assigned_team_id");
+
+        // 1. MaintenanceTicket -> Team
+        builder.HasOne(t => t.AssignedTeam)
+           .WithMany(team => team.Tickets)
+           .HasForeignKey(t => t.AssignedTeamId)
+           .OnDelete(DeleteBehavior.Restrict);
+
+        // 2. MaintenanceTicket -> Asset
+        builder.HasOne(t => t.Asset)
+           .WithMany(asset => asset.Tickets)
+           .HasForeignKey(t => t.AssetId)
+           .OnDelete(DeleteBehavior.Restrict); // Using Restrict to preserve ticket history if an Asset is targeted for deletion
     }
 }

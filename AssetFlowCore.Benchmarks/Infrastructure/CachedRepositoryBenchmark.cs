@@ -58,19 +58,19 @@ public class CachedRepositoryBenchmark
 
     [Benchmark(Baseline = true, Description = "Sans cache — lecture EF directe")]
     public async Task<List<Asset>> GetAll_NoCache()
-        => (await _rawRepository.GetAllReadOnlyAsync()).ToList();
+        => [.. (await _rawRepository.GetAllReadOnlyAsync())];
 
     [Benchmark(Description = "Cache miss — premier appel (populate)")]
     public async Task<List<Asset>> GetAll_CacheMiss()
     {
         _cache.Remove("Assets_List_ReadOnly"); // Vide le cache pour forcer un miss
-        return (await _cachedRepository.GetAllReadOnlyAsync()).ToList();
+        return [.. (await _cachedRepository.GetAllReadOnlyAsync())];
     }
 
     [Benchmark(Description = "Cache hit — appels suivants")]
     public async Task<List<Asset>> GetAll_CacheHit()
     {
         await _cachedRepository.GetAllReadOnlyAsync(); // Chauffe le cache
-        return (await _cachedRepository.GetAllReadOnlyAsync()).ToList();
+        return [.. (await _cachedRepository.GetAllReadOnlyAsync())];
     }
 }
