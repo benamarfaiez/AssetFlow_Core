@@ -83,9 +83,10 @@ Sans ces équipes, l'assignation automatique lèvera une `DomainException` et l'
 ## Diagramme (flux)
 ```mermaid
 flowchart LR
-"CreateTicket" --> "Engine (TicketAssignmentEngine)"
-"Engine (TicketAssignmentEngine)" --> "Strategy (LaptopHighCriticality, LaptopStandard, NetworkAssignment, ServerAssignment)"
-"Strategy (LaptopHighCriticality, LaptopStandard, NetworkAssignment, ServerAssignment)" --> "Team"
+    A["CreateTicket (Request)"] --> B["Engine (TicketAssignmentEngine)"]
+    B --> C{"Strategy Selection"}
+    C -->|Match| D["LaptopHighCriticality\nLaptopStandard\nNetworkAssignment\nServerAssignment"]
+    D --> E[("Team")]
 ```
 
 ## Tests
