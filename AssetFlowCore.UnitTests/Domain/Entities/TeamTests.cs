@@ -62,7 +62,7 @@ public class TeamTests
     [InlineData(null)]
     public void Constructor_WithInvalidName_ShouldThrowArgumentException(string? invalidName)
     {
-        Action act = () => new Team(invalidName!, "Server", "High");
+        Action act = () => _ = new Team(invalidName!, "Server", "High");
 
         act.Should().Throw<ArgumentException>()
            .WithParameterName("name")
@@ -79,7 +79,8 @@ public class TeamTests
     [InlineData(null)]
     public void Constructor_WithInvalidAssetType_ShouldThrowArgumentException(string? invalidAssetType)
     {
-        Action act = () => new Team("Équipe-X", invalidAssetType!, "High");
+        // AssetType validation
+        Action act = () => _ = new Team("Équipe-X", invalidAssetType!, "High");
 
         act.Should().Throw<ArgumentException>()
            .WithParameterName("assetType")
@@ -96,7 +97,8 @@ public class TeamTests
     [InlineData(null)]
     public void Constructor_WithInvalidTicketCriticality_ShouldThrowArgumentException(string? invalidCriticality)
     {
-        Action act = () => new Team("Équipe-X", "Server", invalidCriticality!);
+        // TicketCriticality validation
+        Action act = () => _ = new Team("Équipe-X", "Server", invalidCriticality!);
 
         act.Should().Throw<ArgumentException>()
            .WithParameterName("ticketCriticality")
@@ -181,5 +183,18 @@ public class TeamTests
         team.UpdateDescription(null!);
 
         team.Description.Should().BeNull();
+    }
+
+    [Fact]
+    public void Update_WithPartialValues_ShouldOnlyChangeProvidedFields()
+    {
+        var team = new Team("Initial", "Server", "High", "Desc");
+
+        team.Update(name: null, description: "NewDesc", assetType: null, ticketCriticality: "Low");
+
+        team.Name.Should().Be("Initial");
+        team.Description.Should().Be("NewDesc");
+        team.AssetType.Should().Be("Server");
+        team.TicketCriticality.Should().Be("Low");
     }
 }
