@@ -36,5 +36,28 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
             got.Should().NotBeNull();
             got!.Id.Should().Be(created.Id);
         }
+
+        [Fact]
+        public async Task UpdateTeam_ShouldReturnUpdated()
+        {
+            // Arrange: create first
+            var payload = new CreateTeamRequest("ToUpdate", "Server", "High", "Desc");
+            var createResponse = await _client.PostAsJsonAsync("/api/teams", payload);
+            createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+            var created = await createResponse.Content.ReadFromJsonAsync<TeamResponseDto>();
+
+            // Act: update
+            var update = new UpdateTeamRequest("UpdatedName", "Laptop", "Low", "NewDesc");
+            var updateResponse = await _client.PutAsJsonAsync($"/api/teams/{created!.Id}", update);
+
+            // Assert
+            updateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+            var updated = await updateResponse.Content.ReadFromJsonAsync<TeamResponseDto>();
+            updated.Should().NotBeNull();
+            updated!.Name.Should().Be("UpdatedName");
+            // AssetType and TicketCriticality are not exposed in the response DTO; verify Description and Name instead
+            updated.Description.Should().Be("NewDesc");
+            updated.Name.Should().Be("UpdatedName");
+        }
     }
 }

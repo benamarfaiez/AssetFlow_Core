@@ -1,3 +1,5 @@
-﻿namespace AssetFlowCore.WebApi.Requests;
+﻿using System.Text.Json.Serialization;
 
-public record CreateTicketRequest(Guid AssetId, string Title, string Description, string Criticality);
+namespace AssetFlowCore.WebApi.Requests;
+
+public record CreateTicketRequest([property: JsonRequired] Guid AssetId, string Title, string Description, string Criticality);

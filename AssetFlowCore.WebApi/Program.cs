@@ -93,6 +93,7 @@ builder.Services.AddScoped<RequestTicketTransferCommandHandler>();
 builder.Services.AddScoped<GetTicketHandler>();
 builder.Services.AddScoped<CreateTeamCommandHandler>();
 builder.Services.AddScoped<GetTeamHandler>();
+builder.Services.AddScoped<AssetFlowCore.Application.UseCases.Team.UpdateTeam.UpdateTeamCommandHandler>();
 
 var app = builder.Build();
 

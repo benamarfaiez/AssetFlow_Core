@@ -1,5 +1,4 @@
-﻿using AssetFlowCore.Domain.Entities;
-using AssetFlowCore.Domain.Exceptions;
+﻿using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
 
 namespace AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
