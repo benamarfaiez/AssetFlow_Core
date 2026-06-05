@@ -96,3 +96,106 @@ flowchart LR
 - .NET 8 requis
 - Lancer les tests via Visual Studio Test Explorer ou `dotnet test`.
 
+## Diagrammes d'activité (mermaid)
+Les diagrammes suivants représentent les principaux scénarios applicatifs et flux utilisateur/système. Ils couvrent la création d'équipes, la gestion des assets, la création/assignation/clôture de tickets, le moteur d'assignation (Strategy) et la gestion des erreurs/notifications.
+
+### 1) Lifecycle d'un Asset
+```mermaid
+flowchart TD
+  A[Client/API] -->|POST /api/assets| B[AssetsController.Register]
+  B --> C[RegisterAssetCommandHandler]
+  C --> D[Validate + ExistsWithSerialNumberAsync]
+  D -->|ok| E[TeamRepository.AddAsync / AssetRepository.AddAsync]
+  E --> F[UnitOfWork.SaveChangesAsync]
+  F --> G[Return AssetResponseDto]
+
+  %% Decommission path
+  H[Client/API] -->|POST /api/assets/{id}/decommission| I[DecommissionAssetHandler]
+  I --> J[MaintenanceTicketRepository.CountActiveTicketsByAssetIdAsync]
+  J -->|>0| K[Throw DomainException]
+  J -->|==0| L[Asset.Decommission()]
+  L --> F
+```
+
+### 2) Cycle de vie d'un Ticket (Create → Assign → Close)
+```mermaid
+flowchart TD
+  A[Client/API] -->|POST /api/tickets| B[CreateMaintenanceTicketHandler]
+  B --> C[AssetRepository.GetByIdAsync]
+  C --> D[Validate asset state]
+  D --> E[TicketAssignmentEngine.ResolveTeamIdAsync]
+  E --> F[Choose Strategy (IsMatch)]
+  F --> G[AssignmentStrategy.GetTeamNameAsync]
+  G --> H[TeamRepository.GetByAssetTypeAndCriticalityAsync]
+  H --> I[Create MaintenanceTicket entity]
+  I --> J[Asset.MarkAsDown()]
+  J --> K[MaintenanceTicketRepository.AddAsync]
+  K --> L[UnitOfWork.SaveChangesAsync]
+  L --> M[NotificationService.NotifyTeamNewTicketAsync]
+  M --> N[Return TicketResponseDto]
+
+  %% Assign
+  O[Client/API] -->|POST /api/tickets/{id}/assign| P[AssignTicketToTechnicianHandler]
+  P --> Q[MaintenanceTicketRepository.GetByIdAsync]
+  Q --> R[AssetRepository.GetByIdAsync]
+  R --> S[Ticket.AssignToTechnician()]
+  S --> T[Asset.MarkInMaintenance()]
+  T --> L
+
+  %% Close
+  U[Client/API] -->|POST /api/tickets/{id}/close| V[CloseTicketHandler]
+  V --> Q
+  Q --> R
+  V --> W[Ticket.Close()]
+  W --> X[MaintenanceTicketRepository.CountActiveTicketsByAssetIdAsync]
+  X -->|<=1| Y[Asset.RestoreToService()]
+  X -->|>1| Z[No restore]
+  Y --> L
+  Z --> L
+```
+
+### 3) Moteur d'assignation (Strategy pattern)
+```mermaid
+flowchart LR
+  CreateTicket --> Engine[TicketAssignmentEngine]
+  Engine -->|IEnumerable<IAssignmentStrategy>| Strategies[(Server, Network, LaptopHigh, LaptopStandard)]
+  Strategies -->|First IsMatch(assetType, criticality)| SelectedStrategy
+  SelectedStrategy -->|GetTeamNameAsync| TeamRepo[TeamRepository.GetByAssetTypeAndCriticalityAsync]
+  TeamRepo --> Team[Team Entity]
+  Team -->|Name| CreateTicket
+```
+
+### 4) Gestion des équipes (Team CRUD)
+```mermaid
+flowchart TD
+  A[Client/API] -->|POST /api/teams| B[CreateTeamCommandHandler]
+  B --> C[TeamRepository.AddAsync]
+  C --> D[UnitOfWork.SaveChangesAsync]
+  D --> E[Return TeamResponseDto]
+
+  F[Client/API] -->|GET /api/teams/{id}| G[GetTeamHandler]
+  G --> H[TeamRepository.GetByIdAsync]
+  H --> I[Return TeamResponseDto]
+
+  J[Client/API] -->|PUT /api/teams/{id}| K[UpdateTeamCommandHandler]
+  K --> L[TeamRepository.GetByIdAsync]
+  L --> M[Team.Update(...)]
+  M --> D
+```
+
+### 5) Gestion des erreurs & notifications
+```mermaid
+flowchart LR
+  AnyController --> Middleware[ExceptionHandlingMiddleware]
+  Middleware -->|DomainException| Problem400[ProblemDetails 400]
+  Middleware -->|DbUpdateConcurrencyException| Problem409[ProblemDetails 409]
+  Middleware -->|Other Exception| Problem500[ProblemDetails 500]
+
+  NotificationService[NotificationService]
+  NotificationService -->|Benchmarks| NoOpNotificationService
+  NotificationService -->|Production| SignalRNotificationService
+```
+
+---
+Ces diagrammes représentent les principaux chemins d'interaction utilisateur et les flux internes du système. Si vous souhaitez un diagramme séquentiel (sequenceDiagram) pour un cas précis avec les noms d'acteurs/paramètres exacts, dites‑moi lequel et je l'ajouterai.
+
