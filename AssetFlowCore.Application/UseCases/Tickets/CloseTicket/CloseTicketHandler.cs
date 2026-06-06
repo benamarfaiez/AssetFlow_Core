@@ -15,8 +15,9 @@ public class CloseTicketHandler(IMaintenanceTicketRepository ticketRepository, I
         ticket.Close(command.ResolutionComment);
 
         // Automate d'état en cascade : On libère l'appareil si et seulement s'il n'y a plus de pannes en cours
-        int remainingActiveTickets = await ticketRepository.CountActiveTicketsByAssetIdAsync(asset.Id);
-        if (remainingActiveTickets <= 1) // 1 correspond au ticket en cours de clôture
+        // Vérifie s'il existe d'autres tickets actifs pour cet actif
+        bool hasOtherActive = await ticketRepository.HasOtherActiveTicketsAsync(asset.Id, ticket.Id);
+        if (!hasOtherActive)
         {
             asset.RestoreToService();
         }

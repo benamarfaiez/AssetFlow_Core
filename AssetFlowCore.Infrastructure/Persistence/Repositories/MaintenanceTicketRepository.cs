@@ -21,4 +21,10 @@ public class MaintenanceTicketRepository(AssetFlowDbContext context) : IMaintena
     public async Task<int> CountActiveTicketsByAssetIdAsync(Guid assetId)
         => await context.Tickets
         .CountAsync(t => t.AssetId == assetId && (t.Status == Domain.Enums.TicketStatus.Opened || t.Status == Domain.Enums.TicketStatus.InProgress));
+
+    public async Task<bool> HasOtherActiveTicketsAsync(Guid assetId, Guid excludingTicketId)
+        => await context.Tickets
+            .AsNoTracking()
+            .Where(t => t.AssetId == assetId && t.Id != excludingTicketId)
+            .AnyAsync(t => t.Status == Domain.Enums.TicketStatus.Opened || t.Status == Domain.Enums.TicketStatus.InProgress);
 }
