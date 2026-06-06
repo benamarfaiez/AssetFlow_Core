@@ -83,13 +83,18 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(10));
 
             // Act - initial load
-            var firstList = (await cache.GetAllActiveAsync()).ToList();
+            var allActiveFirstList = await cache.GetAllActiveAsync();
+            var firstList = allActiveFirstList?.ToList();
+
             // Act - should be served from cache (no additional inner call)
-            var secondList = (await cache.GetAllActiveAsync()).ToList();
+            var allActiveSecondList = await cache.GetAllActiveAsync();
+            var secondList = allActiveSecondList?.ToList();
+
 
             // Now add and expect cache invalidation
             await cache.AddAsync(team2);
-            var afterAdd = (await cache.GetAllActiveAsync()).ToList();
+            var allActiveAfterAdd = await cache.GetAllActiveAsync();
+            var afterAdd = allActiveAfterAdd?.ToList();
 
             // Assert
             firstList.Should().ContainSingle().Which.Should().Be(team1);
@@ -117,10 +122,12 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(10));
 
             // Act - initial load
-            var initial = (await cache.GetAllActiveAsync()).ToList();
+            var initialAllActive = await cache.GetAllActiveAsync();
+            var initial = initialAllActive?.ToList();
             // Remove and expect invalidation
             await cache.RemoveAsync(team1);
-            var afterRemove = (await cache.GetAllActiveAsync()).ToList();
+            var afterRemoveAllActive = await cache.GetAllActiveAsync();
+            var afterRemove = afterRemoveAllActive?.ToList();
 
             // Assert
             initial.Should().HaveCount(2);
