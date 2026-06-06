@@ -52,4 +52,27 @@ public class SerialNumberTests
         serialA.Should().NotBe(serialB);
         (serialA != serialB).Should().BeTrue();
     }
+
+    [Fact]
+    public void GetHashCode_ShouldBeStable_AndEqualForEqualSerialNumbers()
+    {
+        var a = SerialNumber.Create(" abc-123 ");
+        var b = SerialNumber.Create("ABC-123");
+
+        var h1 = a.GetHashCode();
+        var h2 = a.GetHashCode();
+        var hb = b.GetHashCode();
+
+        h1.Should().Be(h2);
+        h1.Should().Be(hb);
+    }
+
+    [Fact]
+    public void GetHashCode_ShouldDiffer_ForDifferentSerialNumbers()
+    {
+        var a = SerialNumber.Create("SN-001");
+        var b = SerialNumber.Create("SN-002");
+
+        a.GetHashCode().Should().NotBe(b.GetHashCode());
+    }
 }
