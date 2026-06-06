@@ -2,6 +2,7 @@
 using AssetFlowCore.Application.UseCases.Team.CreateTeam;
 using AssetFlowCore.Application.UseCases.Team.GetTeam;
 using AssetFlowCore.Application.UseCases.Team.UpdateTeam;
+using AssetFlowCore.Application.UseCases.Team.DeleteTeam;
 using AssetFlowCore.WebApi.Requests;
 using Microsoft.AspNetCore.Mvc;
 
@@ -46,5 +47,16 @@ public class TeamsController : ControllerBase
         var command = new UpdateTeamCommand(id, request.Name, request.AssetType, request.TicketCriticality, request.Description);
         var result = await handler.HandleAsync(command);
         return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id, [FromServices] DeleteTeamCommandHandler handler)
+    {
+        var command = new DeleteTeamCommand(id);
+        await handler.ExecuteAsync(command);
+        return NoContent();
     }
 }

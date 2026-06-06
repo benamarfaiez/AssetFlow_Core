@@ -15,8 +15,4 @@
     <ProjectReference Include="..\AssetFlowCore.Domain\AssetFlowCore.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="UseCases\Team\DeleteTeam\" />
-  </ItemGroup>
-
 </Project>

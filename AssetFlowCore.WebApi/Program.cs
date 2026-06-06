@@ -4,6 +4,7 @@ using AssetFlowCore.Application.UseCases.Assets.DecommissionAsset;
 using AssetFlowCore.Application.UseCases.Assets.GetAllAssets;
 using AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
 using AssetFlowCore.Application.UseCases.Team.CreateTeam;
+using AssetFlowCore.Application.UseCases.Team.DeleteTeam;
 using AssetFlowCore.Application.UseCases.Team.GetTeam;
 using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
@@ -62,19 +63,29 @@ builder.Services.AddScoped<IDbContextFactory, SqlServerDbContextFactory>();
 builder.Services.AddMemoryCache();
 builder.Services.AddSignalR();
 
+// Bind cache options from configuration
+builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.SectionName));
+var cacheOptions = builder.Configuration.GetSection(CacheOptions.SectionName).Get<CacheOptions>() ?? new CacheOptions();
+// TeamRepository (Avec gestion de cache via pattern Décorateur)
+builder.Services.AddScoped<TeamRepository>(provider => new TeamRepository(provider.GetRequiredService<AssetFlowDbContext>()));
+builder.Services.AddScoped<ITeamRepository>(provider =>
+{
+    var raw = provider.GetRequiredService<TeamRepository>();
+    var memory = provider.GetRequiredService<IMemoryCache>();
+    return new CachedTeamRepository(raw, memory, TimeSpan.FromMinutes(cacheOptions.TeamsExpirationMinutes));
+});
+
 builder.Services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<AssetFlowDbContext>());
 
-// Repositories (Avec gestion de cache via pattern Décorateur)
+// AssetRepository (Avec gestion de cache via pattern Décorateur)
 builder.Services.AddScoped<IAssetRepository>(provider =>
 {
     var rawRepo = new AssetRepository(provider.GetRequiredService<AssetFlowDbContext>());
     return new CachedAssetRepository(rawRepo, provider.GetRequiredService<IMemoryCache>());
 });
 builder.Services.AddScoped<IMaintenanceTicketRepository, MaintenanceTicketRepository>();
-builder.Services.AddScoped<ITeamRepository, TeamRepository>();
 
 // Moteur d'aiguillage automatique (Stratégies isolées - OCP)
-// ⚠️ Scoped et non plus Singleton — ITeamRepository est Scoped
 builder.Services.AddScoped<IAssignmentStrategy, ServerAssignmentStrategy>();
 builder.Services.AddScoped<IAssignmentStrategy, NetworkAssignmentStrategy>();
 builder.Services.AddScoped<IAssignmentStrategy, LaptopHighCriticalityStrategy>();
@@ -93,6 +104,7 @@ builder.Services.AddScoped<RequestTicketTransferCommandHandler>();
 builder.Services.AddScoped<GetTicketHandler>();
 builder.Services.AddScoped<CreateTeamCommandHandler>();
 builder.Services.AddScoped<GetTeamHandler>();
+builder.Services.AddScoped<DeleteTeamCommandHandler>();
 builder.Services.AddScoped<AssetFlowCore.Application.UseCases.Team.UpdateTeam.UpdateTeamCommandHandler>();
 
 var app = builder.Build();
