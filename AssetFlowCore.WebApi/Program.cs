@@ -4,6 +4,7 @@ using AssetFlowCore.Application.UseCases.Assets.DecommissionAsset;
 using AssetFlowCore.Application.UseCases.Assets.GetAllAssets;
 using AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
 using AssetFlowCore.Application.UseCases.Team.CreateTeam;
+using AssetFlowCore.Application.UseCases.Team.DeleteTeam;
 using AssetFlowCore.Application.UseCases.Team.GetTeam;
 using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
@@ -74,7 +75,6 @@ builder.Services.AddScoped<IMaintenanceTicketRepository, MaintenanceTicketReposi
 builder.Services.AddScoped<ITeamRepository, TeamRepository>();
 
 // Moteur d'aiguillage automatique (Stratégies isolées - OCP)
-// ⚠️ Scoped et non plus Singleton — ITeamRepository est Scoped
 builder.Services.AddScoped<IAssignmentStrategy, ServerAssignmentStrategy>();
 builder.Services.AddScoped<IAssignmentStrategy, NetworkAssignmentStrategy>();
 builder.Services.AddScoped<IAssignmentStrategy, LaptopHighCriticalityStrategy>();
@@ -93,6 +93,7 @@ builder.Services.AddScoped<RequestTicketTransferCommandHandler>();
 builder.Services.AddScoped<GetTicketHandler>();
 builder.Services.AddScoped<CreateTeamCommandHandler>();
 builder.Services.AddScoped<GetTeamHandler>();
+builder.Services.AddScoped<DeleteTeamCommandHandler>();
 builder.Services.AddScoped<AssetFlowCore.Application.UseCases.Team.UpdateTeam.UpdateTeamCommandHandler>();
 
 var app = builder.Build();

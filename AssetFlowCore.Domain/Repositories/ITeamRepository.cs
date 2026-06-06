@@ -10,4 +10,5 @@ public interface ITeamRepository
     Task<IEnumerable<Team>> GetAllActiveAsync();
     Task AddAsync(Team team);
     Task<bool> ExistsWithNameAsync(string name);
+    Task RemoveAsync(Team team);
 }

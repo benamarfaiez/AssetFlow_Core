@@ -26,6 +26,9 @@ public class TeamRepository(AssetFlowDbContext context) : ITeamRepository
     public async Task AddAsync(Team team)
         => await context.Teams.AddAsync(team);
 
+    public async Task RemoveAsync(Team team)
+        => await Task.Run(() => context.Teams.Remove(team));
+
     public async Task<bool> ExistsWithNameAsync(string name)
         => await context.Teams
             .AnyAsync(t => t.Name == name.Trim());
