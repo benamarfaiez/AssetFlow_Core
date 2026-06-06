@@ -26,8 +26,58 @@ public class TeamRepository(AssetFlowDbContext context) : ITeamRepository
     public async Task AddAsync(Team team)
         => await context.Teams.AddAsync(team);
 
+    public async Task UpdateAsync(Team team)
+    {
+        if (team != null)
+        {
+            // If provider supports ExecuteUpdate, prefer set-based update to avoid tracking and materialization overhead.
+            var provider = context.Database.ProviderName ?? string.Empty;
+            if (!provider.Contains("InMemory", StringComparison.OrdinalIgnoreCase))
+            {
+                await context.Teams
+                    .Where(t => t.Id == team.Id)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(t => t.Name, _ => team.Name)
+                        .SetProperty(t => t.Description, _ => team.Description)
+                        .SetProperty(t => t.AssetType, _ => team.AssetType)
+                        .SetProperty(t => t.TicketCriticality, _ => team.TicketCriticality)
+                        .SetProperty(t => t.IsActive, _ => team.IsActive)
+                    );
+                return;
+            }
+
+            // Fallback for providers without ExecuteUpdate (InMemory used in tests): attach + mark modified
+            var entry = context.Entry(team);
+            if (entry.State == EntityState.Detached)
+            {
+                context.Teams.Attach(team);
+            }
+            entry.State = EntityState.Modified;
+        }
+        else
+            throw new ArgumentNullException(nameof(team));
+    }
+
     public async Task RemoveAsync(Team team)
-        => await Task.Run(() => context.Teams.Remove(team));
+    {
+        if (team != null)
+        {
+            var provider = context.Database.ProviderName ?? string.Empty;
+            if (!provider.Contains("InMemory", StringComparison.OrdinalIgnoreCase))
+            {
+                await context.Teams.Where(t => t.Id == team.Id).ExecuteDeleteAsync();
+                return;
+            }
+
+            // Fallback for providers without ExecuteDelete (InMemory): attach then remove
+            var entry = context.Entry(team);
+            if (entry.State == EntityState.Detached)
+                context.Teams.Attach(team);
+            context.Teams.Remove(team);
+        }
+        else
+            throw new ArgumentNullException(nameof(team));
+    }
 
     public async Task<bool> ExistsWithNameAsync(string name)
         => await context.Teams
