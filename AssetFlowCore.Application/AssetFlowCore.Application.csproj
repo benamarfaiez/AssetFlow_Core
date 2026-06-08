@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Fluxera.Extensions.Validation.FluentValidation" Version="8.1.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.6.0" />
   </ItemGroup>
 
   <ItemGroup>

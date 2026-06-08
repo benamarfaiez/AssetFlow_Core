@@ -1,4 +1,5 @@
 using AssetFlowCore.Application.Interfaces;
+using AssetFlowCore.Application.Interfaces.RAG;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
@@ -21,12 +22,13 @@ public class CreateMaintenanceTicketHandlerTests
     private readonly Mock<ITicketAssignmentEngine> _engineMock = new();
     private readonly Mock<INotificationService> _notifierMock = new();
     private readonly Mock<ITeamRepository> _teamMock = new();
+    private readonly Mock<IAIAssistanceQueue> _aiQueue = new();
     private readonly CreateMaintenanceTicketHandler _handler;
-
+     
     private readonly ValidationResult validationResult = new();
     private readonly Mock<IValidator<CreateMaintenanceTicketCommand>> _validator = new();
 
-    public CreateMaintenanceTicketHandlerTests() => _handler = new CreateMaintenanceTicketHandler(_assetRepoMock.Object, _ticketRepoMock.Object, _uowMock.Object, _engineMock.Object, _notifierMock.Object, _teamMock.Object);
+    public CreateMaintenanceTicketHandlerTests() => _handler = new CreateMaintenanceTicketHandler(_assetRepoMock.Object, _ticketRepoMock.Object, _uowMock.Object, _engineMock.Object, _notifierMock.Object, _teamMock.Object, _aiQueue.Object);
 
     [Fact]
     public async Task HandleAsync_WithValidAsset_ShouldCreateTicketAndNotify()

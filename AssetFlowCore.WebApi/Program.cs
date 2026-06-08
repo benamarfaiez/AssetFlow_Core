@@ -1,4 +1,5 @@
 using AssetFlowCore.Application.Interfaces;
+using AssetFlowCore.Application.Interfaces.RAG;
 using AssetFlowCore.Application.Services;
 using AssetFlowCore.Application.UseCases.Assets.DecommissionAsset;
 using AssetFlowCore.Application.UseCases.Assets.GetAllAssets;
@@ -6,6 +7,7 @@ using AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
 using AssetFlowCore.Application.UseCases.Team.CreateTeam;
 using AssetFlowCore.Application.UseCases.Team.DeleteTeam;
 using AssetFlowCore.Application.UseCases.Team.GetTeam;
+using AssetFlowCore.Application.UseCases.Team.UpdateTeam;
 using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
@@ -17,6 +19,8 @@ using AssetFlowCore.Infrastructure.Configuration;
 using AssetFlowCore.Infrastructure.Notifications;
 using AssetFlowCore.Infrastructure.Persistence;
 using AssetFlowCore.Infrastructure.Persistence.Repositories;
+using AssetFlowCore.Infrastructure.RAG;
+using AssetFlowCore.Infrastructure.RAG.BackgroundQueue;
 using AssetFlowCore.WebApi.Middlewares;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +41,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
 
+builder.Services.AddOllamaRagServices(builder.Configuration);
+
+builder.Services.Configure<DatabaseOptions>(
+    builder.Configuration.GetSection(nameof(DatabaseOptions)));
+
 var isIntegrationTesting = builder.Environment.IsEnvironment("Testing")
                            || AppDomain.CurrentDomain.GetAssemblies().Any(a => a.FullName!.Contains("Microsoft.AspNetCore.Mvc.Testing"));
 
@@ -51,12 +60,10 @@ else
 {
     builder.Services.AddDbContext<AssetFlowDbContext>(options =>
     {
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        options.UseSqlServer(connectionString, b => b.MigrationsAssembly("AssetFlowCore.Infrastructure"));
     });
 }
-
-builder.Services.Configure<DatabaseOptions>(
-    builder.Configuration.GetSection(DatabaseOptions.SectionName));
 
 builder.Services.AddScoped<IDbContextFactory, SqlServerDbContextFactory>();
 
@@ -105,7 +112,10 @@ builder.Services.AddScoped<GetTicketHandler>();
 builder.Services.AddScoped<CreateTeamCommandHandler>();
 builder.Services.AddScoped<GetTeamHandler>();
 builder.Services.AddScoped<DeleteTeamCommandHandler>();
-builder.Services.AddScoped<AssetFlowCore.Application.UseCases.Team.UpdateTeam.UpdateTeamCommandHandler>();
+builder.Services.AddScoped<UpdateTeamCommandHandler>();
+
+builder.Services.AddSingleton<IAIAssistanceQueue, AIAssistanceQueue>();
+builder.Services.AddHostedService<AIAssistanceWorker>();
 
 var app = builder.Build();
 
