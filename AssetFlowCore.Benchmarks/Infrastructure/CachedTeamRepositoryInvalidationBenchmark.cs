@@ -11,6 +11,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.VSDiagnostics;
 
 namespace AssetFlowCore.Benchmarks.Infrastructure;
+
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
 [SimpleJob(RuntimeMoniker.Net80, warmupCount: 2, iterationCount: 5)]
 [RankColumn]
