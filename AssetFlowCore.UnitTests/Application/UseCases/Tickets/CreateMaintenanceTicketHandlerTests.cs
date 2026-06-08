@@ -24,7 +24,7 @@ public class CreateMaintenanceTicketHandlerTests
     private readonly Mock<ITeamRepository> _teamMock = new();
     private readonly Mock<IAIAssistanceQueue> _aiQueue = new();
     private readonly CreateMaintenanceTicketHandler _handler;
-     
+
     private readonly ValidationResult validationResult = new();
     private readonly Mock<IValidator<CreateMaintenanceTicketCommand>> _validator = new();
 

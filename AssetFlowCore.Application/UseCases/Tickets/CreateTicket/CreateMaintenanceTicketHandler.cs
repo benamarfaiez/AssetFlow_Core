@@ -74,6 +74,7 @@ public class CreateMaintenanceTicketHandler(
         await notificationService.NotifyTeamNewTicketAsync(teamName, dto);
 
         await aiQueue.QueueTicketAsync(ticket.Id);
+
         return dto;
     }
 }
