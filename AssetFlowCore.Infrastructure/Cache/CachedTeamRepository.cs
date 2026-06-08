@@ -89,16 +89,7 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
         {
             await _inner.UpdateAsync(team);
             _memory.Set(GetIdKey(team.Id), team, CacheOptions());
-
-            // Incremental update: update team in cached list instead of full invalidation
-            if (_memory.TryGetValue(TeamsListCacheKey, out IEnumerable<Team>? list) && list is List<Team> teamList)
-            {
-                var index = teamList.FindIndex(t => t.Id == team.Id);
-                if (index >= 0)
-                {
-                    teamList[index] = team;
-                }
-            }
+            _memory.Remove(TeamsListCacheKey);
         }
         else
             throw new ArgumentNullException(nameof(team));
@@ -110,12 +101,7 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
         {
             await _inner.RemoveAsync(team);
             _memory.Remove(GetIdKey(team.Id));
-
-            // Incremental update: remove team from cached list instead of full invalidation
-            if (_memory.TryGetValue(TeamsListCacheKey, out IEnumerable<Team>? list) && list is List<Team> teamList)
-            {
-                teamList.RemoveAll(t => t.Id == team.Id);
-            }
+            _memory.Remove(TeamsListCacheKey);
         }
         else
             throw new ArgumentNullException(nameof(team));
@@ -138,16 +124,7 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
     {
         if (team == null) return;
         _memory.Set(GetIdKey(team.Id), team, CacheOptions());
-
-        // Incremental update: update team in cached list instead of full invalidation
-        if (_memory.TryGetValue(TeamsListCacheKey, out IEnumerable<Team>? list) && list is List<Team> teamList)
-        {
-            var index = teamList.FindIndex(t => t.Id == team.Id);
-            if (index >= 0)
-            {
-                teamList[index] = team;
-            }
-        }
+        _memory.Remove(TeamsListCacheKey);
     }
 
     private static string GetIdKey(Guid id) => $"team_{id:N}";
