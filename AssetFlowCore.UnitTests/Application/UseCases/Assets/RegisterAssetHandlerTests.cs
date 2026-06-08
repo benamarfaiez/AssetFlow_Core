@@ -32,7 +32,7 @@ public class RegisterAssetHandlerTests
     [Fact]
     public async Task HandleAsync_WhenSerialAlreadyExists_ShouldThrowDomainException()
     {
-        _repoMock.Setup(r => r.ExistsWithSerialNumberAsync("SERIAL123")).ReturnsAsync(true);
+        _repoMock.Setup(r => r.ExistsWithSerialNumberAsync("SERIAL123".ToUpper().Trim())).ReturnsAsync(true);
         var command = new RegisterAssetCommand("Asset-01", "SERIAL123", "Server");
 
         Func<Task> act = async () => await _handler.HandleAsync(command);

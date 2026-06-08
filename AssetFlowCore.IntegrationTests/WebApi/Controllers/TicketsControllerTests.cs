@@ -116,4 +116,137 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         assets.Should().NotBeNull();
         assets.Id.Should().Be(ticketId);
     }
+
+    [Fact]
+    public async Task AssignTicket_WithValidData_ShouldReturnNoContent_And_UpdateStatuses()
+    {
+        var ticketId = Guid.NewGuid();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            await db.Database.EnsureDeletedAsync();
+
+            var asset = new Asset(Guid.NewGuid(), "Srv Broken", SerialNumber.Create("ASSIGN-1"), AssetType.Server);
+            asset.MarkAsDown();
+            await db.Assets.AddAsync(asset);
+
+            var team = new Team("Ops", AssetType.Server.ToString(), TicketCriticality.Low.ToString(), "Ops");
+            await db.Teams.AddAsync(team);
+
+            var ticket = new MaintenanceTicket(ticketId, asset.Id, "titre", "desc", TicketCriticality.Low, team.Id);
+            await db.Tickets.AddAsync(ticket);
+            await db.SaveChangesAsync();
+        }
+
+        var resp = await _client.PutAsync($"/api/tickets/{ticketId}/assign", null);
+        resp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            var ticket = await db.Tickets.FindAsync(ticketId);
+            ticket.Should().NotBeNull();
+            ticket!.Status.Should().Be(TicketStatus.InProgress);
+
+            var asset = await db.Assets.FindAsync(ticket.AssetId);
+            asset.Should().NotBeNull();
+            asset!.Status.Should().Be(Domain.Enums.AssetStatus.InMaintenance);
+        }
+    }
+
+    [Fact]
+    public async Task AssignTicket_NotFound_ShouldReturnBadRequest()
+    {
+        var resp = await _client.PutAsync($"/api/tickets/{Guid.NewGuid()}/assign", null);
+        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CloseTicket_WithValidData_ShouldReturnNoContent_And_RestoreAssetWhenNoOtherActiveTickets()
+    {
+        var ticketId = Guid.NewGuid();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            await db.Database.EnsureDeletedAsync();
+
+            var asset = new Asset(Guid.NewGuid(), "Srv To Close", SerialNumber.Create("CLOSE-1"), AssetType.Server);
+            asset.MarkAsDown();
+            await db.Assets.AddAsync(asset);
+
+            var team = new Team("OpsClose", AssetType.Server.ToString(), TicketCriticality.Low.ToString(), "Ops");
+            await db.Teams.AddAsync(team);
+
+            var ticket = new MaintenanceTicket(ticketId, asset.Id, "titre", "desc", TicketCriticality.Low, team.Id);
+            ticket.AssignToTechnician();
+            await db.Tickets.AddAsync(ticket);
+            await db.SaveChangesAsync();
+        }
+
+        var payload = new CloseTicketRequest("Resolution ok");
+        var resp = await _client.PutAsJsonAsync($"/api/tickets/{ticketId}/close", payload);
+        resp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            var ticket = await db.Tickets.FindAsync(ticketId);
+            ticket.Should().NotBeNull();
+            ticket!.Status.Should().Be(TicketStatus.Closed);
+            ticket.ResolutionComment.Should().Be("Resolution ok");
+
+            var asset = await db.Assets.FindAsync(ticket.AssetId);
+            asset.Should().NotBeNull();
+            asset!.Status.Should().Be(Domain.Enums.AssetStatus.InService);
+        }
+    }
+
+    [Fact]
+    public async Task CloseTicket_NotFound_ShouldReturnBadRequest()
+    {
+        var payload = new CloseTicketRequest("x");
+        var resp = await _client.PutAsJsonAsync($"/api/tickets/{Guid.NewGuid()}/close", payload);
+        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task TransferTicket_TargetTeamNotFound_ShouldReturnBadRequest()
+    {
+        var ticketId = Guid.NewGuid();
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            await db.Database.EnsureDeletedAsync();
+            var team = new Team("Old", AssetType.Server.ToString(), TicketCriticality.Low.ToString(), "Old");
+            var ticket = new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "desc", TicketCriticality.Low, team.Id);
+            await db.Tickets.AddAsync(ticket);
+            await db.Teams.AddAsync(team);
+            await db.SaveChangesAsync();
+        }
+
+        var payload = new TransferTicketRequest("NonExistingTeam", "reason");
+        var resp = await _client.PostAsJsonAsync($"/api/tickets/{ticketId}/transfer", payload);
+        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateTicket_WithDecommissionedAsset_ShouldReturnBadRequest()
+    {
+        var assetId = Guid.NewGuid();
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            await db.Database.EnsureDeletedAsync();
+            var asset = new Asset(assetId, "Decom", SerialNumber.Create("DEC-1"), AssetType.Server);
+            asset.Decommission();
+            await db.Assets.AddAsync(asset);
+            await db.SaveChangesAsync();
+        }
+
+        var payload = new CreateTicketRequest(assetId, "t", "d", "Low");
+        var resp = await _client.PostAsJsonAsync("/api/tickets", payload);
+        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }
