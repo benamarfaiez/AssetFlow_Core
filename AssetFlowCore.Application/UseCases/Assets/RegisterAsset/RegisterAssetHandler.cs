@@ -11,7 +11,7 @@ public class RegisterAssetHandler(IAssetRepository assetRepository, IUnitOfWork 
 {
     public async Task<AssetResponseDto> HandleAsync(RegisterAssetCommand command)
     {
-        if (await assetRepository.ExistsWithSerialNumberAsync(command.SerialNumber))
+        if (await assetRepository.ExistsWithSerialNumberAsync(command.SerialNumber.ToUpper().Trim()))
             throw new DomainException("Ce numéro de série constructeur est déjà enregistré dans le parc.");
 
         var serial = SerialNumber.Create(command.SerialNumber);

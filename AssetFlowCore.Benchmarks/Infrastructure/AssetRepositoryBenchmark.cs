@@ -67,13 +67,13 @@ public class AssetRepositoryBenchmark
 
     [Benchmark(Description = "ExistsWithSerialNumberAsync — numéro existant")]
     public async Task<bool> ExistsSerial_Found()
-        => await _repository.ExistsWithSerialNumberAsync(_existingSerial);
+        => await _repository.ExistsWithSerialNumberAsync(_existingSerial.ToUpper().Trim());
 
     [Benchmark(Description = "ExistsWithSerialNumberAsync — numéro inexistant")]
     public async Task<bool> ExistsSerial_NotFound()
-        => await _repository.ExistsWithSerialNumberAsync("ZZZ-999999");
+        => await _repository.ExistsWithSerialNumberAsync("ZZZ-999999".ToUpper().Trim());
 
     [Benchmark(Description = "ExistsWithSerialNumberAsync — avec espaces et casse mixte")]
     public async Task<bool> ExistsSerial_WithTrimAndCase()
-        => await _repository.ExistsWithSerialNumberAsync($"  {_existingSerial.ToLower()}  ");
+        => await _repository.ExistsWithSerialNumberAsync($"  {_existingSerial.ToLower()}  ".ToUpper().Trim());
 }

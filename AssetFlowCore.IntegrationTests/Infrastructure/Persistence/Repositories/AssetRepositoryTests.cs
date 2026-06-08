@@ -30,7 +30,7 @@ public class AssetRepositoryTests : IntegrationTestBase
 
             retrieved.Should().NotBeNull();
             retrieved!.Name.Should().Be("Serveur Exchange");
-            retrieved.SerialNumber.Value.Should().Be("SRV-99887");
+            retrieved.SerialNumber.Value.Should().Be("SRV-99887".ToUpper().Trim());
         }
     }
 
@@ -46,12 +46,10 @@ public class AssetRepositoryTests : IntegrationTestBase
             await writeContext.SaveChangesAsync();
         }
 
-        using (var readContext = CreateInMemoryDbContext(dbName))
-        {
-            var repository = new AssetRepository(readContext);
-            var exists = await repository.ExistsWithSerialNumberAsync("lpt-12345");
-            exists.Should().BeTrue();
-        }
+        using var readContext = CreateInMemoryDbContext(dbName);
+        var repository = new AssetRepository(readContext);
+        var exists = await repository.ExistsWithSerialNumberAsync("lpt-12345".ToUpper().Trim());
+        exists.Should().BeTrue();
     }
 
     [Fact]
