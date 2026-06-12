@@ -26,13 +26,13 @@ public class AssignTicketToTechnicianHandlerTests
         var ticket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Title", "Desc", TicketCriticality.Low, Guid.NewGuid());
 
         _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id)).ReturnsAsync(ticket);
-        _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id)).ReturnsAsync(asset);
+        _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(asset);
 
         await _handler.ExecuteAsync(new AssignTicketToTechnicianCommand(ticket.Id));
 
         ticket.Status.Should().Be(TicketStatus.InProgress);
         asset.Status.Should().Be(AssetStatus.InMaintenance);
-        _uowMock.Verify(u => u.SaveChangesAsync(), Times.Once);
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

@@ -11,16 +11,13 @@ using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 using AssetFlowCore.Application.UseCases.Tickets.GetTicket;
 using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
-using AssetFlowCore.Domain.Repositories;
-using AssetFlowCore.Infrastructure.Cache;
+using AssetFlowCore.Infrastructure;
 using AssetFlowCore.Infrastructure.Configuration;
 using AssetFlowCore.Infrastructure.Notifications;
 using AssetFlowCore.Infrastructure.Persistence;
-using AssetFlowCore.Infrastructure.Persistence.Repositories;
 using AssetFlowCore.WebApi.Middlewares;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,32 +55,9 @@ else
 builder.Services.Configure<DatabaseOptions>(
     builder.Configuration.GetSection(DatabaseOptions.SectionName));
 
-builder.Services.AddScoped<IDbContextFactory, SqlServerDbContextFactory>();
 
-builder.Services.AddMemoryCache();
-builder.Services.AddSignalR();
 
-// Bind cache options from configuration
-builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.SectionName));
-var cacheOptions = builder.Configuration.GetSection(CacheOptions.SectionName).Get<CacheOptions>() ?? new CacheOptions();
-// TeamRepository (Avec gestion de cache via pattern Décorateur)
-builder.Services.AddScoped<TeamRepository>(provider => new TeamRepository(provider.GetRequiredService<AssetFlowDbContext>()));
-builder.Services.AddScoped<ITeamRepository>(provider =>
-{
-    var raw = provider.GetRequiredService<TeamRepository>();
-    var memory = provider.GetRequiredService<IMemoryCache>();
-    return new CachedTeamRepository(raw, memory, TimeSpan.FromMinutes(cacheOptions.TeamsExpirationMinutes));
-});
-
-builder.Services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<AssetFlowDbContext>());
-
-// AssetRepository (Avec gestion de cache via pattern Décorateur)
-builder.Services.AddScoped<IAssetRepository>(provider =>
-{
-    var rawRepo = new AssetRepository(provider.GetRequiredService<AssetFlowDbContext>());
-    return new CachedAssetRepository(rawRepo, provider.GetRequiredService<IMemoryCache>());
-});
-builder.Services.AddScoped<IMaintenanceTicketRepository, MaintenanceTicketRepository>();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 // Moteur d'aiguillage automatique (Stratégies isolées - OCP)
 builder.Services.AddScoped<IAssignmentStrategy, ServerAssignmentStrategy>();

@@ -28,13 +28,13 @@ public class CloseTicketHandlerTests
         ticket.AssignToTechnician();
 
         _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id)).ReturnsAsync(ticket);
-        _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id)).ReturnsAsync(asset);
+        _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(asset);
         _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(asset.Id)).ReturnsAsync(1); // Uniquement celui-ci
 
         await _handler.ExecuteAsync(new CloseTicketCommand(ticket.Id, "Repaired"));
 
         ticket.Status.Should().Be(TicketStatus.Closed);
         asset.Status.Should().Be(AssetStatus.InService);
-        _uowMock.Verify(u => u.SaveChangesAsync(), Times.Once);
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

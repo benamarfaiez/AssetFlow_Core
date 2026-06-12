@@ -56,7 +56,7 @@ public class RequestTicketTransferCommandHandlerTests
 
         // Assert
         // On vérifie que la sauvegarde a bien été appelée exactement 1 fois
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         existingTicket.AssignedTeam.Name.Should().Be(team.Name);
     }
 
@@ -78,6 +78,6 @@ public class RequestTicketTransferCommandHandlerTests
                     .WithMessage("Ticket introuvable.");
 
         // On s'assure que SaveChanges n'a JAMAIS été appelé
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

@@ -4,15 +4,13 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace AssetFlowCore.Infrastructure.Cache;
 
-public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache memoryCache, TimeSpan? expiration = null) : ITeamRepository
+public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache memoryCache) : ITeamRepository
 {
     private const string TeamsListCacheKey = "Teams_List_Active";
-    private readonly TimeSpan _expiration = expiration ?? TimeSpan.FromMinutes(5);
     private readonly ITeamRepository _inner = innerRepository ?? throw new ArgumentNullException(nameof(innerRepository));
     private readonly IMemoryCache _memory = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
 
-    private MemoryCacheEntryOptions CacheOptions() => new() { AbsoluteExpirationRelativeToNow = _expiration };
-
+    private static MemoryCacheEntryOptions CacheOptions() => new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) };
     public Task<Team?> GetByIdAsync(Guid id)
         => _memory.GetOrCreateAsync(GetIdKey(id), async entry =>
         {

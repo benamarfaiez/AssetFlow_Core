@@ -6,20 +6,20 @@ namespace AssetFlowCore.Infrastructure.Persistence.Repositories;
 
 public class AssetRepository(AssetFlowDbContext context) : IAssetRepository
 {
-    public async Task<Asset?> GetByIdAsync(Guid id)
+    public async Task<Asset?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => await context.Assets
-        .FirstOrDefaultAsync(a => a.Id == id);
+        .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
-    public async Task<bool> ExistsWithSerialNumberAsync(string serialNumber)
+    public async Task<bool> ExistsWithSerialNumberAsync(string serialNumber, CancellationToken cancellationToken = default)
         => await context.Assets
-        .AnyAsync(a => a.SerialNumber.Value == serialNumber);
+        .AnyAsync(a => a.SerialNumber.Value == serialNumber, cancellationToken);
 
-    public async Task AddAsync(Asset asset)
+    public async Task AddAsync(Asset asset, CancellationToken cancellationToken = default)
         => await context.Assets
-        .AddAsync(asset);
+        .AddAsync(asset, cancellationToken);
 
-    public async Task<IEnumerable<Asset>> GetAllReadOnlyAsync()
+    public async Task<IEnumerable<Asset>> GetAllReadOnlyAsync(CancellationToken cancellationToken = default)
         => await context.Assets
         .AsNoTracking()
-        .ToListAsync();
+        .ToListAsync(cancellationToken);
 }

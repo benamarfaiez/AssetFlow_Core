@@ -21,7 +21,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             innerMock.Setup(r => r.GetByIdAsync(teamId)).ReturnsAsync(team);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(10));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             // Act
             var first = await cache.GetByIdAsync(teamId);
@@ -46,7 +46,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             innerMock.Setup(r => r.UpdateAsync(It.IsAny<Team>())).Returns(Task.CompletedTask);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(10));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             // Act - load into cache
             var first = await cache.GetByIdAsync(teamId);
@@ -80,7 +80,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             innerMock.Setup(r => r.AddAsync(team2)).Returns(Task.CompletedTask);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(10));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             // Act - initial load
             var allActiveFirstList = await cache.GetAllActiveAsync();
@@ -119,7 +119,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             innerMock.Setup(r => r.RemoveAsync(team1)).Returns(Task.CompletedTask);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(10));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             // Act - initial load
             var initialAllActive = await cache.GetAllActiveAsync();

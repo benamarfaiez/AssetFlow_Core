@@ -3,19 +3,12 @@ using AssetFlowCore.Domain.Repositories;
 
 namespace AssetFlowCore.Application.UseCases.Assets.GetAllAssets;
 
-public class GetAllAssetsHandler
+public class GetAllAssetsHandler(IAssetRepository assetRepository)
 {
-    private readonly IAssetRepository _assetRepository;
-
-    public GetAllAssetsHandler(IAssetRepository assetRepository)
-    {
-        _assetRepository = assetRepository;
-    }
-
-    public async Task<IEnumerable<AssetResponseDto>> HandleAsync(GetAllAssetsQuery query)
+    public async Task<IEnumerable<AssetResponseDto>> HandleAsync()
     {
         // Profite de l'optimisation AsNoTracking + Cache gérée par l'infrastructure
-        var assets = await _assetRepository.GetAllReadOnlyAsync();
+        var assets = await assetRepository.GetAllReadOnlyAsync();
         return assets.Select(a => a.ToDto());
     }
 }

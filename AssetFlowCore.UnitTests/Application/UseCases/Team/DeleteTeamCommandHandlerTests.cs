@@ -13,7 +13,7 @@ public class DeleteTeamCommandHandlerTests
     private readonly DeleteTeamCommandHandler _handler;
 
     public DeleteTeamCommandHandlerTests()
-        => _handler = new DeleteTeamCommandHandler(_teamRepo.Object, _ticketRepo.Object, _uow.Object);
+        => _handler = new DeleteTeamCommandHandler(_uow.Object);
 
     [Fact]
     public async Task ExecuteAsync_WithNoAssignedActiveTickets_ShouldRemoveTeam()
@@ -25,7 +25,7 @@ public class DeleteTeamCommandHandlerTests
         await _handler.ExecuteAsync(new DeleteTeamCommand(team.Id));
 
         _teamRepo.Verify(r => r.RemoveAsync(team), Times.Once);
-        _uow.Verify(u => u.SaveChangesAsync(), Times.Once);
+        _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -39,6 +39,6 @@ public class DeleteTeamCommandHandlerTests
 
         await act.Should().ThrowAsync<AssetFlowCore.Domain.Exceptions.DomainException>();
         _teamRepo.Verify(r => r.RemoveAsync(It.IsAny<AssetFlowCore.Domain.Entities.Team>()), Times.Never);
-        _uow.Verify(u => u.SaveChangesAsync(), Times.Never);
+        _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }
