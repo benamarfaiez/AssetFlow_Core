@@ -51,14 +51,14 @@ public class GetAllAssetsBenchmark : BenchmarkBase
     public async Task<List<AssetResponseDto>> GetAll_CacheMiss()
     {
         var handler = Resolve<GetAllAssetsHandler>();
-        return [.. (await handler.HandleAsync(new GetAllAssetsQuery()))];
+        return [.. (await handler.HandleAsync())];
     }
 
     [Benchmark(Description = "GetAll — cache hit (appels suivants)")]
     public async Task<List<AssetResponseDto>> GetAll_CacheHit()
     {
         var handler = Resolve<GetAllAssetsHandler>();
-        await handler.HandleAsync(new GetAllAssetsQuery()); // chauffe
-        return [.. (await handler.HandleAsync(new GetAllAssetsQuery()))];
+        await handler.HandleAsync(); // chauffe
+        return [.. (await handler.HandleAsync())];
     }
 }

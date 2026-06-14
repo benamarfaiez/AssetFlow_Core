@@ -30,32 +30,18 @@ builder.Services.AddControllers()
 
 builder.Services.AddValidatorsFromAssembly(typeof(CreateMaintenanceTicketValidator).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(CreateTeamCommandValidator).Assembly);
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
 
-var isIntegrationTesting = builder.Environment.IsEnvironment("Testing")
-                           || AppDomain.CurrentDomain.GetAssemblies().Any(a => a.FullName!.Contains("Microsoft.AspNetCore.Mvc.Testing"));
-
-if (isIntegrationTesting)
+builder.Services.AddDbContext<AssetFlowDbContext>(options =>
 {
-    builder.Services.AddDbContext<AssetFlowDbContext>(options =>
-    {
-        options.UseInMemoryDatabase("IntegrationTestsDb");
-    });
-}
-else
-{
-    builder.Services.AddDbContext<AssetFlowDbContext>(options =>
-    {
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-    });
-}
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
 builder.Services.Configure<DatabaseOptions>(
     builder.Configuration.GetSection(DatabaseOptions.SectionName));
-
-
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -91,7 +77,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<TicketHub>("/ticketHub");
