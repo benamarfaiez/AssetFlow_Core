@@ -65,13 +65,11 @@ public class AssetRepositoryTests : IntegrationTestBase
             await writeContext.SaveChangesAsync();
         }
 
-        using (var readContext = CreateInMemoryDbContext(dbName))
-        {
-            var repository = new AssetRepository(readContext);
-            var result = await repository.GetAllReadOnlyAsync();
+        using var readContext = CreateInMemoryDbContext(dbName);
+        var repository = new AssetRepository(readContext);
+        var result = await repository.GetAllReadOnlyAsync();
 
-            result.Should().NotBeEmpty();
-            readContext.ChangeTracker.Entries<Asset>().Should().BeEmpty();
-        }
+        result.Should().NotBeEmpty();
+        readContext.ChangeTracker.Entries<Asset>().Should().BeEmpty();
     }
 }

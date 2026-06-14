@@ -15,8 +15,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             var memory = new MemoryCache(new MemoryCacheOptions());
             var repoMock = new Mock<ITeamRepository>();
 
-            Action a1 = () => new CachedTeamRepository(null!, memory);
-            Action a2 = () => new CachedTeamRepository(repoMock.Object, null!);
+            Action a1 = () => _ = new CachedTeamRepository(null!, memory);
+            Action a2 = () => _ = new CachedTeamRepository(repoMock.Object, null!);
 
             a1.Should().Throw<ArgumentNullException>();
             a2.Should().Throw<ArgumentNullException>();

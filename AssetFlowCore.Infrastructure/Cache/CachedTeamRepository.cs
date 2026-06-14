@@ -38,14 +38,14 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
         return team;
     }
 
-    public Task<IEnumerable<Team>?> GetAllActiveAsync()
+    public Task<IEnumerable<Team>> GetAllActiveAsync()
     {
         return _memory.GetOrCreateAsync(TeamsListCacheKey, async entry =>
             {
                 entry.SetOptions(CacheOptions());
                 var teams = await _inner.GetAllActiveAsync();
-                return teams;
-            });
+                return teams ?? []; ;
+            })!;
     }
 
     public async Task<Team?> GetByAssetTypeAndCriticalityAsync(string assetType, string criticality)
