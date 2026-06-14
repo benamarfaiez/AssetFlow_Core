@@ -18,10 +18,10 @@ public class GetAllAssetsHandlerTests
     {
         var repoMock = new Mock<IAssetRepository>();
         var list = new List<Asset> { new(Guid.NewGuid(), "Name", SerialNumber.Create("SERIALX"), AssetType.Server) };
-        repoMock.Setup(r => r.GetAllReadOnlyAsync()).ReturnsAsync(list);
+        repoMock.Setup(r => r.GetAllReadOnlyAsync(It.IsAny<CancellationToken>())).ReturnsAsync(list);
 
         var handler = new GetAllAssetsHandler(repoMock.Object);
-        var result = await handler.HandleAsync(new GetAllAssetsQuery());
+        var result = await handler.HandleAsync();
 
         result.Should().HaveCount(1);
     }

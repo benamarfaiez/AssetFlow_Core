@@ -15,8 +15,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             var memory = new MemoryCache(new MemoryCacheOptions());
             var repoMock = new Mock<ITeamRepository>();
 
-            Action a1 = () => new CachedTeamRepository(null!, memory);
-            Action a2 = () => new CachedTeamRepository(repoMock.Object, null!);
+            Action a1 = () => _ = new CachedTeamRepository(null!, memory);
+            Action a2 = () => _ = new CachedTeamRepository(repoMock.Object, null!);
 
             a1.Should().Throw<ArgumentNullException>();
             a2.Should().Throw<ArgumentNullException>();
@@ -27,10 +27,10 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         {
             var team = new Team("CacheAll-Team", "Srv", "High");
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync(new[] { team });
+            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync([team]);
 
             var memory = new MemoryCache(new MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(5));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             var firstAllActive = await cache.GetAllActiveAsync();
             var first = firstAllActive?.ToList();
@@ -47,12 +47,12 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         {
             var team = new Team("ByName-Team", "Net", "Low");
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync(new[] { team });
+            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync([team]);
             // if GetByNameAsync were called, return null to ensure cache path is used
             innerMock.Setup(r => r.GetByNameAsync(It.IsAny<string>())).ReturnsAsync((Team?)null);
 
             var memory = new MemoryCache(new MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(5));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             // populate list cache
             var listAllActive = await cache.GetAllActiveAsync();
@@ -72,11 +72,11 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         {
             var team = new Team("ByType-Team", "TypeX", "Critical");
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync(new[] { team });
+            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync([team]);
             innerMock.Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync((Team?)null);
 
             var memory = new MemoryCache(new MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(5));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             await cache.GetAllActiveAsync(); // populate
             var found = await cache.GetByAssetTypeAndCriticalityAsync("TypeX", "Critical");
@@ -92,11 +92,11 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         {
             var team = new Team("ExistsCache-Team", "T", "C");
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync(new[] { team });
+            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync([team]);
             innerMock.Setup(r => r.ExistsWithNameAsync(It.IsAny<string>())).ReturnsAsync(false);
 
             var memory = new MemoryCache(new MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(5));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             await cache.GetAllActiveAsync();
             var exists = await cache.ExistsWithNameAsync("ExistsCache-Team");
@@ -114,7 +114,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             innerMock.Setup(r => r.GetByIdAsync(team.Id)).ReturnsAsync((Team?)null);
 
             var memory = new MemoryCache(new MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(5));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             // initially inner would return null
             var before = await cache.GetByIdAsync(team.Id);

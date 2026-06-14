@@ -15,8 +15,7 @@ public class AssetsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyCollection<AssetResponseDto>))]
     public async Task<ActionResult<IEnumerable<AssetResponseDto>>> GetAll([FromServices] GetAllAssetsHandler handler)
     {
-        var query = new GetAllAssetsQuery();
-        var result = await handler.HandleAsync(query);
+        var result = await handler.HandleAsync();
         return Ok(result);
     }
 

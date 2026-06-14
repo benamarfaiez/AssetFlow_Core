@@ -1,9 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc.Testing;
+﻿using AssetFlowCore.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AssetFlowCore.Infrastructure.Persistence;
-using System.Linq;
 
 namespace AssetFlowCore.IntegrationTests.WebApi;
 
@@ -13,19 +12,29 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
     {
         builder.ConfigureServices(services =>
         {
-            // 1. On retire la configuration existante de SQL Server
-            var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AssetFlowDbContext>));
-            if (descriptor != null) services.Remove(descriptor);
+            // 1. Nettoyage des anciens descripteurs de contexte
+            var optionsDescriptors = services.Where(d =>
+                d.ServiceType == typeof(DbContextOptions<AssetFlowDbContext>) ||
+                d.ServiceType == typeof(AssetFlowDbContext) ||
+                d.ServiceType == typeof(DbContextOptions)).ToList();
 
-            // 2. On réenregistre l'InMemory en lui ordonnant de s'isoler
-            services.AddDbContext<AssetFlowDbContext>((container, options) =>
+            // Supprimer TOUS les enregistrements de DbContextOptions<AssetFlowDbContext> (doublons inclus)
+            foreach (var descriptor in optionsDescriptors)
             {
-                options.UseInMemoryDatabase("IntegrationTestsDb");
+                services.Remove(descriptor);
+            }
 
-                // TRUC DE SIOUX : On force EF Core à ignorer le ServiceProvider global pour ses composants internes
-                options.UseRootApplicationServiceProvider();
+            // 2. CRÉATION D'UN FOURNISSEUR DE SERVICES ISOLÉ POUR EF CORE IN-MEMORY
+            // Cela force EF Core à ne pas partager ses services internes avec ceux de SQL Server
+            var internalServiceProvider = new ServiceCollection()
+                .AddEntityFrameworkInMemoryDatabase()
+                .BuildServiceProvider();
 
-                options.ConfigureWarnings(x => x.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning));
+            // 3. Ré-enregistrement du DbContext en lui injectant ce fournisseur isolé
+            services.AddDbContext<AssetFlowDbContext>(options =>
+            {
+                options.UseInMemoryDatabase("IntegrationTestsDb")
+                       .UseInternalServiceProvider(internalServiceProvider);
             });
         });
     }

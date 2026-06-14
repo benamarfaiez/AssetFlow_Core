@@ -33,7 +33,7 @@ public class CreateMaintenanceTicketHandlerTests
     {
         var asset = new Asset(Guid.NewGuid(), "Server", SerialNumber.Create("SRV123"), AssetType.Server);
         _assetRepoMock
-            .Setup(r => r.GetByIdAsync(asset.Id))
+            .Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(asset);
         _engineMock
             .Setup(e => e.ResolveTeamIdAsync(It.IsAny<AssetType>(), It.IsAny<TicketCriticality>()))
@@ -56,7 +56,7 @@ public class CreateMaintenanceTicketHandlerTests
         result.Should().NotBeNull();
         asset.Status.Should().Be(AssetStatus.Down);
         _ticketRepoMock.Verify(t => t.AddAsync(It.IsAny<MaintenanceTicket>()), Times.Once);
-        _uowMock.Verify(u => u.SaveChangesAsync(), Times.Once);
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class CreateMaintenanceTicketHandlerTests
         var asset = new Asset(Guid.NewGuid(), "Server", SerialNumber.Create("SRV123"), AssetType.Server);
         asset.Decommission();
         _assetRepoMock
-            .Setup(r => r.GetByIdAsync(asset.Id))
+            .Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(asset);
         _validator
             .Setup(v => v.ValidateAsync(It.IsAny<CreateMaintenanceTicketCommand>(), It.IsAny<CancellationToken>()))

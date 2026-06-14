@@ -14,7 +14,11 @@ public class CreateTeamCommandHandlerTests
     private readonly CreateTeamCommandHandler _handler;
 
     public CreateTeamCommandHandlerTests()
-        => _handler = new CreateTeamCommandHandler(_uowMock.Object, _teamRepoMock.Object);
+    {
+        // On lie les sous-propriétés de l'Unit of Work à nos mocks de repositories
+        _uowMock.Setup(u => u.Team).Returns(_teamRepoMock.Object);
+        _handler = new CreateTeamCommandHandler(_uowMock.Object);
+    }
 
     // ──────────────────────────────────────────────────────────────────────
     // Happy path
@@ -32,7 +36,7 @@ public class CreateTeamCommandHandlerTests
         result.Name.Should().Be("Infrastructure-Serveurs");
         result.IsActive.Should().BeTrue();
         _teamRepoMock.Verify(r => r.AddAsync(It.IsAny<DomainTeam>()), Times.Once);
-        _uowMock.Verify(u => u.SaveChangesAsync(), Times.Once);
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -43,7 +47,7 @@ public class CreateTeamCommandHandlerTests
         var result = await _handler.HandleAsync(command);
 
         result.Description.Should().BeNull();
-        _uowMock.Verify(u => u.SaveChangesAsync(), Times.Once);
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -86,7 +90,7 @@ public class CreateTeamCommandHandlerTests
 
         await act.Should().ThrowAsync<ArgumentException>()
                  .WithMessage("*Le nom de l'équipe est obligatoire*");
-        _uowMock.Verify(u => u.SaveChangesAsync(), Times.Never);
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Theory]
@@ -102,7 +106,7 @@ public class CreateTeamCommandHandlerTests
 
         await act.Should().ThrowAsync<ArgumentException>()
                  .WithMessage("*Le assetType de l'équipe est obligatoire*");
-        _uowMock.Verify(u => u.SaveChangesAsync(), Times.Never);
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Theory]
@@ -118,6 +122,6 @@ public class CreateTeamCommandHandlerTests
 
         await act.Should().ThrowAsync<ArgumentException>()
                  .WithMessage("*Le ticketCriticality de l'équipe est obligatoire*");
-        _uowMock.Verify(u => u.SaveChangesAsync(), Times.Never);
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

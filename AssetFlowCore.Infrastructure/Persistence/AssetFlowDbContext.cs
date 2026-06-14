@@ -1,10 +1,9 @@
 ﻿using AssetFlowCore.Domain.Entities;
-using AssetFlowCore.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace AssetFlowCore.Infrastructure.Persistence;
 
-public class AssetFlowDbContext(DbContextOptions<AssetFlowDbContext> options) : DbContext(options), IUnitOfWork
+public class AssetFlowDbContext(DbContextOptions<AssetFlowDbContext> options) : DbContext(options)
 {
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<MaintenanceTicket> Tickets => Set<MaintenanceTicket>();
@@ -15,5 +14,4 @@ public class AssetFlowDbContext(DbContextOptions<AssetFlowDbContext> options) : 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AssetFlowDbContext).Assembly);
     }
 
-    public async Task<int> SaveChangesAsync() => await base.SaveChangesAsync();
 }

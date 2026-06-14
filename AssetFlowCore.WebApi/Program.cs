@@ -1,26 +1,9 @@
 using AssetFlowCore.Application.Interfaces;
-using AssetFlowCore.Application.Services;
-using AssetFlowCore.Application.UseCases.Assets.DecommissionAsset;
-using AssetFlowCore.Application.UseCases.Assets.GetAllAssets;
-using AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
-using AssetFlowCore.Application.UseCases.Team.CreateTeam;
-using AssetFlowCore.Application.UseCases.Team.DeleteTeam;
-using AssetFlowCore.Application.UseCases.Team.GetTeam;
-using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
-using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
-using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
-using AssetFlowCore.Application.UseCases.Tickets.GetTicket;
-using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
-using AssetFlowCore.Domain.Repositories;
-using AssetFlowCore.Infrastructure.Cache;
+using AssetFlowCore.Application;
+using AssetFlowCore.Infrastructure;
 using AssetFlowCore.Infrastructure.Configuration;
 using AssetFlowCore.Infrastructure.Notifications;
-using AssetFlowCore.Infrastructure.Persistence;
-using AssetFlowCore.Infrastructure.Persistence.Repositories;
 using AssetFlowCore.WebApi.Middlewares;
-using FluentValidation;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,81 +14,17 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
-builder.Services.AddValidatorsFromAssembly(typeof(CreateMaintenanceTicketValidator).Assembly);
-builder.Services.AddValidatorsFromAssembly(typeof(CreateTeamCommandValidator).Assembly);
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
 
-var isIntegrationTesting = builder.Environment.IsEnvironment("Testing")
-                           || AppDomain.CurrentDomain.GetAssemblies().Any(a => a.FullName!.Contains("Microsoft.AspNetCore.Mvc.Testing"));
-
-if (isIntegrationTesting)
-{
-    builder.Services.AddDbContext<AssetFlowDbContext>(options =>
-    {
-        options.UseInMemoryDatabase("IntegrationTestsDb");
-    });
-}
-else
-{
-    builder.Services.AddDbContext<AssetFlowDbContext>(options =>
-    {
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-    });
-}
-
 builder.Services.Configure<DatabaseOptions>(
     builder.Configuration.GetSection(DatabaseOptions.SectionName));
 
-builder.Services.AddScoped<IDbContextFactory, SqlServerDbContextFactory>();
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.AddMemoryCache();
-builder.Services.AddSignalR();
-
-// Bind cache options from configuration
-builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.SectionName));
-var cacheOptions = builder.Configuration.GetSection(CacheOptions.SectionName).Get<CacheOptions>() ?? new CacheOptions();
-// TeamRepository (Avec gestion de cache via pattern Décorateur)
-builder.Services.AddScoped<TeamRepository>(provider => new TeamRepository(provider.GetRequiredService<AssetFlowDbContext>()));
-builder.Services.AddScoped<ITeamRepository>(provider =>
-{
-    var raw = provider.GetRequiredService<TeamRepository>();
-    var memory = provider.GetRequiredService<IMemoryCache>();
-    return new CachedTeamRepository(raw, memory, TimeSpan.FromMinutes(cacheOptions.TeamsExpirationMinutes));
-});
-
-builder.Services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<AssetFlowDbContext>());
-
-// AssetRepository (Avec gestion de cache via pattern Décorateur)
-builder.Services.AddScoped<IAssetRepository>(provider =>
-{
-    var rawRepo = new AssetRepository(provider.GetRequiredService<AssetFlowDbContext>());
-    return new CachedAssetRepository(rawRepo, provider.GetRequiredService<IMemoryCache>());
-});
-builder.Services.AddScoped<IMaintenanceTicketRepository, MaintenanceTicketRepository>();
-
-// Moteur d'aiguillage automatique (Stratégies isolées - OCP)
-builder.Services.AddScoped<IAssignmentStrategy, ServerAssignmentStrategy>();
-builder.Services.AddScoped<IAssignmentStrategy, NetworkAssignmentStrategy>();
-builder.Services.AddScoped<IAssignmentStrategy, LaptopHighCriticalityStrategy>();
-builder.Services.AddScoped<IAssignmentStrategy, LaptopStandardStrategy>();
-builder.Services.AddScoped<ITicketAssignmentEngine, TicketAssignmentEngine>();
-builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
-
-// Enregistrement explicite des Handlers de Cas d'Usages (Vertical Slices Applicatives)
-builder.Services.AddScoped<RegisterAssetHandler>();
-builder.Services.AddScoped<GetAllAssetsHandler>();
-builder.Services.AddScoped<DecommissionAssetHandler>();
-builder.Services.AddScoped<CreateMaintenanceTicketHandler>();
-builder.Services.AddScoped<AssignTicketToTechnicianHandler>();
-builder.Services.AddScoped<CloseTicketHandler>();
-builder.Services.AddScoped<RequestTicketTransferCommandHandler>();
-builder.Services.AddScoped<GetTicketHandler>();
-builder.Services.AddScoped<CreateTeamCommandHandler>();
-builder.Services.AddScoped<GetTeamHandler>();
-builder.Services.AddScoped<DeleteTeamCommandHandler>();
-builder.Services.AddScoped<AssetFlowCore.Application.UseCases.Team.UpdateTeam.UpdateTeamCommandHandler>();
 
 var app = builder.Build();
 
@@ -117,7 +36,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<TicketHub>("/ticketHub");
