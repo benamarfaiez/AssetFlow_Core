@@ -7,11 +7,11 @@ using AssetFlowCore.Domain.ValueObjects;
 
 namespace AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
 
-public class RegisterAssetHandler(IAssetRepository assetRepository, IUnitOfWork unitOfWork)
+public class RegisterAssetHandler(IUnitOfWork unitOfWork)
 {
     public async Task<AssetResponseDto> HandleAsync(RegisterAssetCommand command)
     {
-        if (await assetRepository.ExistsWithSerialNumberAsync(command.SerialNumber.ToUpper().Trim()))
+        if (await unitOfWork.Asset.ExistsWithSerialNumberAsync(command.SerialNumber.ToUpper().Trim()))
             throw new DomainException("Ce numéro de série constructeur est déjà enregistré dans le parc.");
 
         var serial = SerialNumber.Create(command.SerialNumber);
@@ -19,8 +19,8 @@ public class RegisterAssetHandler(IAssetRepository assetRepository, IUnitOfWork 
 
         var asset = new Asset(Guid.NewGuid(), command.Name, serial, assetType);
 
-        await assetRepository.AddAsync(asset);
-        await unitOfWork.SaveChangesAsync(); // Validation via UoW
+        await unitOfWork.Asset.AddAsync(asset);
+        await unitOfWork.SaveChangesAsync();
 
         return asset.ToDto();
     }

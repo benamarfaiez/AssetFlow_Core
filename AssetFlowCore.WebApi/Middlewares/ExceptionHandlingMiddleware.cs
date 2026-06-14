@@ -56,7 +56,7 @@ public class ExceptionHandlingMiddleware
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 problemDetails.Status = StatusCodes.Status500InternalServerError;
                 problemDetails.Title = "Erreur interne du serveur";
-                problemDetails.Detail = "Une erreur imprévue est survenue sur notre serveur éditeur.";
+                problemDetails.Detail = $"{exception.Message}";
                 break;
         }
 

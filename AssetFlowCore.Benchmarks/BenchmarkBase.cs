@@ -49,8 +49,7 @@ public abstract class BenchmarkBase
         services.AddValidatorsFromAssemblyContaining<CreateMaintenanceTicketValidator>();
 
         // Unit of Work
-        services.AddScoped<IUnitOfWork>(p => p.GetRequiredService<AssetFlowDbContext>());
-
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         // Repositories avec pattern Décorateur (Cache)
         services.AddScoped<IAssetRepository>(p =>
         {

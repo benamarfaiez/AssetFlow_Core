@@ -21,7 +21,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             innerMock.Setup(r => r.GetByIdAsync(teamId)).ReturnsAsync(team);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(10));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             // Act
             var first = await cache.GetByIdAsync(teamId);
@@ -39,14 +39,14 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         {
             // Arrange
             var teamId = Guid.NewGuid();
-            var team = new Team("Team A", "Servers", "High");
+            var team = new Team("Team A", "Servers", "High", "Description A");
 
             var innerMock = new Mock<ITeamRepository>();
             innerMock.Setup(r => r.GetByIdAsync(teamId)).ReturnsAsync(team);
             innerMock.Setup(r => r.UpdateAsync(It.IsAny<Team>())).Returns(Task.CompletedTask);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(10));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             // Act - load into cache
             var first = await cache.GetByIdAsync(teamId);
@@ -70,8 +70,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         public async Task GetAllActiveAsync_ShouldInvalidateList_AfterAddAsync()
         {
             // Arrange
-            var team1 = new Team("Team A", "Servers", "High");
-            var team2 = new Team("Team B", "Network", "Low");
+            var team1 = new Team("Team A", "Servers", "High", "Description A");
+            var team2 = new Team("Team B", "Network", "Low", "Description B");
 
             var innerMock = new Mock<ITeamRepository>();
             innerMock.SetupSequence(r => r.GetAllActiveAsync())
@@ -80,7 +80,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             innerMock.Setup(r => r.AddAsync(team2)).Returns(Task.CompletedTask);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(10));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             // Act - initial load
             var allActiveFirstList = await cache.GetAllActiveAsync();
@@ -109,8 +109,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         public async Task GetAllActiveAsync_ShouldInvalidateList_AfterRemoveAsync()
         {
             // Arrange
-            var team1 = new Team("Team A", "Servers", "High");
-            var team2 = new Team("Team B", "Network", "Low");
+            var team1 = new Team("Team A", "Servers", "High", "Description A");
+            var team2 = new Team("Team B", "Network", "Low", "Description B");
 
             var innerMock = new Mock<ITeamRepository>();
             innerMock.SetupSequence(r => r.GetAllActiveAsync())
@@ -119,7 +119,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             innerMock.Setup(r => r.RemoveAsync(team1)).Returns(Task.CompletedTask);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
-            var cache = new CachedTeamRepository(innerMock.Object, memory, TimeSpan.FromMinutes(10));
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
 
             // Act - initial load
             var initialAllActive = await cache.GetAllActiveAsync();
