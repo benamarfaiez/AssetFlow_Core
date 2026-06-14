@@ -14,7 +14,11 @@ public class CreateTeamCommandHandlerTests
     private readonly CreateTeamCommandHandler _handler;
 
     public CreateTeamCommandHandlerTests()
-        => _handler = new CreateTeamCommandHandler(_uowMock.Object);
+    {
+        // On lie les sous-propriétés de l'Unit of Work à nos mocks de repositories
+        _uowMock.Setup(u => u.Team).Returns(_teamRepoMock.Object);
+        _handler = new CreateTeamCommandHandler(_uowMock.Object);
+    }
 
     // ──────────────────────────────────────────────────────────────────────
     // Happy path

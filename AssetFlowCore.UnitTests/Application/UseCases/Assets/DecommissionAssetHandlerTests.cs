@@ -4,6 +4,7 @@ using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
 using AssetFlowCore.Domain.ValueObjects;
+using AssetFlowCore.Infrastructure.Persistence.Repositories;
 using FluentAssertions;
 using Moq;
 
@@ -16,7 +17,14 @@ public class DecommissionAssetHandlerTests
     private readonly Mock<IUnitOfWork> _uowMock = new();
     private readonly DecommissionAssetHandler _handler;
 
-    public DecommissionAssetHandlerTests() => _handler = new DecommissionAssetHandler(_uowMock.Object);
+    public DecommissionAssetHandlerTests()
+    {
+        // On configure l'Unit of Work pour qu'il retourne ce mock de repository
+        _uowMock.Setup(u => u.Asset).Returns(_assetRepoMock.Object);
+        _uowMock.Setup(u => u.MaintenanceTicket).Returns(_ticketRepoMock.Object);
+
+        _handler = new DecommissionAssetHandler(_uowMock.Object);
+    } 
 
     [Fact]
     public async Task ExecuteAsync_WithNoActiveTickets_ShouldSucceed()

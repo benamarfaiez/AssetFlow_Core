@@ -13,7 +13,12 @@ public class RegisterAssetHandlerTests
     private readonly Mock<IUnitOfWork> _uowMock = new();
     private readonly RegisterAssetHandler _handler;
 
-    public RegisterAssetHandlerTests() => _handler = new RegisterAssetHandler(_uowMock.Object);
+    public RegisterAssetHandlerTests()
+    {
+        // On configure l'Unit of Work pour qu'il retourne ce mock de repository
+        _uowMock.Setup(u => u.Asset).Returns(_repoMock.Object);
+        _handler = new RegisterAssetHandler(_uowMock.Object);
+    }
 
     [Fact]
     public async Task HandleAsync_WhenNewAsset_ShouldSaveAndReturnDto()

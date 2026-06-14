@@ -13,7 +13,12 @@ public class DeleteTeamCommandHandlerTests
     private readonly DeleteTeamCommandHandler _handler;
 
     public DeleteTeamCommandHandlerTests()
-        => _handler = new DeleteTeamCommandHandler(_uow.Object);
+    {
+        // On lie les sous-propriétés de l'Unit of Work à nos mocks de repositories
+        _uow.Setup(u => u.Team).Returns(_teamRepo.Object);
+        _uow.Setup(u => u.MaintenanceTicket).Returns(_ticketRepo.Object);
+        _handler = new DeleteTeamCommandHandler(_uow.Object);
+    }
 
     [Fact]
     public async Task ExecuteAsync_WithNoAssignedActiveTickets_ShouldRemoveTeam()
