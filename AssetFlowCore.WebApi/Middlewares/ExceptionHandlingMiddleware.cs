@@ -56,7 +56,7 @@ public class ExceptionHandlingMiddleware
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 problemDetails.Status = StatusCodes.Status500InternalServerError;
                 problemDetails.Title = "Erreur interne du serveur";
-                problemDetails.Detail = $"{exception.Message} -> {exception.StackTrace}";
+                problemDetails.Detail = $"{exception.Message}";
                 break;
         }
 

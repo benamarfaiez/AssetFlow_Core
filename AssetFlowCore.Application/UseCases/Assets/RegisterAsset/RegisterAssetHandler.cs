@@ -20,7 +20,7 @@ public class RegisterAssetHandler(IUnitOfWork unitOfWork)
         var asset = new Asset(Guid.NewGuid(), command.Name, serial, assetType);
 
         await unitOfWork.Asset.AddAsync(asset);
-        await unitOfWork.SaveChangesAsync(); // Validation via UoW
+        await unitOfWork.SaveChangesAsync();
 
         return asset.ToDto();
     }

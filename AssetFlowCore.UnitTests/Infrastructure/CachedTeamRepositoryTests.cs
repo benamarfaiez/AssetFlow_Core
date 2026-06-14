@@ -39,7 +39,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         {
             // Arrange
             var teamId = Guid.NewGuid();
-            var team = new Team("Team A", "Servers", "High");
+            var team = new Team("Team A", "Servers", "High", "Description A");
 
             var innerMock = new Mock<ITeamRepository>();
             innerMock.Setup(r => r.GetByIdAsync(teamId)).ReturnsAsync(team);
@@ -70,8 +70,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         public async Task GetAllActiveAsync_ShouldInvalidateList_AfterAddAsync()
         {
             // Arrange
-            var team1 = new Team("Team A", "Servers", "High");
-            var team2 = new Team("Team B", "Network", "Low");
+            var team1 = new Team("Team A", "Servers", "High", "Description A");
+            var team2 = new Team("Team B", "Network", "Low", "Description B");
 
             var innerMock = new Mock<ITeamRepository>();
             innerMock.SetupSequence(r => r.GetAllActiveAsync())
@@ -109,8 +109,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         public async Task GetAllActiveAsync_ShouldInvalidateList_AfterRemoveAsync()
         {
             // Arrange
-            var team1 = new Team("Team A", "Servers", "High");
-            var team2 = new Team("Team B", "Network", "Low");
+            var team1 = new Team("Team A", "Servers", "High", "Description A");
+            var team2 = new Team("Team B", "Network", "Low", "Description B");
 
             var innerMock = new Mock<ITeamRepository>();
             innerMock.SetupSequence(r => r.GetAllActiveAsync())
