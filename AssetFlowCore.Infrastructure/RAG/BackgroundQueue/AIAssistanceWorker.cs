@@ -79,9 +79,6 @@ public sealed class AIAssistanceWorker(
                 ticket?.FailAiProcessing();
             }
         }
-        else
-        {
-            throw new InvalidOperationException($"Le ticket avec l'ID {ticketId} n'existe pas ou a été supprimé.");
-        }
+        throw new InvalidOperationException($"Le ticket avec l'ID {ticketId} n'existe pas ou a été supprimé.");        
     }
 }

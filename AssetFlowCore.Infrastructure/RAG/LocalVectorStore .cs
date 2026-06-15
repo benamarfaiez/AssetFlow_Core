@@ -19,11 +19,11 @@ public sealed class LocalVectorStore : ILocalVectorStore, IAsyncDisposable
 
     // ── Cosine similarity SQL expression
     // list_dot_product / (norm(a) * norm(b))
-    private const string CosineSimilaritySql =
-        "list_dot_product(embedding, $query) " +
-        "/ (sqrt(list_sum(list_multiply(embedding, embedding))) " +
-        "* sqrt(list_sum(list_multiply($query, $query))))";
-
+    private const string CosineSimilaritySql = """
+        list_dot_product(embedding, CAST($query AS FLOAT[])) 
+        / (sqrt(list_dot_product(embedding, embedding)) 
+        * sqrt(list_dot_product(CAST($query AS FLOAT[]), CAST($query AS FLOAT[]))))
+        """;
     // ── State ────────────────────────────────────────────────────────────────
     private readonly DuckDBConnection _connection;
     private readonly ILogger<LocalVectorStore> _logger;
@@ -52,29 +52,33 @@ public sealed class LocalVectorStore : ILocalVectorStore, IAsyncDisposable
         await _initLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (_initialized) return; // double-checked locking
+            if (_initialized) return;
 
-            _logger.LogInformation("Initialising RAG vector store (table: {Table}).", TableName);
+            // ── AJOUT CRUCIAL : Ouvrir la connexion si elle est fermée ou à l'état initial
+            if (_connection.State != System.Data.ConnectionState.Open)
+            {
+                await _connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            }
 
-            const string ddl = $"""
-                CREATE TABLE IF NOT EXISTS {TableName} (
-                    id         VARCHAR     NOT NULL PRIMARY KEY,
-                    embedding  FLOAT[]     NOT NULL,
-                    metadata   JSON,
-                    created_at TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP
-                );
-                """;
-
+            // Configuration initiale de la table (Ligne 70)
             await using var cmd = _connection.CreateCommand();
-            cmd.CommandText = ddl;
+            cmd.CommandText = $"""
+            CREATE TABLE IF NOT EXISTS {TableName} (
+                id VARCHAR PRIMARY KEY,
+                embedding FLOAT[],
+                metadata JSON,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Ajout de la colonne manquante
+            );
+            """;
+
             await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
 
             _initialized = true;
-            _logger.LogInformation("Vector store initialised successfully.");
+            _logger.LogInformation("DuckDB Vector Store initialized successfully.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to initialise the vector store table '{Table}'.", TableName);
+            _logger.LogError(ex, "Failed to initialize DuckDB database.");
             throw;
         }
         finally
@@ -146,10 +150,7 @@ public sealed class LocalVectorStore : ILocalVectorStore, IAsyncDisposable
             topK, threshold, queryEmbedding.Length);
 
         var sql = $"""
-            SELECT
-                id,
-                metadata,
-                {CosineSimilaritySql} AS score
+            SELECT id, metadata, {CosineSimilaritySql} AS score
             FROM {TableName}
             WHERE {CosineSimilaritySql} >= $threshold
             ORDER BY score DESC
@@ -162,7 +163,7 @@ public sealed class LocalVectorStore : ILocalVectorStore, IAsyncDisposable
             cmd.CommandText = sql;
 
             var queryParam = FormatFloatArray(queryEmbedding);
-            cmd.Parameters.Add(new DuckDBParameter("query", queryParam));
+            cmd.Parameters.Add(new DuckDBParameter("query", FormatFloatArray(queryEmbedding)));
             cmd.Parameters.Add(new DuckDBParameter("threshold", threshold));
             cmd.Parameters.Add(new DuckDBParameter("topK", topK));
 

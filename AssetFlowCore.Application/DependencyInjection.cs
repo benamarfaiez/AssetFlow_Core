@@ -21,8 +21,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        var assembly = typeof(DependencyInjection).Assembly;
-
         services.AddValidatorsFromAssembly(typeof(CreateMaintenanceTicketValidator).Assembly);
         services.AddValidatorsFromAssembly(typeof(CreateTeamCommandValidator).Assembly);
         // Moteur d'aiguillage automatique (Stratégies isolées - OCP)
