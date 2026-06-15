@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
-using AssetFlowCore.Application.DTOs;
+﻿using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.Application.Interfaces;
+using AssetFlowCore.Application.Interfaces.RAG;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
@@ -21,7 +21,8 @@ public class CreateMaintenanceTicketHandler(
     IUnitOfWork unitOfWork,
     ITicketAssignmentEngine assignmentEngine,
     INotificationService notificationService,
-    ITeamRepository teamRepository)
+    ITeamRepository teamRepository,
+    IAIAssistanceQueue aiQueue)
 {
 
     /// <summary>
@@ -71,6 +72,8 @@ public class CreateMaintenanceTicketHandler(
 
         // 11. Notification Temps Réel asynchrone et découplée (SignalR WebSockets)
         await notificationService.NotifyTeamNewTicketAsync(teamName, dto);
+
+        await aiQueue.QueueTicketAsync(ticket.Id);
 
         return dto;
     }

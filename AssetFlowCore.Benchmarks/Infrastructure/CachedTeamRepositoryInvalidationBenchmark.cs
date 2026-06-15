@@ -31,7 +31,7 @@ public class CachedTeamRepositoryInvalidationBenchmark
     {
         var options = new DbContextOptionsBuilder<AssetFlowDbContext>().UseInMemoryDatabase($"Bench_CachedTeam_{TeamCount}_{Guid.NewGuid():N}").ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning)).Options;
         _dbContext = new AssetFlowDbContext(options);
-        _teamIds = new List<Guid>();
+        _teamIds = [];
         for (int i = 0; i < TeamCount; i++)
         {
             var assetType = (i % 3) switch

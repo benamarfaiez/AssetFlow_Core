@@ -7,7 +7,7 @@ public class MaintenanceTicket
 {
     public Guid Id { get; private set; }
     public Guid AssetId { get; private set; }
-    public Asset Asset { get; private set; } = null!; // Added missing navigation property
+    public Asset Asset { get; private set; }
 
     public string Title { get; private set; }
     public string Description { get; private set; }
@@ -20,11 +20,13 @@ public class MaintenanceTicket
     public string? ResolutionComment { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public byte[] RowVersion { get; private set; } = [];
-
+    public string? AssistanceNote { get; private set; }
+    public bool IsAiProcessing { get; private set; }
     private MaintenanceTicket()
     {
         Description = null!;
         Title = null!;
+        Asset = null!;
     }
 
     public MaintenanceTicket(
@@ -52,6 +54,8 @@ public class MaintenanceTicket
         AssignedTeamId = assignedTeamId;
         Status = TicketStatus.Opened;
         CreatedAt = DateTime.UtcNow;
+        IsAiProcessing = true;
+        Asset = null!;
     }
 
     public void AssignToTechnician()
@@ -84,5 +88,18 @@ public class MaintenanceTicket
 
         AssignedTeam = team;
         Description += $"\n\n---\n\n**Motif du transfert :** {reason}";
+    }
+
+    public void SetAssistanceNote(string markdownNote)
+    {
+        if (string.IsNullOrWhiteSpace(markdownNote))
+            throw new ArgumentException("La note d'assistance ne peut pas être vide.", nameof(markdownNote));
+
+        AssistanceNote = markdownNote;
+        IsAiProcessing = false;
+    }
+    public void FailAiProcessing()
+    {
+        IsAiProcessing = false;
     }
 }

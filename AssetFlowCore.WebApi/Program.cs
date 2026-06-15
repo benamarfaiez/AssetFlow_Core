@@ -1,7 +1,5 @@
-using AssetFlowCore.Application.Interfaces;
 using AssetFlowCore.Application;
 using AssetFlowCore.Infrastructure;
-using AssetFlowCore.Infrastructure.Configuration;
 using AssetFlowCore.Infrastructure.Notifications;
 using AssetFlowCore.WebApi.Middlewares;
 
@@ -14,17 +12,12 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
 
-builder.Services.Configure<DatabaseOptions>(
-    builder.Configuration.GetSection(DatabaseOptions.SectionName));
-
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-
 
 var app = builder.Build();
 

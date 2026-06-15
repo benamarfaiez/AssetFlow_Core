@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="DuckDB.NET.Data" Version="1.5.3" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.16" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.16" />
@@ -25,6 +26,8 @@
 	<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.8" />
 	<PackageReference Include="Microsoft.Extensions.Options" Version="10.0.8" />
 	<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.8" />
+	<PackageReference Include="Microsoft.SemanticKernel" Version="1.77.0" />
+	<PackageReference Include="RestSharp" Version="114.0.0" />
   </ItemGroup>
 
   <ItemGroup>

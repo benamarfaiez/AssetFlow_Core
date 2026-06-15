@@ -27,6 +27,18 @@ public class MaintenanceTicketConfiguration : IEntityTypeConfiguration<Maintenan
         builder.Property(t => t.ResolutionComment).HasColumnName("resolution_comment").HasColumnType("nvarchar(max)");
         builder.Property(t => t.CreatedAt).HasColumnName("created_at").HasColumnType("datetime2");
 
+        // Indicateur d'état pour le Worker asynchrone
+        builder.Property(t => t.IsAiProcessing)
+            .HasColumnName("is_ai_processing")
+            .HasDefaultValue(false) // Par défaut à false à la création
+            .IsRequired();
+
+        // Le rapport Markdown peut être très volumineux, on mappe vers le type texte maximal
+        builder.Property(t => t.AssistanceNote)
+            .HasColumnName("assistance_note")
+            .HasColumnType("nvarchar(max)")
+            .IsRequired(false);
+
         // Gestion de la concurrence optimiste via jeton d'infrastructure
         builder.Property(t => t.RowVersion).HasColumnName("row_version").IsRowVersion();
 
@@ -35,6 +47,8 @@ public class MaintenanceTicketConfiguration : IEntityTypeConfiguration<Maintenan
 
         builder.HasIndex(t => t.AssignedTeamId)
             .HasDatabaseName("IX_t_tickets_assigned_team_id");
+
+        // ── Relations (Clés Étrangères) ───────────────────────────────
 
         // 1. MaintenanceTicket -> Team
         builder.HasOne(t => t.AssignedTeam)
@@ -46,6 +60,6 @@ public class MaintenanceTicketConfiguration : IEntityTypeConfiguration<Maintenan
         builder.HasOne(t => t.Asset)
            .WithMany(asset => asset.Tickets)
            .HasForeignKey(t => t.AssetId)
-           .OnDelete(DeleteBehavior.Restrict); // Using Restrict to preserve ticket history if an Asset is targeted for deletion
+           .OnDelete(DeleteBehavior.Restrict);
     }
 }

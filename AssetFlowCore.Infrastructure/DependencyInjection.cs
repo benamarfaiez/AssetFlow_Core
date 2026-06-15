@@ -1,10 +1,13 @@
 ﻿using AssetFlowCore.Application.Interfaces;
+using AssetFlowCore.Application.Interfaces.RAG;
 using AssetFlowCore.Domain.Repositories;
 using AssetFlowCore.Infrastructure.Cache;
 using AssetFlowCore.Infrastructure.Configuration;
 using AssetFlowCore.Infrastructure.Notifications;
 using AssetFlowCore.Infrastructure.Persistence;
 using AssetFlowCore.Infrastructure.Persistence.Repositories;
+using AssetFlowCore.Infrastructure.RAG;
+using AssetFlowCore.Infrastructure.RAG.BackgroundQueue;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -51,6 +54,11 @@ public static class DependencyInjection
         // 6. Services d'infrastructure transverses
         services.AddScoped<IDbContextFactory, SqlServerDbContextFactory>();
         services.AddScoped<INotificationService, SignalRNotificationService>();
+
+        // 6. Services RAG (Retrieval-Augmented Generation) et file d'attente pour l'assistance IA
+        services.AddSingleton<IAIAssistanceQueue, AIAssistanceQueue>();
+        services.AddHostedService<AIAssistanceWorker>();
+        services.AddOllamaRagServices(configuration);
 
         return services;
     }
