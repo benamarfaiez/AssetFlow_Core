@@ -104,13 +104,24 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+
             await dbContext.Database.EnsureDeletedAsync();
+            await dbContext.Database.EnsureCreatedAsync(); // Assurez-vous que les tables sont recréées
+
             var team = new Team("teamName", AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Description de la Team A");
             dbContext.Teams.Add(team);
-            dbContext.Tickets.Add(new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "description", TicketCriticality.Low, team.Id));
+            await dbContext.SaveChangesAsync(); // Sauvegarde de la team pour fixer son ID
+
+            var ticket = new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "description", TicketCriticality.Low, team.Id);
+            dbContext.Tickets.Add(ticket);
             await dbContext.SaveChangesAsync();
         }
+
+        // Act
         var response = await client.GetAsync($"/api/tickets/{ticketId}");
+
+        // Assert
+        response.EnsureSuccessStatusCode();
 
         var assets = await response.Content.ReadFromJsonAsync<TicketResponseDto>();
         assets.Should().NotBeNull();
