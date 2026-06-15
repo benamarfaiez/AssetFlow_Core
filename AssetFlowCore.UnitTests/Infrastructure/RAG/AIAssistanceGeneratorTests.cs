@@ -5,11 +5,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AssetFlowCore.UnitTests.Infrastructure.RAG;
 
@@ -31,17 +26,17 @@ public class AIAssistanceGeneratorTests
         var description = "Le serveur de base de données est surchargé.";
         var expectedResponse = "## 🔍 Diagnostic Steps\n1. Vérifier les index.";
 
-        // 1. On crée le contenu de réponse textuel
+        // On crée le contenu de réponse textuel
         var chatContent = new ChatMessageContent(AuthorRole.Assistant, expectedResponse);
 
-        // 2. CORRECTION : La vraie méthode d'interface retourne une liste en lecture seule (IReadOnlyList)
+        // La vraie méthode d'interface retourne une liste en lecture seule (IReadOnlyList)
         IReadOnlyList<ChatMessageContent> mockResponseList = new List<ChatMessageContent> { chatContent }.AsReadOnly();
 
-        // 3. CORRECTION : Configurer la VRAIE méthode d'interface (avec ses 4 arguments précis)
+        // Configurer la VRAIE méthode d'interface (avec ses 4 arguments précis)
         _chatMock.Setup(c => c.GetChatMessageContentsAsync(
             It.IsAny<ChatHistory>(),
             It.IsAny<PromptExecutionSettings>(),
-            It.IsAny<Kernel>(), // Peut accepter It.IsAny<Kernel>() ou null selon l'appel
+            It.IsAny<Kernel>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(mockResponseList);
 
@@ -54,7 +49,7 @@ public class AIAssistanceGeneratorTests
         // Assert
         result.Should().Be(expectedResponse);
 
-        // 4. CORRECTION : Adapter également la vérification (Verify) sur la bonne méthode d'interface
+        // Adapter également la vérification (Verify) sur la bonne méthode d'interface
         _chatMock.Verify(c => c.GetChatMessageContentsAsync(
             It.IsAny<ChatHistory>(),
             It.IsAny<PromptExecutionSettings>(),

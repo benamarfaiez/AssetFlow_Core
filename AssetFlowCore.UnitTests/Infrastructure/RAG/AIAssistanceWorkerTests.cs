@@ -39,7 +39,7 @@ public class AIAssistanceWorkerTests
         var ticketId = Guid.NewGuid();
         var assetId = Guid.NewGuid();
         var teamId = Guid.NewGuid();
-        var ticket = new MaintenanceTicket(ticketId, assetId, "Écran cassé","Description" ,TicketCriticality.Medium, teamId); // Adaptez selon votre constructeur de domaine
+        var ticket = new MaintenanceTicket(ticketId, assetId, "Écran cassé", "Description", TicketCriticality.Medium, teamId);
 
         // Configuration de la file : renvoie un ticket puis lève une annulation pour arrêter le Worker propre
         var cts = new CancellationTokenSource();
@@ -53,10 +53,10 @@ public class AIAssistanceWorkerTests
         var vector = new float[] { 0.1f, 0.2f, 0.3f };
         var embedding = new Embedding<float>(vector);
 
-        // 2. Utilisez la classe concrète attendue par le framework comme valeur de retour
+        // Utilisez la classe concrète attendue par le framework comme valeur de retour
         var generatedEmbeddings = new GeneratedEmbeddings<Embedding<float>>([embedding]);
 
-        // 3. Configurez le Setup standard (SANS SetupSequence sauf si vous simulez plusieurs appels différents)
+        // Configurez le Setup standard (SANS SetupSequence sauf si vous simulez plusieurs appels différents)
         _embeddingMock
             .Setup(e => e.GenerateAsync(
                 It.IsAny<IEnumerable<string>>(),
