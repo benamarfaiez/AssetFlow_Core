@@ -36,10 +36,9 @@ public sealed class OllamaConnectivityService : IOllamaConnectivityService, IDis
         ILogger<OllamaConnectivityService> logger,
         Action<RestClientOptions>? configureOptions)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-        if (config is null) throw new ArgumentNullException(nameof(config));
-
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(config);
+        _logger = logger;
         _baseUrl = config["Ollama:BaseUrl"] ?? "http://localhost:11434";
 
         var options = new RestClientOptions(_baseUrl)

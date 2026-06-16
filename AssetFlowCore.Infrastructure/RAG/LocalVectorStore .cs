@@ -1,5 +1,6 @@
 ﻿using AssetFlowCore.Application.Interfaces.RAG;
 using AssetFlowCore.Application.Models.RAG;
+using AssetFlowCore.Domain.Entities;
 using DuckDB.NET.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -33,7 +34,8 @@ public sealed class LocalVectorStore : ILocalVectorStore, IAsyncDisposable
     // ── Constructor ──────────────────────────────────────────────────────────
     public LocalVectorStore(IConfiguration config, ILogger<LocalVectorStore> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
 
         var dataPath = config["VectorStore:DataPath"] ?? "./vectordb";
         Directory.CreateDirectory(dataPath);
