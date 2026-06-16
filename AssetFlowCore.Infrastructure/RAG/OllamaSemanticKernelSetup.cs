@@ -22,7 +22,19 @@ public static class OllamaSemanticKernelSetup
     public static IServiceCollection AddOllamaRagServices(this IServiceCollection services, IConfiguration config)
     {
         // 1. Récupération et validation des clés de configuration
-        var ollamaBaseUrl = config["Ollama:BaseUrl"] ?? "http://localhost:11434";
+        var ollamaBaseUrl = config["Ollama:BaseUrl"];
+        if (string.IsNullOrWhiteSpace(ollamaBaseUrl))
+        {
+            throw new InvalidOperationException(
+                "La configuration critique 'Ollama:BaseUrl' est manquante. " +
+                "Veuillez renseigner l'adresse de l'API Ollama.");
+        }
+        ollamaBaseUrl = ollamaBaseUrl.Trim();
+        if (!ollamaBaseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !ollamaBaseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UriFormatException($"L'URL Ollama spécifiée '{ollamaBaseUrl}' est invalide.");
+        }
         var ollamaChatModel = config["Ollama:ChatModel"] ?? "mistral";
         var ollamaEmbedModel = config["Ollama:EmbeddingModel"] ?? "nomic-embed-text";
 
