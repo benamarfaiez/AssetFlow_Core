@@ -34,5 +34,5 @@
     <ProjectReference Include="..\AssetFlowCore.Application\AssetFlowCore.Application.csproj" />
     <ProjectReference Include="..\AssetFlowCore.Domain\AssetFlowCore.Domain.csproj" />
   </ItemGroup>
-
+	
 </Project>

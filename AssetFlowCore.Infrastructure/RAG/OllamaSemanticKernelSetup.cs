@@ -2,6 +2,7 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using OpenAI;
@@ -16,19 +17,11 @@ namespace AssetFlowCore.Infrastructure.RAG;
 public static class OllamaSemanticKernelSetup
 {
     /// <summary>
-    /// Registers the full RAG infrastructure stack:
-    /// <list type="bullet">
-    ///   <item><description><see cref="IEmbeddingGenerator{TInput,TEmbedding}"/> backed by Ollama via the standardised Microsoft.Extensions.AI abstraction.</description></item>
-    ///   <item><description>A Semantic Kernel <see cref="Kernel"/> wired to the local Ollama chat endpoint.</description></item>
-    ///   <item><description>Application-layer RAG interfaces bound to their infrastructure implementations.</description></item>
-    /// </list>
+    /// Registers the full RAG infrastructure stack with aligned service lifetimes.
     /// </summary>
-    /// <param name="services">The service collection to populate.</param>
-    /// <param name="config">The application configuration provider.</param>
-    /// <returns>The same <paramref name="services"/> for chaining.</returns>
     public static IServiceCollection AddOllamaRagServices(this IServiceCollection services, IConfiguration config)
     {
-        // Récupération et validation des clés de configuration
+        // 1. Récupération et validation des clés de configuration
         var ollamaBaseUrl = config["Ollama:BaseUrl"] ?? "http://localhost:11434";
         var ollamaChatModel = config["Ollama:ChatModel"] ?? "mistral";
         var ollamaEmbedModel = config["Ollama:EmbeddingModel"] ?? "nomic-embed-text";
@@ -45,7 +38,7 @@ public static class OllamaSemanticKernelSetup
         services.AddSingleton(sharedOpenAIClient);
 
         // ----------------------------------------------------------------
-        // 1.  Embedding generator
+        // 2. Embedding generator (Générateur d'embeddings Microsoft.Extensions.AI)
         // ----------------------------------------------------------------
         services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
         {
@@ -55,7 +48,7 @@ public static class OllamaSemanticKernelSetup
         });
 
         // ----------------------------------------------------------------
-        // 2.  Semantic Kernel & Chat Completion
+        // 3. Semantic Kernel & Chat Completion (Alignés en Scoped)
         // ----------------------------------------------------------------
         services.AddScoped<Kernel>(sp =>
         {
@@ -65,16 +58,25 @@ public static class OllamaSemanticKernelSetup
                 modelId: ollamaChatModel,
                 openAIClient: sharedOpenAIClient);
 
+            // Permet au Kernel d'utiliser le système de log applicatif
+            builder.Services.AddSingleton(sp.GetRequiredService<ILoggerFactory>());
+
             return builder.Build();
         });
 
+        // Enregistrement direct et propre du service de Chat sans forcer une double résolution
         services.AddScoped<IChatCompletionService>(sp =>
-            sp.GetRequiredService<Kernel>().GetRequiredService<IChatCompletionService>());
+        {
+            var kernel = sp.GetRequiredService<Kernel>();
+            return kernel.GetRequiredService<IChatCompletionService>();
+        });
 
         // ----------------------------------------------------------------
-        // 3.  RAG infrastructure services
+        // 4. RAG infrastructure services
         // ----------------------------------------------------------------
-        services.AddSingleton<ILocalVectorStore, LocalVectorStore>();
+
+        services.AddScoped<ILocalVectorStore, LocalVectorStore>();
+
         services.AddScoped<IAIAssistanceGenerator, AIAssistanceGenerator>();
         services.AddTransient<IOllamaConnectivityService, OllamaConnectivityService>();
 
