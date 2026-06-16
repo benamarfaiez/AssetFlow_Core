@@ -43,8 +43,8 @@ public class AIAssistanceGeneratorTests
         // Act
         var result = await _generator.GenerateAssistanceNoteAsync(
             description,
-            Enumerable.Empty<SimilarTicketResult>(),
-            Enumerable.Empty<ResolutionProcedure>());
+            [],
+            []);
 
         // Assert
         result.Should().Be(expectedResponse);
@@ -62,6 +62,6 @@ public class AIAssistanceGeneratorTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _generator.GenerateAssistanceNoteAsync("", Enumerable.Empty<SimilarTicketResult>(), Enumerable.Empty<ResolutionProcedure>()));
+            _generator.GenerateAssistanceNoteAsync("", [], []));
     }
 }

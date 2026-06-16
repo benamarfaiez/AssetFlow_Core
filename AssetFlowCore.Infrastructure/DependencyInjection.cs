@@ -56,9 +56,9 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, SignalRNotificationService>();
 
         // 6. Services RAG (Retrieval-Augmented Generation) et file d'attente pour l'assistance IA
+        services.AddOllamaRagServices(configuration);
         services.AddSingleton<IAIAssistanceQueue, AIAssistanceQueue>();
         services.AddHostedService<AIAssistanceWorker>();
-        services.AddOllamaRagServices(configuration);
 
         return services;
     }

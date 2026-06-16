@@ -27,14 +27,27 @@ public sealed class OllamaConnectivityService : IOllamaConnectivityService, IDis
 
     // ── Constructor ───────────────────────────────────────────────────────────
     public OllamaConnectivityService(IConfiguration config, ILogger<OllamaConnectivityService> logger)
+        : this(config, logger, null) // Appelle le constructeur interne ci-dessous
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    internal OllamaConnectivityService(
+        IConfiguration config,
+        ILogger<OllamaConnectivityService> logger,
+        Action<RestClientOptions>? configureOptions)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(config);
+        _logger = logger;
         _baseUrl = config["Ollama:BaseUrl"] ?? "http://localhost:11434";
 
         var options = new RestClientOptions(_baseUrl)
         {
             Timeout = DefaultTimeout
         };
+
+        // Permet l'injection du Mock de test (HttpMessageHandler)
+        configureOptions?.Invoke(options);
 
         _client = new RestClient(options);
     }
@@ -105,6 +118,7 @@ public sealed class OllamaConnectivityService : IOllamaConnectivityService, IDis
             }
 
             var models = payload.Models
+                .Where(m => m != null)
                 .Select(m => new OllamaModelInfo(
                     Name: m.Name ?? "<unknown>",
                     ModifiedAt: m.ModifiedAt,
