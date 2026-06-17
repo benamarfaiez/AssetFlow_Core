@@ -144,7 +144,7 @@ jobs:
   test-unit:
     name: Tests unitaires
     runs-on: ubuntu-latest
-    needs: build
+    needs: test-architecture
 
     steps:
       - name: Checkout du code source
@@ -191,7 +191,7 @@ jobs:
   test-integration:
     name: Tests d'intégration
     runs-on: ubuntu-latest
-    needs: build
+    needs: test-architecture
 
     steps:
       - name: Checkout du code source
@@ -301,7 +301,7 @@ jobs:
     name: Analyse qualité (SonarCloud)
     runs-on: ubuntu-latest
     environment: dev
-    needs: [test-unit, test-integration]
+    needs: [test-unit, test-integration, test-architecture]
 
     steps:
       - name: Checkout du code source
@@ -334,7 +334,7 @@ jobs:
       - name: Restauration des dépendances NuGet
         run: dotnet restore ${{ env.SOLUTION_FILE }}
 
-      # ✅ Téléchargement des deux rapports de couverture uploadés par test-unit et test-integration
+      # Téléchargement des deux rapports de couverture uploadés par test-unit et test-integration
       - name: Téléchargement des rapports de couverture
         uses: actions/download-artifact@v4
         with:
@@ -342,7 +342,7 @@ jobs:
           merge-multiple: true
           path: ./coverage
 
-      # ✅ sonar.cs.opencover.reportsPaths pointe vers les rapports téléchargés
+      # Prise en compte globale des 3 rapports OpenCover par Sonar
       - name: Démarrage de l'analyse SonarCloud
         run: |
           dotnet sonarscanner begin \
