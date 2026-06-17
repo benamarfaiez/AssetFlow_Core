@@ -6,12 +6,13 @@
 #   - Pull Request ciblant main ou dev
 #
 # Jobs :
-#   1. build            → Compilation Release + vérification du format
-#   2. test-unit        → Tests unitaires + couverture de code (dépend : build)
-#   3. test-integration → Tests d'intégration (dépend : build)
-#   4. benchmark        → Exécution des benchmarks BenchmarkDotNet (dépend : build)
-#   5. quality          → Analyse SonarCloud (dépend : test-unit, test-integration)
-#   6. deploy           → Déploiement Docker conditionnel sur main (dépend : quality)
+#   1. build             → Compilation Release + vérification du format
+#   2. test-architecture → Validation des règles d'architecture (dépend : build)
+#   3. test-unit         → Tests unitaires + couverture de code (dépend : build)
+#   4. test-integration  → Tests d'intégration (dépend : build)
+#   5. benchmark         → Exécution des benchmarks BenchmarkDotNet (dépend : build)
+#   6. quality           → Analyse SonarCloud (dépend : test-unit, test-integration)
+#   7. deploy            → Déploiement Docker conditionnel sur main (dépend : quality)
 # =============================================================================
 
 name: AssetFlowCore CI/CD
@@ -92,13 +93,58 @@ jobs:
           retention-days: 1
 
   # ===========================================================================
+  # NEW JOB — TESTS D'ARCHITECTURE (ArchUnitNET)
+  # ===========================================================================
+  test-architecture:
+    name: Tests d'architecture
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout du code source
+        uses: actions/checkout@v4
+
+      - name: Installation du SDK .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Mise en cache des packages NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restauration des dépendances NuGet
+        run: dotnet restore ${{ env.SOLUTION_FILE }}
+
+      # Exécution ciblée des tests d'architecture avec couverture OpenCover
+      - name: Exécution des tests d'architecture
+        run: |
+          dotnet test AssetFlowCore.ArchitectureTests/AssetFlowCore.ArchitectureTests.csproj \
+            --configuration ${{ env.BUILD_CONFIGURATION }} \
+            --no-restore \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage-architecture \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: Upload du rapport de couverture d'architecture
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-architecture
+          path: ./coverage-architecture/**/coverage.opencover.xml
+          retention-days: 1
+
+  # ===========================================================================
   # JOB 2 — TESTS UNITAIRES
   # ✅ CORRIGÉ : génération du rapport de couverture OpenCover + upload artefact
   # ===========================================================================
   test-unit:
     name: Tests unitaires
     runs-on: ubuntu-latest
-    needs: build
+    needs: test-architecture
 
     steps:
       - name: Checkout du code source
@@ -145,7 +191,7 @@ jobs:
   test-integration:
     name: Tests d'intégration
     runs-on: ubuntu-latest
-    needs: build
+    needs: test-architecture
 
     steps:
       - name: Checkout du code source
@@ -255,7 +301,7 @@ jobs:
     name: Analyse qualité (SonarCloud)
     runs-on: ubuntu-latest
     environment: dev
-    needs: [test-unit, test-integration]
+    needs: [test-unit, test-integration, test-architecture]
 
     steps:
       - name: Checkout du code source
@@ -288,7 +334,7 @@ jobs:
       - name: Restauration des dépendances NuGet
         run: dotnet restore ${{ env.SOLUTION_FILE }}
 
-      # ✅ Téléchargement des deux rapports de couverture uploadés par test-unit et test-integration
+      # Téléchargement des deux rapports de couverture uploadés par test-unit et test-integration
       - name: Téléchargement des rapports de couverture
         uses: actions/download-artifact@v4
         with:
@@ -296,7 +342,7 @@ jobs:
           merge-multiple: true
           path: ./coverage
 
-      # ✅ sonar.cs.opencover.reportsPaths pointe vers les rapports téléchargés
+      # Prise en compte globale des 3 rapports OpenCover par Sonar
       - name: Démarrage de l'analyse SonarCloud
         run: |
           dotnet sonarscanner begin \

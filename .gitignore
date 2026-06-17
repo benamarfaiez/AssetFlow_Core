@@ -43,3 +43,5 @@
 /AssetFlowCore.IntegrationTests/TestResults
 /BenchmarkDotNet.Artifacts
 /AssetFlowCore.Benchmarks/BenchmarkDotNet.Artifacts/results
+/AssetFlowCore.ArchitectureTests/bin/Release/net8.0
+/AssetFlowCore.ArchitectureTests/obj
