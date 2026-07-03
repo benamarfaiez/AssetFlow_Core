@@ -1,7 +1,7 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 // 1. Aspire va automatiquement chercher la clé "Parameters:sqlserver-password" dans le User Secrets.
-var passwordParameter = builder.AddParameter("sqlserver-password");
+var passwordParameter = builder.AddParameter("sqlserver-password", secret: true);
 
 // 2. On déclare le serveur SQL Server local (géré via un conteneur Docker par Aspire)
 var sqlServer = builder.AddSqlServer("sqlserver-server", password: passwordParameter)
