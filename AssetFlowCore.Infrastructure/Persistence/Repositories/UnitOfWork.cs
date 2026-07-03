@@ -28,26 +28,4 @@ public class UnitOfWork(AssetFlowDbContext context) : IUnitOfWork
     {
         return await context.SaveChangesAsync(cancellationToken);
     }
-
-    public async Task CommitTransactionAsync(
-        CancellationToken cancellationToken = default)
-    {
-        if (_transaction == null)
-            throw new InvalidOperationException("Aucune transaction active.");
-
-        await _transaction.CommitAsync(cancellationToken);
-        await _transaction.DisposeAsync();
-        _transaction = null;
-    }
-
-    public async Task RollbackTransactionAsync(
-        CancellationToken cancellationToken = default)
-    {
-        if (_transaction == null)
-            throw new InvalidOperationException("Aucune transaction active.");
-
-        await _transaction.RollbackAsync(cancellationToken);
-        await _transaction.DisposeAsync();
-        _transaction = null;
-    }
 }

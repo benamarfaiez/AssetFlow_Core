@@ -45,3 +45,7 @@
 /AssetFlowCore.Benchmarks/BenchmarkDotNet.Artifacts/results
 /AssetFlowCore.ArchitectureTests/bin/Release/net8.0
 /AssetFlowCore.ArchitectureTests/obj
+/AssetFlowCore.Aspire/AssetFlowCore.Aspire.AppHost/bin/Release/net8.0
+/AssetFlowCore.Aspire/AssetFlowCore.Aspire.AppHost/obj
+/AssetFlowCore.Aspire/AssetFlowCore.Aspire.ServiceDefaults/bin/Release/net8.0
+/AssetFlowCore.Aspire/AssetFlowCore.Aspire.ServiceDefaults/obj

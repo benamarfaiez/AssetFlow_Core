@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" Version="13.4.5" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.16">
       <PrivateAssets>all</PrivateAssets>
@@ -19,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AssetFlowCore.Application\AssetFlowCore.Application.csproj" />
+    <ProjectReference Include="..\AssetFlowCore.Aspire\AssetFlowCore.Aspire.ServiceDefaults\AssetFlowCore.Aspire.ServiceDefaults.csproj" />
     <ProjectReference Include="..\AssetFlowCore.Infrastructure\AssetFlowCore.Infrastructure.csproj" />
   </ItemGroup>
 
