@@ -1,3 +1,6 @@
+using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace AssetFlowCore.ArchitectureTests
@@ -5,29 +8,25 @@ namespace AssetFlowCore.ArchitectureTests
     public class AppHostTests
     {
         [Fact]
-        public void AppHost_source_file_contains_expected_builder_call()
+        public async Task AppHost_Configures_Expected_Resources_Correctly()
         {
-            // Resolve the path to the AppHost source file in the repository
-            var repoRoot = Directory.GetCurrentDirectory();
-            // Tests run from the test project's bin folder; walk up until solution root is found
-            // Try multiple parent levels to be robust across environments
-            string solutionRoot = repoRoot;
-            for (int i = 0; i < 6; i++)
-            {
-                if (File.Exists(Path.Combine(solutionRoot, "AssetFlowCore.Aspire", "AssetFlowCore.Aspire.AppHost", "AppHost.cs")))
-                    break;
-                solutionRoot = Path.GetDirectoryName(solutionRoot) ?? solutionRoot;
-            }
+            // Arrange : Initialise l'application Aspire en mode test
+            var appBuilder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.AssetFlowCore_Aspire_AppHost>();
 
-            var appHostPath = Path.Combine(solutionRoot, "AssetFlowCore.Aspire", "AssetFlowCore.Aspire.AppHost", "AppHost.cs");
+            // Act
+            using var app = await appBuilder.BuildAsync();
+            var resources = app.Services.GetRequiredService<DistributedApplicationModel>().Resources;
 
-            Assert.True(File.Exists(appHostPath), $"AppHost.cs not found at: {appHostPath}");
+            // Assert 1 : Vérifier la présence du serveur SQL (généralement une resource de type SqlServerServerResource)
+            var sqlServerExists = resources.Any(r => r.Name == "sqlserver" || r.GetType().Name.Contains("SqlServer"));
+            Assert.True(sqlServerExists, "Le composant SqlServer n'a pas été enregistré dans l'AppHost.");
 
-            var content = File.ReadAllText(appHostPath);
+            // Assert 2 : Vérifier la présence et le type du projet WebApi
+            var webApiProject = resources.FirstOrDefault(r => r.Name.Contains("WebApi", StringComparison.OrdinalIgnoreCase));
 
-            Assert.Contains("DistributedApplication.CreateBuilder", content);
-            Assert.Contains("AddSqlServer", content);
-            Assert.Contains("AddProject<Projects.AssetFlowCore_WebApi>", content);
+            Assert.NotNull(webApiProject);
+            // On vérifie que c'est bien un projet exécutable et non une simple chaîne de texte
+            Assert.Contains("ProjectResource", webApiProject.GetType().Name);
         }
     }
 }
