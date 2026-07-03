@@ -13,4 +13,5 @@ var database = sqlServer.AddDatabase("assetflow-db");
 builder.AddProject<Projects.AssetFlowCore_WebApi>("webapi")
        .WithReference(database);
 
-builder.Build().Run();
+var app = builder.Build();
+await app.RunAsync();
