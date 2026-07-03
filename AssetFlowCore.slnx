@@ -1,6 +1,8 @@
 <Solution>
   <Project Path="AssetFlowCore.Application/AssetFlowCore.Application.csproj" />
   <Project Path="AssetFlowCore.ArchitectureTests/AssetFlowCore.ArchitectureTests.csproj" Id="ecc272de-45ec-4c38-b9c4-8d59d25babb6" />
+  <Project Path="AssetFlowCore.Aspire/AssetFlowCore.Aspire.AppHost/AssetFlowCore.Aspire.AppHost.csproj" Id="b3c07401-b097-4e54-99d7-279dc07f61fa" />
+  <Project Path="AssetFlowCore.Aspire/AssetFlowCore.Aspire.ServiceDefaults/AssetFlowCore.Aspire.ServiceDefaults.csproj" />
   <Project Path="AssetFlowCore.Benchmarks/AssetFlowCore.Benchmarks.csproj" Id="95dc1d0f-8f5c-42ec-98bd-20f5234c7343" />
   <Project Path="AssetFlowCore.Domain/AssetFlowCore.Domain.csproj" />
   <Project Path="AssetFlowCore.Infrastructure/AssetFlowCore.Infrastructure.csproj" />

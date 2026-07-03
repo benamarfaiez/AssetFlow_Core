@@ -23,12 +23,7 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddSignalR();
 
-        // 2. Configuration du DbContext & Options
-        services.AddDbContext<AssetFlowDbContext>(options =>
-            options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection"),
-                b => b.MigrationsAssembly(typeof(AssetFlowDbContext).Assembly.GetName().Name)));
-
+        // 2. Configuration du Options
         services.AddOptions<DatabaseOptions>().BindConfiguration(DatabaseOptions.SectionName);
 
         // 3. AssetRepository (Pattern Décorateur propre via IoC)

@@ -16,7 +16,7 @@ namespace AssetFlowCore.Benchmarks.Domain;
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
 [SimpleJob(RuntimeMoniker.Net80, warmupCount: 1, iterationCount: 3)]
 [RankColumn]
-public static class AssetStateMachineBenchmark
+public class AssetStateMachineBenchmark
 {
     [Benchmark(Baseline = true, Description = "Asset.MarkAsDown() — InService → Down")]
     public static void MarkAsDown()
