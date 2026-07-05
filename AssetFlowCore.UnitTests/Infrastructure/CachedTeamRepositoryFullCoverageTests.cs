@@ -111,7 +111,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         {
             var team = new Team("Refresh-Team", "T", "C");
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.Setup(r => r.GetByIdAsync(team.Id)).ReturnsAsync((Team?)null);
+            innerMock.Setup(r => r.GetByIdAsync(team.Id, CancellationToken.None)).ReturnsAsync((Team?)null);
 
             var memory = new MemoryCache(new MemoryCacheOptions());
             var cache = new CachedTeamRepository(innerMock.Object, memory);
@@ -128,7 +128,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             after!.Id.Should().Be(team.Id);
 
             // since cache had the value, inner GetByIdAsync should not be called for the cached read
-            innerMock.Verify(r => r.GetByIdAsync(team.Id), Times.Once); // initial call only
+            innerMock.Verify(r => r.GetByIdAsync(team.Id, CancellationToken.None), Times.Once); // initial call only
         }
     }
 }

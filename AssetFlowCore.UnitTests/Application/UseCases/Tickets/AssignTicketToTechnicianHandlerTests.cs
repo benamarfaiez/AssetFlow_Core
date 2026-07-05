@@ -25,7 +25,7 @@ public class AssignTicketToTechnicianHandlerTests
         asset.MarkAsDown();
         var ticket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Title", "Desc", TicketCriticality.Low, Guid.NewGuid());
 
-        _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id)).ReturnsAsync(ticket);
+        _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id, CancellationToken.None)).ReturnsAsync(ticket);
         _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(asset);
 
         await _handler.Handle(new AssignTicketToTechnicianCommand(ticket.Id), CancellationToken.None);
@@ -38,7 +38,7 @@ public class AssignTicketToTechnicianHandlerTests
     [Fact]
     public async Task ExecuteAsync_WithMissingEntities_ShouldThrowDomainException()
     {
-        _ticketRepoMock.Setup(t => t.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((MaintenanceTicket?)null);
+        _ticketRepoMock.Setup(t => t.GetByIdAsync(It.IsAny<Guid>(), CancellationToken.None)).ReturnsAsync((MaintenanceTicket?)null);
 
         Func<Task> act = async () => await _handler.Handle(new AssignTicketToTechnicianCommand(Guid.NewGuid()), CancellationToken.None);
 

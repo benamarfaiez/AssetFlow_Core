@@ -28,7 +28,7 @@ public class DeleteTeamCommandHandlerTests
     {
         // Arrange
         var team = new DomainTeam("Support", "Laptop", "Low");
-        _teamRepoMock.Setup(r => r.GetByIdAsync(team.Id)).ReturnsAsync(team);
+        _teamRepoMock.Setup(r => r.GetByIdAsync(team.Id, CancellationToken.None)).ReturnsAsync(team);
         _ticketRepoMock.Setup(r => r.ExistsActiveTicketsForTeamAsync(team.Id)).ReturnsAsync(false);
 
         var command = new DeleteTeamCommand(team.Id);
@@ -46,7 +46,7 @@ public class DeleteTeamCommandHandlerTests
     {
         // Arrange
         var unknownId = Guid.NewGuid();
-        _teamRepoMock.Setup(r => r.GetByIdAsync(unknownId)).ReturnsAsync((DomainTeam?)null);
+        _teamRepoMock.Setup(r => r.GetByIdAsync(unknownId, CancellationToken.None)).ReturnsAsync((DomainTeam?)null);
 
         var command = new DeleteTeamCommand(unknownId);
 
@@ -66,7 +66,7 @@ public class DeleteTeamCommandHandlerTests
     {
         // Arrange
         var team = new DomainTeam("Réseau", "Network", "High");
-        _teamRepoMock.Setup(r => r.GetByIdAsync(team.Id)).ReturnsAsync(team);
+        _teamRepoMock.Setup(r => r.GetByIdAsync(team.Id, CancellationToken.None)).ReturnsAsync(team);
         _ticketRepoMock.Setup(r => r.ExistsActiveTicketsForTeamAsync(team.Id)).ReturnsAsync(true);
 
         var command = new DeleteTeamCommand(team.Id);

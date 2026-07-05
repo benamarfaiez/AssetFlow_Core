@@ -18,7 +18,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             // inner repo mock will return the team instance directly
 
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.Setup(r => r.GetByIdAsync(teamId)).ReturnsAsync(team);
+            innerMock.Setup(r => r.GetByIdAsync(teamId, CancellationToken.None)).ReturnsAsync(team);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
             var cache = new CachedTeamRepository(innerMock.Object, memory);
@@ -31,7 +31,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             first.Should().NotBeNull();
             second.Should().NotBeNull();
             second.Should().BeSameAs(first);
-            innerMock.Verify(r => r.GetByIdAsync(teamId), Times.Once);
+            innerMock.Verify(r => r.GetByIdAsync(teamId, CancellationToken.None), Times.Once);
         }
 
         [Fact]
@@ -42,7 +42,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             var team = new Team("Team A", "Servers", "High", "Description A");
 
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.Setup(r => r.GetByIdAsync(teamId)).ReturnsAsync(team);
+            innerMock.Setup(r => r.GetByIdAsync(teamId, CancellationToken.None)).ReturnsAsync(team);
             innerMock.Setup(r => r.UpdateAsync(It.IsAny<Team>())).Returns(Task.CompletedTask);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
@@ -62,7 +62,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             afterUpdate.Should().NotBeNull();
             afterUpdate!.Name.Should().Be("Team A - Renamed");
 
-            innerMock.Verify(r => r.GetByIdAsync(teamId), Times.Once);
+            innerMock.Verify(r => r.GetByIdAsync(teamId, CancellationToken.None), Times.Once);
             innerMock.Verify(r => r.UpdateAsync(It.Is<Team>(t => t.Id == team.Id && t.Name == "Team A - Renamed")), Times.Once);
         }
 

@@ -24,7 +24,7 @@ public class UpdateTeamCommandHandlerTests
     {
         // Arrange
         var team = new AssetFlowCore.Domain.Entities.Team("OldName", "Server", "High", "OldDesc");
-        _teamRepo.Setup(r => r.GetByIdAsync(team.Id)).ReturnsAsync(team);
+        _teamRepo.Setup(r => r.GetByIdAsync(team.Id, CancellationToken.None)).ReturnsAsync(team);
 
         var command = new UpdateTeamCommand(team.Id, "NewName", "Laptop", "Low", "NewDesc");
 
@@ -46,7 +46,7 @@ public class UpdateTeamCommandHandlerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        _teamRepo.Setup(r => r.GetByIdAsync(id)).ReturnsAsync((AssetFlowCore.Domain.Entities.Team?)null);
+        _teamRepo.Setup(r => r.GetByIdAsync(id, CancellationToken.None)).ReturnsAsync((AssetFlowCore.Domain.Entities.Team?)null);
         var command = new UpdateTeamCommand(id, "Name", "Desc", "Server", "High");
 
         // Act

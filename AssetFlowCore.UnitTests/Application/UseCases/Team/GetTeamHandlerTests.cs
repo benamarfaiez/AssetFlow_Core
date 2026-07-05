@@ -26,7 +26,7 @@ public class GetTeamHandlerTests
         // Arrange
         var team = new DomainTeam("Infrastructure-Serveurs", "Server", "High", "Équipe serveurs");
         _teamRepoMock
-            .Setup(r => r.GetByIdAsync(team.Id))
+            .Setup(r => r.GetByIdAsync(team.Id, CancellationToken.None))
             .ReturnsAsync(team);
 
         var query = new GetTeamQuery(team.Id);
@@ -49,7 +49,7 @@ public class GetTeamHandlerTests
         // Arrange
         var team = new DomainTeam("Support-VIP", "Laptop", "Low");
         _teamRepoMock
-            .Setup(r => r.GetByIdAsync(team.Id))
+            .Setup(r => r.GetByIdAsync(team.Id, CancellationToken.None))
             .ReturnsAsync(team);
 
         // Act
@@ -73,7 +73,7 @@ public class GetTeamHandlerTests
         // Arrange
         var unknownId = Guid.NewGuid();
         _teamRepoMock
-            .Setup(r => r.GetByIdAsync(unknownId))
+            .Setup(r => r.GetByIdAsync(unknownId, CancellationToken.None))
             .ReturnsAsync((DomainTeam?)null);
 
         // Act
@@ -89,7 +89,7 @@ public class GetTeamHandlerTests
         // Arrange
         var unknownId = Guid.NewGuid();
         _teamRepoMock
-            .Setup(r => r.GetByIdAsync(unknownId))
+            .Setup(r => r.GetByIdAsync(unknownId, CancellationToken.None))
             .ReturnsAsync((DomainTeam?)null);
 
         // Act
@@ -109,14 +109,14 @@ public class GetTeamHandlerTests
         // Arrange
         var team = new DomainTeam("Réseau", "Network", "Medium");
         _teamRepoMock
-            .Setup(r => r.GetByIdAsync(team.Id))
+            .Setup(r => r.GetByIdAsync(team.Id, CancellationToken.None))
             .ReturnsAsync(team);
 
         // Act
         await _handler.Handle(new GetTeamQuery(team.Id), CancellationToken.None);
 
         // Assert
-        _teamRepoMock.Verify(r => r.GetByIdAsync(team.Id), Times.Once);
+        _teamRepoMock.Verify(r => r.GetByIdAsync(team.Id, CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -125,13 +125,13 @@ public class GetTeamHandlerTests
         // Arrange
         var team = new DomainTeam("Équipe-BDD", "Database", "Critical");
         _teamRepoMock
-            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), CancellationToken.None))
             .ReturnsAsync(team);
 
         // Act
         await _handler.Handle(new GetTeamQuery(team.Id), CancellationToken.None);
 
         // Assert
-        _teamRepoMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
+        _teamRepoMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), CancellationToken.None), Times.Once);
     }
 }

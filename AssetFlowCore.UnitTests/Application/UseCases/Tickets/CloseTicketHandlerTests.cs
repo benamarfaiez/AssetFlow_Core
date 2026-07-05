@@ -27,7 +27,7 @@ public class CloseTicketHandlerTests
         var ticket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Title", "Desc", TicketCriticality.Low, Guid.NewGuid());
         ticket.AssignToTechnician();
 
-        _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id)).ReturnsAsync(ticket);
+        _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id, CancellationToken.None)).ReturnsAsync(ticket);
         _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(asset);
         _ticketRepoMock.Setup(t => t.HasOtherActiveTicketsAsync(asset.Id, ticket.Id)).ReturnsAsync(false);
 

@@ -12,7 +12,7 @@ public class AssignTicketToTechnicianHandler(IMaintenanceTicketRepository ticket
 
     public async Task Handle(AssignTicketToTechnicianCommand command, CancellationToken cancellationToken)
     {
-        var ticket = await _ticketRepository.GetByIdAsync(command.TicketId) ?? throw new DomainException("Ticket introuvable.");
+        var ticket = await _ticketRepository.GetByIdAsync(command.TicketId, cancellationToken) ?? throw new DomainException("Ticket introuvable.");
         var asset = await _assetRepository.GetByIdAsync(ticket.AssetId, cancellationToken) ?? throw new DomainException("Actif lié introuvable.");
         ticket.AssignToTechnician();
         asset.MarkInMaintenance(); // Automate d'état en cascade

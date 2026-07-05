@@ -11,10 +11,10 @@ public class TeamRepository(AssetFlowDbContext context) : ITeamRepository
             .FirstOrDefaultAsync(t =>
                 t.Name == name.Trim() && t.IsActive);
 
-    public async Task<Team?> GetByIdAsync(Guid id)
+    public async Task<Team?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => await context.Teams
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == id);
+            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
     public async Task<IEnumerable<Team>> GetAllActiveAsync()
         => await context.Teams
