@@ -34,22 +34,23 @@ public class CloseTicketBenchmark : BenchmarkBase
 
         var assetId = Guid.NewGuid();
         var asset = new Asset(assetId, $"Asset-Close-{_counter}", SerialNumber.Create($"CLO-{_counter:D6}"), AssetType.Server);
-        // Met l'actif en panne pour permettre l'entrée en maintenance lors de l'assignation du ticket
         asset.MarkAsDown();
 
         await DbContext.Assets.AddAsync(asset);
         await DbContext.SaveChangesAsync();
 
-        // Crée le ticket
+        // 1. Crée le ticket via MediatR Handler
         var create = Resolve<CreateMaintenanceTicketHandler>();
-        var ticket = await create.HandleAsync(new CreateMaintenanceTicketCommand(assetId, $"Ticket-{_counter}", "Description", "Medium"));
+        var ticket = await create.Handle(
+            new CreateMaintenanceTicketCommand(assetId, $"Ticket-{_counter}", "Description", "Medium"),
+            CancellationToken.None);
 
-        // Assigne le ticket
+        // 2. Assigne le ticket via MediatR Handler
         var assign = Resolve<AssignTicketToTechnicianHandler>();
-        await assign.ExecuteAsync(new AssignTicketToTechnicianCommand(ticket.Id));
+        await assign.Handle(new AssignTicketToTechnicianCommand(ticket.Id), CancellationToken.None);
 
-        // Ferme le ticket — déclenche RestoreToService (dernier ticket actif)
+        // 3. Ferme le ticket — déclenche RestoreToService (dernier ticket actif)
         var close = Resolve<CloseTicketHandler>();
-        await close.ExecuteAsync(new CloseTicketCommand(ticket.Id, "Résolu."));
+        await close.Handle(new CloseTicketCommand(ticket.Id, "Résolu."), CancellationToken.None);
     }
 }

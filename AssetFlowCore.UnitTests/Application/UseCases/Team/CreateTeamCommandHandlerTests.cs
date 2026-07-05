@@ -25,12 +25,16 @@ public class CreateTeamCommandHandlerTests
     // ──────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task HandleAsync_WithValidCommand_ShouldPersistTeamAndReturnDto()
+    public async Task Handle_WithValidCommand_ShouldPersistTeamAndReturnDto()
     {
+        // Arrange
         var command = new CreateTeamCommand("Infrastructure-Serveurs", "Server", "High", "Équipe serveurs");
 
-        var result = await _handler.HandleAsync(command);
+        // Act
+        // CORRECTION : Appel à .Handle() avec CancellationToken
+        var result = await _handler.Handle(command, CancellationToken.None);
 
+        // Assert
         result.Should().NotBeNull();
         result.Should().BeOfType<TeamResponseDto>();
         result.Name.Should().Be("Infrastructure-Serveurs");
@@ -40,33 +44,45 @@ public class CreateTeamCommandHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WithNullDescription_ShouldSucceedAndReturnDtoWithNullDescription()
+    public async Task Handle_WithNullDescription_ShouldSucceedAndReturnDtoWithNullDescription()
     {
+        // Arrange
         var command = new CreateTeamCommand("Support-VIP", "Laptop", "Low", null);
 
-        var result = await _handler.HandleAsync(command);
+        // Act
+        // CORRECTION : Appel à .Handle() avec CancellationToken
+        var result = await _handler.Handle(command, CancellationToken.None);
 
+        // Assert
         result.Description.Should().BeNull();
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task HandleAsync_WithValidCommand_ShouldReturnDtoWithNonEmptyId()
+    public async Task Handle_WithValidCommand_ShouldReturnDtoWithNonEmptyId()
     {
+        // Arrange
         var command = new CreateTeamCommand("Réseau", "Network", "Medium", null);
 
-        var result = await _handler.HandleAsync(command);
+        // Act
+        // CORRECTION : Appel à .Handle() avec CancellationToken
+        var result = await _handler.Handle(command, CancellationToken.None);
 
+        // Assert
         result.Id.Should().NotBeEmpty();
     }
 
     [Fact]
-    public async Task HandleAsync_WithValidCommand_ShouldReturnDtoWithCorrectProperties()
+    public async Task Handle_WithValidCommand_ShouldReturnDtoWithCorrectProperties()
     {
+        // Arrange
         var command = new CreateTeamCommand("Équipe-BDD", "Database", "Critical", "Base de données de prod");
 
-        var result = await _handler.HandleAsync(command);
+        // Act
+        // CORRECTION : Appel à .Handle() avec CancellationToken
+        var result = await _handler.Handle(command, CancellationToken.None);
 
+        // Assert
         result.Name.Should().Be("Équipe-BDD");
         result.Description.Should().Be("Base de données de prod");
         result.IsActive.Should().BeTrue();
@@ -81,13 +97,17 @@ public class CreateTeamCommandHandlerTests
     [InlineData("", "Server", "High")]
     [InlineData("   ", "Server", "High")]
     [InlineData(null, "Server", "High")]
-    public async Task HandleAsync_WithInvalidName_ShouldThrowArgumentException(
+    public async Task Handle_WithInvalidName_ShouldThrowArgumentException(
         string? name, string assetType, string criticality)
     {
+        // Arrange
         var command = new CreateTeamCommand(name!, assetType, criticality, null);
 
-        Func<Task> act = async () => await _handler.HandleAsync(command);
+        // Act
+        // CORRECTION : Appel à .Handle() avec CancellationToken dans le délégué
+        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
+        // Assert
         await act.Should().ThrowAsync<ArgumentException>()
                  .WithMessage("*Le nom de l'équipe est obligatoire*");
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -97,13 +117,17 @@ public class CreateTeamCommandHandlerTests
     [InlineData("Équipe-X", "", "High")]
     [InlineData("Équipe-X", "   ", "High")]
     [InlineData("Équipe-X", null, "High")]
-    public async Task HandleAsync_WithInvalidAssetType_ShouldThrowArgumentException(
+    public async Task Handle_WithInvalidAssetType_ShouldThrowArgumentException(
         string name, string? assetType, string criticality)
     {
+        // Arrange
         var command = new CreateTeamCommand(name, assetType!, criticality, null);
 
-        Func<Task> act = async () => await _handler.HandleAsync(command);
+        // Act
+        // CORRECTION : Appel à .Handle() avec CancellationToken dans le délégué
+        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
+        // Assert
         await act.Should().ThrowAsync<ArgumentException>()
                  .WithMessage("*Le assetType de l'équipe est obligatoire*");
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -113,13 +137,17 @@ public class CreateTeamCommandHandlerTests
     [InlineData("Équipe-X", "Server", "")]
     [InlineData("Équipe-X", "Server", "   ")]
     [InlineData("Équipe-X", "Server", null)]
-    public async Task HandleAsync_WithInvalidTicketCriticality_ShouldThrowArgumentException(
+    public async Task Handle_WithInvalidTicketCriticality_ShouldThrowArgumentException(
         string name, string assetType, string? criticality)
     {
+        // Arrange
         var command = new CreateTeamCommand(name, assetType, criticality!, null);
 
-        Func<Task> act = async () => await _handler.HandleAsync(command);
+        // Act
+        // CORRECTION : Appel à .Handle() avec CancellationToken dans le délégué
+        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
+        // Assert
         await act.Should().ThrowAsync<ArgumentException>()
                  .WithMessage("*Le ticketCriticality de l'équipe est obligatoire*");
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

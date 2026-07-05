@@ -52,7 +52,7 @@ public class RequestTicketTransferCommandHandlerTests
             .ReturnsAsync(existingTicket);
 
         // Act
-        await _handler.ExecuteAsync(command);
+        await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         // On vérifie que la sauvegarde a bien été appelée exactement 1 fois
@@ -71,7 +71,7 @@ public class RequestTicketTransferCommandHandlerTests
             .ReturnsAsync((MaintenanceTicket?)null); // Simule un retour vide de la BDD
 
         // Act
-        Func<Task> action = async () => await _handler.ExecuteAsync(command);
+        Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         await action.Should().ThrowAsync<DomainException>()

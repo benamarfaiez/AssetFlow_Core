@@ -5,6 +5,7 @@ using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
+using MediatR;
 
 namespace AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 
@@ -22,16 +23,16 @@ public class CreateMaintenanceTicketHandler(
     ITicketAssignmentEngine assignmentEngine,
     INotificationService notificationService,
     ITeamRepository teamRepository,
-    IAIAssistanceQueue aiQueue)
+    IAIAssistanceQueue aiQueue) : IRequestHandler<CreateMaintenanceTicketCommand, TicketResponseDto>
 {
 
     /// <summary>
     /// Exécute de manière transactionnelle l'ouverture du ticket et la mutation de l'actif lié.
     /// </summary>
-    public async Task<TicketResponseDto> HandleAsync(CreateMaintenanceTicketCommand command)
+    public async Task<TicketResponseDto> Handle(CreateMaintenanceTicketCommand command, CancellationToken cancellationToken)
     {
         // 1. Récupération de l'agrégat / entité cible
-        var asset = await assetRepository.GetByIdAsync(command.AssetId) ?? throw new DomainException($"L'actif cible {command.AssetId} n'existe pas.");
+        var asset = await assetRepository.GetByIdAsync(command.AssetId, cancellationToken) ?? throw new DomainException($"L'actif cible {command.AssetId} n'existe pas.");
 
         // 2. Validation des invariants métiers du Domaine
         if (asset.Status == AssetStatus.Decommissioned)
@@ -68,7 +69,7 @@ public class CreateMaintenanceTicketHandler(
         var dto = ticket.ToDto(teamName);
 
         // 10. PERSISTANCE ATOMIQUE (Unit of Work)
-        await unitOfWork.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         // 11. Notification Temps Réel asynchrone et découplée (SignalR WebSockets)
         await notificationService.NotifyTeamNewTicketAsync(teamName, dto);

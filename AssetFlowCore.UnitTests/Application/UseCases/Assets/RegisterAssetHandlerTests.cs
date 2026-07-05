@@ -21,13 +21,17 @@ public class RegisterAssetHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenNewAsset_ShouldSaveAndReturnDto()
+    public async Task Handle_WhenNewAsset_ShouldSaveAndReturnDto()
     {
+        // Arrange
         _repoMock.Setup(r => r.ExistsWithSerialNumberAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
         var command = new RegisterAssetCommand("Asset-01", "SERIAL123", "Server");
 
-        var result = await _handler.HandleAsync(command);
+        // Act
+        // CORRECTION : Appel à .Handle() avec CancellationToken
+        var result = await _handler.Handle(command, CancellationToken.None);
 
+        // Assert
         result.Should().NotBeNull();
         result.Name.Should().Be("Asset-01");
         _repoMock.Verify(r => r.AddAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -35,14 +39,20 @@ public class RegisterAssetHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenSerialAlreadyExists_ShouldThrowDomainException()
+    public async Task Handle_WhenSerialAlreadyExists_ShouldThrowDomainException()
     {
+        // Arrange
         _repoMock.Setup(r => r.ExistsWithSerialNumberAsync("SERIAL123".ToUpper().Trim(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         var command = new RegisterAssetCommand("Asset-01", "SERIAL123", "Server");
 
-        Func<Task> act = async () => await _handler.HandleAsync(command);
+        // Act
+        // CORRECTION : Appel à .Handle() avec CancellationToken dans le délégué
+        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<DomainException>();
+        // Assert
+        await act.Should().ThrowAsync<DomainException>()
+            .WithMessage("Ce numéro de série constructeur est déjà enregistré dans le parc.");
+
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

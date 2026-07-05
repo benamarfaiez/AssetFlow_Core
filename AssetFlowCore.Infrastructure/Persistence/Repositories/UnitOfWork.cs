@@ -1,13 +1,10 @@
 ﻿using AssetFlowCore.Domain.Repositories;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace AssetFlowCore.Infrastructure.Persistence.Repositories;
 
 
 public class UnitOfWork(AssetFlowDbContext context) : IUnitOfWork
 {
-    private IDbContextTransaction? _transaction;
-
     // Lazy loading des repositories
     private ITeamRepository? _teamRepository;
     private IAssetRepository? _assetRepository;

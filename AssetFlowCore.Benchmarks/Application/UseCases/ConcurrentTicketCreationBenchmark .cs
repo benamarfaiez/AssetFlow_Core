@@ -5,13 +5,13 @@ using AssetFlowCore.Domain.ValueObjects;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AssetFlowCore.Benchmarks.Application.UseCases;
 
 /// <summary>
 /// Mesure le coût de création de N tickets sur des assets distincts en parallèle.
 /// Simule une charge réelle où plusieurs techniciens déclarent des incidents simultanément.
-/// Mesure le throughput du pipeline complet sous charge concurrente.
 /// </summary>
 [MemoryDiagnoser]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
@@ -50,22 +50,31 @@ public class ConcurrentTicketCreationBenchmark : BenchmarkBase
         var assetIds = await CreateFreshAssets();
         for (int i = 0; i < ConcurrentTickets; i++)
         {
+            // On résout le handler à chaque itération pour nettoyer le scope d'injection si nécessaire
             var handler = Resolve<CreateMaintenanceTicketHandler>();
-            await handler.HandleAsync(new CreateMaintenanceTicketCommand(
-                assetIds[i], $"Incident-{i}", "Description", "Medium"));
+
+            await handler.Handle(
+                new CreateMaintenanceTicketCommand(assetIds[i], $"Incident-{i}", "Description", "Medium"),
+                CancellationToken.None);
         }
     }
 
-    [Benchmark(Description = "N tickets en parallèle (Task.WhenAll)")]
+    [Benchmark(Description = "N tickets en parallèle (Task.WhenAll avec Scopes isolés)")]
     public async Task CreateTickets_Parallel()
     {
         var assetIds = await CreateFreshAssets();
-        var tasks = assetIds.Select((id, i) =>
+
+        var tasks = assetIds.Select(async (id, i) =>
         {
-            var handler = Resolve<CreateMaintenanceTicketHandler>();
-            return handler.HandleAsync(new CreateMaintenanceTicketCommand(
-                id, $"Incident-{i}", "Description", "Medium"));
+            using var scope = ServiceProvider.CreateScope();
+
+            var handler = scope.ServiceProvider.GetRequiredService<CreateMaintenanceTicketHandler>();
+
+            await handler.Handle(
+                new CreateMaintenanceTicketCommand(id, $"Incident-{i}", "Description", "Medium"),
+                CancellationToken.None);
         });
+
         await Task.WhenAll(tasks);
     }
 }

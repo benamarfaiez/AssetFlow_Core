@@ -43,14 +43,14 @@ public class TicketLifecycleBenchmark : BenchmarkBase
         var assetId = await CreateFreshAsset();
 
         var createHandler = Resolve<CreateMaintenanceTicketHandler>();
-        var ticket = await createHandler.HandleAsync(new CreateMaintenanceTicketCommand(
-            assetId, $"Incident {_counter}", "Description", "Medium"));
+        var ticket = await createHandler.Handle(new CreateMaintenanceTicketCommand(
+            assetId, $"Incident {_counter}", "Description", "Medium"), CancellationToken.None);
 
         var assignHandler = Resolve<AssignTicketToTechnicianHandler>();
-        await assignHandler.ExecuteAsync(new AssignTicketToTechnicianCommand(ticket.Id));
+        await assignHandler.Handle(new AssignTicketToTechnicianCommand(ticket.Id), CancellationToken.None);
 
         var closeHandler = Resolve<CloseTicketHandler>();
-        await closeHandler.ExecuteAsync(new CloseTicketCommand(ticket.Id, "Problème résolu."));
+        await closeHandler.Handle(new CloseTicketCommand(ticket.Id, "Problème résolu."), CancellationToken.None);
     }
 
     [Benchmark(Description = "Assign seul (sans Close)")]
@@ -59,11 +59,11 @@ public class TicketLifecycleBenchmark : BenchmarkBase
         var assetId = await CreateFreshAsset();
 
         var createHandler = Resolve<CreateMaintenanceTicketHandler>();
-        var ticket = await createHandler.HandleAsync(new CreateMaintenanceTicketCommand(
-            assetId, $"Incident-Assign {_counter}", "Description", "High"));
+        var ticket = await createHandler.Handle(new CreateMaintenanceTicketCommand(
+            assetId, $"Incident-Assign {_counter}", "Description", "High"), CancellationToken.None);
 
         var assignHandler = Resolve<AssignTicketToTechnicianHandler>();
-        await assignHandler.ExecuteAsync(new AssignTicketToTechnicianCommand(ticket.Id));
+        await assignHandler.Handle(new AssignTicketToTechnicianCommand(ticket.Id), CancellationToken.None);
     }
 
     [Benchmark(Description = "Close seul (après Create + Assign)")]
@@ -72,13 +72,13 @@ public class TicketLifecycleBenchmark : BenchmarkBase
         var assetId = await CreateFreshAsset();
 
         var createHandler = Resolve<CreateMaintenanceTicketHandler>();
-        var ticket = await createHandler.HandleAsync(new CreateMaintenanceTicketCommand(
-            assetId, $"Incident-Close {_counter}", "Description", "Low"));
+        var ticket = await createHandler.Handle(new CreateMaintenanceTicketCommand(
+            assetId, $"Incident-Close {_counter}", "Description", "Low"), CancellationToken.None);
 
         var assignHandler = Resolve<AssignTicketToTechnicianHandler>();
-        await assignHandler.ExecuteAsync(new AssignTicketToTechnicianCommand(ticket.Id));
+        await assignHandler.Handle(new AssignTicketToTechnicianCommand(ticket.Id), CancellationToken.None);
 
         var closeHandler = Resolve<CloseTicketHandler>();
-        await closeHandler.ExecuteAsync(new CloseTicketCommand(ticket.Id, "Clôturé."));
+        await closeHandler.Handle(new CloseTicketCommand(ticket.Id, "Clôturé."), CancellationToken.None);
     }
 }

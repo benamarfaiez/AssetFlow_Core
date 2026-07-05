@@ -58,8 +58,9 @@ public class DecommissionAssetBenchmark : BenchmarkBase
             await DbContext.SaveChangesAsync();
 
             var handler = Resolve<CreateMaintenanceTicketHandler>();
-            await handler.HandleAsync(new CreateMaintenanceTicketCommand(
-                id, $"Ticket-{i}", "Description", "Low"));
+
+            await handler.Handle(new CreateMaintenanceTicketCommand(
+                id, $"Ticket-{i}", "Description", "Low"), CancellationToken.None);
         }
         return id;
     }
@@ -69,7 +70,8 @@ public class DecommissionAssetBenchmark : BenchmarkBase
     {
         var assetId = await CreateCleanAsset();
         var handler = Resolve<DecommissionAssetHandler>();
-        await handler.ExecuteAsync(new DecommissionAssetCommand(assetId));
+
+        await handler.Handle(new DecommissionAssetCommand(assetId), CancellationToken.None);
     }
 
     [Benchmark(Description = "Decommission — asset bloqué par tickets actifs (DomainException)")]
@@ -79,7 +81,7 @@ public class DecommissionAssetBenchmark : BenchmarkBase
         var handler = Resolve<DecommissionAssetHandler>();
         try
         {
-            await handler.ExecuteAsync(new DecommissionAssetCommand(assetId));
+            await handler.Handle(new DecommissionAssetCommand(assetId), CancellationToken.None);
         }
         catch (DomainException)
         {

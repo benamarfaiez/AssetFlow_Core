@@ -1,6 +1,5 @@
 using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.Application.UseCases.Team.GetTeam;
-using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
 using FluentAssertions;
@@ -22,16 +21,20 @@ public class GetTeamHandlerTests
     // ──────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task ExecuteAsync_WhenTeamExists_ShouldReturnDto()
+    public async Task Handle_WhenTeamExists_ShouldReturnDto()
     {
+        // Arrange
         var team = new DomainTeam("Infrastructure-Serveurs", "Server", "High", "Équipe serveurs");
         _teamRepoMock
             .Setup(r => r.GetByIdAsync(team.Id))
             .ReturnsAsync(team);
 
         var query = new GetTeamQuery(team.Id);
-        var result = await _handler.ExecuteAsync(query);
 
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
         result.Should().NotBeNull();
         result.Should().BeOfType<TeamResponseDto>();
         result.Id.Should().Be(team.Id);
@@ -41,15 +44,18 @@ public class GetTeamHandlerTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenTeamExists_ShouldMapAllPropertiesCorrectly()
+    public async Task Handle_WhenTeamExists_ShouldMapAllPropertiesCorrectly()
     {
+        // Arrange
         var team = new DomainTeam("Support-VIP", "Laptop", "Low");
         _teamRepoMock
             .Setup(r => r.GetByIdAsync(team.Id))
             .ReturnsAsync(team);
 
-        var result = await _handler.ExecuteAsync(new GetTeamQuery(team.Id));
+        // Act
+        var result = await _handler.Handle(new GetTeamQuery(team.Id), CancellationToken.None);
 
+        // Assert
         result.Id.Should().Be(team.Id);
         result.Name.Should().Be(team.Name);
         result.Description.Should().BeNull();
@@ -62,29 +68,34 @@ public class GetTeamHandlerTests
     // ──────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task ExecuteAsync_WhenTeamDoesNotExist_ShouldThrowDomainException()
+    public async Task Handle_WhenTeamDoesNotExist_ShouldThrowDomainException()
     {
+        // Arrange
         var unknownId = Guid.NewGuid();
         _teamRepoMock
             .Setup(r => r.GetByIdAsync(unknownId))
             .ReturnsAsync((DomainTeam?)null);
 
-        Func<Task> act = async () => await _handler.ExecuteAsync(new GetTeamQuery(unknownId));
+        // Act
+        Func<Task> act = async () => await _handler.Handle(new GetTeamQuery(unknownId), CancellationToken.None);
 
-        await act.Should().ThrowAsync<DomainException>()
-                 .WithMessage($"*{unknownId}*");
+        // Assert
+        await act.Should().ThrowAsync<DomainException>().WithMessage($"Le team avec l'ID {unknownId} est introuvable.");
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenTeamDoesNotExist_ShouldNotReturnDefaultDto()
+    public async Task Handle_WhenTeamDoesNotExist_ShouldNotReturnDefaultDto()
     {
+        // Arrange
         var unknownId = Guid.NewGuid();
         _teamRepoMock
             .Setup(r => r.GetByIdAsync(unknownId))
             .ReturnsAsync((DomainTeam?)null);
 
-        Func<Task> act = async () => await _handler.ExecuteAsync(new GetTeamQuery(unknownId));
+        // Act
+        Func<Task> act = async () => await _handler.Handle(new GetTeamQuery(unknownId), CancellationToken.None);
 
+        // Assert
         await act.Should().ThrowAsync<DomainException>();
     }
 
@@ -93,28 +104,34 @@ public class GetTeamHandlerTests
     // ──────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task ExecuteAsync_ShouldCallRepositoryWithCorrectId()
+    public async Task Handle_ShouldCallRepositoryWithCorrectId()
     {
+        // Arrange
         var team = new DomainTeam("Réseau", "Network", "Medium");
         _teamRepoMock
             .Setup(r => r.GetByIdAsync(team.Id))
             .ReturnsAsync(team);
 
-        await _handler.ExecuteAsync(new GetTeamQuery(team.Id));
+        // Act
+        await _handler.Handle(new GetTeamQuery(team.Id), CancellationToken.None);
 
+        // Assert
         _teamRepoMock.Verify(r => r.GetByIdAsync(team.Id), Times.Once);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldCallRepositoryExactlyOnce()
+    public async Task Handle_ShouldCallRepositoryExactlyOnce()
     {
+        // Arrange
         var team = new DomainTeam("Équipe-BDD", "Database", "Critical");
         _teamRepoMock
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync(team);
 
-        await _handler.ExecuteAsync(new GetTeamQuery(team.Id));
+        // Act
+        await _handler.Handle(new GetTeamQuery(team.Id), CancellationToken.None);
 
+        // Assert
         _teamRepoMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>()), Times.Once);
     }
 }

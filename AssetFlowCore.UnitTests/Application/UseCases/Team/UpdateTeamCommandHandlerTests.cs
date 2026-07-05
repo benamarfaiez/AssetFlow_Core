@@ -29,7 +29,7 @@ public class UpdateTeamCommandHandlerTests
         var command = new UpdateTeamCommand(team.Id, "NewName", "Laptop", "Low", "NewDesc");
 
         // Act
-        var result = await _handler.HandleAsync(command);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
@@ -42,18 +42,18 @@ public class UpdateTeamCommandHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenTeamNotFound_ShouldThrowDomainException()
+    public async Task Handle_WhenTeamNotFound_ShouldThrowDomainException()
     {
         // Arrange
         var id = Guid.NewGuid();
         _teamRepo.Setup(r => r.GetByIdAsync(id)).ReturnsAsync((AssetFlowCore.Domain.Entities.Team?)null);
-
-        var command = new UpdateTeamCommand(id, "Name", "Server", "High", "Desc");
+        var command = new UpdateTeamCommand(id, "Name", "Desc", "Server", "High");
 
         // Act
-        Func<Task> act = async () => await _handler.HandleAsync(command);
+        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<DomainException>();
+        await act.Should().ThrowAsync<DomainException>().WithMessage($"Le team avec l'ID {id} est introuvable.");
+        _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

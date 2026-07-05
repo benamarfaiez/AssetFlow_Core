@@ -1,11 +1,12 @@
 ﻿using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
+using MediatR;
 
 namespace AssetFlowCore.Application.UseCases.Team.DeleteTeam;
 
-public class DeleteTeamCommandHandler(IUnitOfWork unitOfWork)
+public class DeleteTeamCommandHandler(IUnitOfWork unitOfWork) : IRequestHandler<DeleteTeamCommand>
 {
-    public async ValueTask ExecuteAsync(DeleteTeamCommand command)
+    public async Task Handle(DeleteTeamCommand command, CancellationToken cancellationToken)
     {
         var team = await unitOfWork.Team.GetByIdAsync(command.TeamId) ?? throw new DomainException("Team introuvable.");
 
@@ -15,6 +16,6 @@ public class DeleteTeamCommandHandler(IUnitOfWork unitOfWork)
             throw new DomainException("Impossible de supprimer l'équipe : des tickets actifs lui sont assignés.");
 
         await unitOfWork.Team.RemoveAsync(team);
-        await unitOfWork.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

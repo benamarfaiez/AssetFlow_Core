@@ -1,4 +1,7 @@
-﻿namespace AssetFlowCore.Application.UseCases.Team.UpdateTeam;
+﻿using AssetFlowCore.Application.DTOs;
+using MediatR;
 
-public record UpdateTeamCommand(Guid TeamId, string? Name, string? AssetType, string? TicketCriticality, string? Description);
+namespace AssetFlowCore.Application.UseCases.Team.UpdateTeam;
+
+public record UpdateTeamCommand(Guid TeamId, string? Name, string? AssetType, string? TicketCriticality, string? Description) : IRequest<TeamResponseDto>;
 

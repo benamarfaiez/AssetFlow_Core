@@ -28,7 +28,7 @@ public class AssignTicketToTechnicianHandlerTests
         _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id)).ReturnsAsync(ticket);
         _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(asset);
 
-        await _handler.ExecuteAsync(new AssignTicketToTechnicianCommand(ticket.Id));
+        await _handler.Handle(new AssignTicketToTechnicianCommand(ticket.Id), CancellationToken.None);
 
         ticket.Status.Should().Be(TicketStatus.InProgress);
         asset.Status.Should().Be(AssetStatus.InMaintenance);
@@ -40,7 +40,7 @@ public class AssignTicketToTechnicianHandlerTests
     {
         _ticketRepoMock.Setup(t => t.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((MaintenanceTicket?)null);
 
-        Func<Task> act = async () => await _handler.ExecuteAsync(new AssignTicketToTechnicianCommand(Guid.NewGuid()));
+        Func<Task> act = async () => await _handler.Handle(new AssignTicketToTechnicianCommand(Guid.NewGuid()), CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>();
     }
