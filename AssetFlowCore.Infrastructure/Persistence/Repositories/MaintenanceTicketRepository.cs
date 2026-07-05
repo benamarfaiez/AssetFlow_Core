@@ -6,9 +6,9 @@ namespace AssetFlowCore.Infrastructure.Persistence.Repositories;
 
 public class MaintenanceTicketRepository(AssetFlowDbContext context) : IMaintenanceTicketRepository
 {
-    public async Task<MaintenanceTicket?> GetByIdAsync(Guid id)
+    public async Task<MaintenanceTicket?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => await context.Tickets
-        .FirstOrDefaultAsync(t => t.Id == id);
+        .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
     public async Task<MaintenanceTicket?> GetByIdWithTrackingAsync(Guid id)
         => await context.Tickets

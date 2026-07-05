@@ -47,7 +47,7 @@ public class AIAssistanceWorkerTests
             .ReturnsAsync(ticketId)
             .ThrowsAsync(new OperationCanceledException());
 
-        _ticketRepoMock.Setup(r => r.GetByIdAsync(ticketId)).ReturnsAsync(ticket);
+        _ticketRepoMock.Setup(r => r.GetByIdAsync(ticketId, CancellationToken.None)).ReturnsAsync(ticket);
 
         // Mock du générateur d'Embedding (retourne un faux vecteur float[])
         var vector = new float[] { 0.1f, 0.2f, 0.3f };

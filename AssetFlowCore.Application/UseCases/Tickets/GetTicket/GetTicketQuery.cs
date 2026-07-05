@@ -1,3 +1,6 @@
-﻿namespace AssetFlowCore.Application.UseCases.Tickets.GetTicket;
+﻿using AssetFlowCore.Application.DTOs;
+using MediatR;
 
-public record GetTicketQuery(Guid TicketId);
+namespace AssetFlowCore.Application.UseCases.Tickets.GetTicket;
+
+public record GetTicketQuery(Guid TicketId) : IRequest<TicketResponseDto>;

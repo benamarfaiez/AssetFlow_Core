@@ -41,8 +41,9 @@ public class CreateTicketBenchmark : BenchmarkBase
     {
         var assetId = await CreateFreshAsset("SRV", AssetType.Server);
         var handler = Resolve<CreateMaintenanceTicketHandler>();
-        return await handler.HandleAsync(new CreateMaintenanceTicketCommand(
-            assetId, $"Panne serveur {_counter}", "Disque HS", "High"));
+
+        return await handler.Handle(new CreateMaintenanceTicketCommand(
+            assetId, $"Panne serveur {_counter}", "Disque HS", "High"), CancellationToken.None);
     }
 
     [Benchmark(Description = "Ticket Laptop High → Support-VIP")]
@@ -50,8 +51,9 @@ public class CreateTicketBenchmark : BenchmarkBase
     {
         var assetId = await CreateFreshAsset("LPT", AssetType.Laptop);
         var handler = Resolve<CreateMaintenanceTicketHandler>();
-        return await handler.HandleAsync(new CreateMaintenanceTicketCommand(
-            assetId, $"Laptop VIP {_counter}", "Écran cassé", "High"));
+
+        return await handler.Handle(new CreateMaintenanceTicketCommand(
+            assetId, $"Laptop VIP {_counter}", "Écran cassé", "High"), CancellationToken.None);
     }
 
     [Benchmark(Description = "Ticket Laptop Medium → Support-Lectorat")]
@@ -59,8 +61,9 @@ public class CreateTicketBenchmark : BenchmarkBase
     {
         var assetId = await CreateFreshAsset("LPM", AssetType.Laptop);
         var handler = Resolve<CreateMaintenanceTicketHandler>();
-        return await handler.HandleAsync(new CreateMaintenanceTicketCommand(
-            assetId, $"Laptop Standard {_counter}", "Clavier HS", "Medium"));
+
+        return await handler.Handle(new CreateMaintenanceTicketCommand(
+            assetId, $"Laptop Standard {_counter}", "Clavier HS", "Medium"), CancellationToken.None);
     }
 
     [Benchmark(Description = "Ticket Network Low → Réseau-Télécom")]
@@ -68,7 +71,8 @@ public class CreateTicketBenchmark : BenchmarkBase
     {
         var assetId = await CreateFreshAsset("SWI", AssetType.NetworkDevice);
         var handler = Resolve<CreateMaintenanceTicketHandler>();
-        return await handler.HandleAsync(new CreateMaintenanceTicketCommand(
-            assetId, $"Switch {_counter}", "Port défaillant", "Low"));
+
+        return await handler.Handle(new CreateMaintenanceTicketCommand(
+            assetId, $"Switch {_counter}", "Port défaillant", "Low"), CancellationToken.None);
     }
 }

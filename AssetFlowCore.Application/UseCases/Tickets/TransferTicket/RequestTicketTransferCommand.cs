@@ -1,3 +1,5 @@
-﻿namespace AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
+﻿using MediatR;
 
-public record RequestTicketTransferCommand(Guid TicketId, string TeamName, string Reason);
+namespace AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
+
+public record RequestTicketTransferCommand(Guid TicketId, string TeamName, string Reason) : IRequest;

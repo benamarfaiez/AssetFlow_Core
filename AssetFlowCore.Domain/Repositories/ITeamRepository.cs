@@ -5,7 +5,7 @@ namespace AssetFlowCore.Domain.Repositories;
 public interface ITeamRepository
 {
     Task<Team?> GetByNameAsync(string name);
-    Task<Team?> GetByIdAsync(Guid id);
+    Task<Team?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Team?> GetByAssetTypeAndCriticalityAsync(string assetType, string criticality);
     Task<IEnumerable<Team>> GetAllActiveAsync();
     Task AddAsync(Team team);

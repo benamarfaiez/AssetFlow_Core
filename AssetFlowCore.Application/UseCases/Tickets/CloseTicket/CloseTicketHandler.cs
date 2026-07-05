@@ -1,16 +1,15 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
-using AssetFlowCore.Domain.Exceptions;
+using MediatR;
 
 namespace AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
 
-public class CloseTicketHandler(IMaintenanceTicketRepository ticketRepository, IAssetRepository assetRepository, IUnitOfWork unitOfWork)
+public class CloseTicketHandler(IMaintenanceTicketRepository ticketRepository, IAssetRepository assetRepository, IUnitOfWork unitOfWork) : IRequestHandler<CloseTicketCommand>
 {
-    public async ValueTask ExecuteAsync(CloseTicketCommand command)
+    public async Task Handle(CloseTicketCommand command, CancellationToken cancellationToken)
     {
         var ticket = await ticketRepository.GetByIdAsync(command.TicketId) ?? throw new DomainException("Ticket introuvable.");
-        var asset = await assetRepository.GetByIdAsync(ticket.AssetId) ?? throw new DomainException("Actif associé introuvable.");
+        var asset = await assetRepository.GetByIdAsync(ticket.AssetId, cancellationToken) ?? throw new DomainException("Actif associé introuvable.");
 
         ticket.Close(command.ResolutionComment);
 
@@ -22,6 +21,6 @@ public class CloseTicketHandler(IMaintenanceTicketRepository ticketRepository, I
             asset.RestoreToService();
         }
 
-        await unitOfWork.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

@@ -20,39 +20,42 @@ public class RegisterAssetBenchmark : BenchmarkBase
     [GlobalSetup]
     public void Setup() => SetupServices("Bench_RegisterAsset");
 
-    [IterationSetup]
-    public void IterationSetup() => _counter++;
-
     [Benchmark(Baseline = true, Description = "Register Server")]
     public async Task RegisterServer()
     {
+        // On incrémente à chaque invocation pour garantir l'unicité du numéro de série
+        _counter++;
+
         var handler = Resolve<RegisterAssetHandler>();
         var cmd = new RegisterAssetCommand(
             $"Serveur-{_counter}",
             $"SRV-{_counter:D6}",
             "Server");
-        await handler.HandleAsync(cmd);
+        await handler.Handle(cmd, CancellationToken.None);
     }
 
     [Benchmark(Description = "Register Laptop")]
     public async Task RegisterLaptop()
     {
+        _counter++;
         var handler = Resolve<RegisterAssetHandler>();
         var cmd = new RegisterAssetCommand(
             $"Laptop-{_counter}",
             $"LPT-{_counter:D6}",
             "Laptop");
-        await handler.HandleAsync(cmd);
+        await handler.Handle(cmd, CancellationToken.None);
     }
 
     [Benchmark(Description = "Register NetworkDevice")]
     public async Task RegisterNetworkDevice()
     {
+        _counter++;
+
         var handler = Resolve<RegisterAssetHandler>();
         var cmd = new RegisterAssetCommand(
             $"Switch-{_counter}",
             $"SWI-{_counter:D6}",
             "NetworkDevice");
-        await handler.HandleAsync(cmd);
+        await handler.Handle(cmd, CancellationToken.None);
     }
 }

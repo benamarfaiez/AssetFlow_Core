@@ -1,3 +1,5 @@
-﻿namespace AssetFlowCore.Application.UseCases.Assets.DecommissionAsset;
+﻿using MediatR;
 
-public record DecommissionAssetCommand(Guid Id);
+namespace AssetFlowCore.Application.UseCases.Assets.DecommissionAsset;
+
+public record DecommissionAssetCommand(Guid Id) : IRequest;

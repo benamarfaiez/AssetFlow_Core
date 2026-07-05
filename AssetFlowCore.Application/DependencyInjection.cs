@@ -44,6 +44,12 @@ public static class DependencyInjection
         services.AddScoped<DeleteTeamCommandHandler>();
         services.AddScoped<UpdateTeamCommandHandler>();
 
+        // Enregistrement MediatR
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+        });
+
         return services;
     }
 }

@@ -1,3 +1,5 @@
-﻿namespace AssetFlowCore.Application.UseCases.Team.DeleteTeam;
+﻿using MediatR;
 
-public record DeleteTeamCommand(Guid TeamId);
+namespace AssetFlowCore.Application.UseCases.Team.DeleteTeam;
+
+public record DeleteTeamCommand(Guid TeamId) : IRequest;

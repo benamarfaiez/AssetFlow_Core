@@ -1,3 +1,6 @@
-﻿namespace AssetFlowCore.Application.UseCases.Team.CreateTeam;
+﻿using AssetFlowCore.Application.DTOs;
+using MediatR;
 
-public record CreateTeamCommand(string Name, string AssetType, string TicketCriticality, string? Description);
+namespace AssetFlowCore.Application.UseCases.Team.CreateTeam;
+
+public record CreateTeamCommand(string Name, string AssetType, string TicketCriticality, string? Description) : IRequest<TeamResponseDto>;

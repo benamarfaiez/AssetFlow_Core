@@ -53,7 +53,7 @@ public class CreateMaintenanceTicketHandlerTests
             .ReturnsAsync(validationResult);
 
         var command = new CreateMaintenanceTicketCommand(asset.Id, "Panne", "Détail", "High");
-        var result = await _handler.HandleAsync(command);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         result.Should().NotBeNull();
         asset.Status.Should().Be(AssetStatus.Down);
@@ -73,7 +73,7 @@ public class CreateMaintenanceTicketHandlerTests
             .Setup(v => v.ValidateAsync(It.IsAny<CreateMaintenanceTicketCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(validationResult);
         var command = new CreateMaintenanceTicketCommand(asset.Id, "Panne", "Détail", "High");
-        Func<Task> act = async () => await _handler.HandleAsync(command);
+        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>();
     }

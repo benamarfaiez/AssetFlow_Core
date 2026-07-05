@@ -1,3 +1,6 @@
-﻿namespace AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
+﻿using AssetFlowCore.Application.DTOs;
+using MediatR;
 
-public record RegisterAssetCommand(string Name, string SerialNumber, string Type);
+namespace AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
+
+public record RegisterAssetCommand(string Name, string SerialNumber, string Type) : IRequest<AssetResponseDto>;

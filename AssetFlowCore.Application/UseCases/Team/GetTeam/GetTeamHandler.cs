@@ -1,12 +1,13 @@
 ﻿using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
+using MediatR;
 
 namespace AssetFlowCore.Application.UseCases.Team.GetTeam;
 
-public class GetTeamHandler(ITeamRepository teamRepository)
+public class GetTeamHandler(ITeamRepository teamRepository) : IRequestHandler<GetTeamQuery, TeamResponseDto>
 {
-    public async Task<TeamResponseDto> ExecuteAsync(GetTeamQuery query)
+    public async Task<TeamResponseDto> Handle(GetTeamQuery query, CancellationToken cancellationToken)
     {
         var team = await teamRepository.GetByIdAsync(query.TeamId) ?? throw new DomainException($"Le team avec l'ID {query.TeamId} est introuvable.");
 

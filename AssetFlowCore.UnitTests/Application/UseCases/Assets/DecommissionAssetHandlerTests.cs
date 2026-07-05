@@ -32,7 +32,7 @@ public class DecommissionAssetHandlerTests
         _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(asset);
         _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(asset.Id)).ReturnsAsync(0);
 
-        await _handler.ExecuteAsync(new DecommissionAssetCommand(asset.Id));
+        await _handler.Handle(new DecommissionAssetCommand(asset.Id), CancellationToken.None);
 
         asset.Status.Should().Be(AssetStatus.Decommissioned);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -45,7 +45,7 @@ public class DecommissionAssetHandlerTests
         _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(asset);
         _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(asset.Id)).ReturnsAsync(2);
 
-        Func<Task> act = async () => await _handler.ExecuteAsync(new DecommissionAssetCommand(asset.Id));
+        Func<Task> act = async () => await _handler.Handle(new DecommissionAssetCommand(asset.Id), CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>();
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -56,7 +56,7 @@ public class DecommissionAssetHandlerTests
     {
         _assetRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync((Asset?)null);
 
-        Func<Task> act = async () => await _handler.ExecuteAsync(new DecommissionAssetCommand(Guid.NewGuid()));
+        Func<Task> act = async () => await _handler.Handle(new DecommissionAssetCommand(Guid.NewGuid()), CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>();
     }

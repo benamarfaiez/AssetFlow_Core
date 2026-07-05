@@ -27,7 +27,7 @@ public class RegisterAssetDuplicateSerialBenchmark : BenchmarkBase
 
         // Pré-enregistre un asset avec le serial qui sera dupliqué
         var handler = Resolve<RegisterAssetHandler>();
-        await handler.HandleAsync(new RegisterAssetCommand("Asset Existant", ExistingSerial, "Server"));
+        await handler.Handle(new RegisterAssetCommand("Asset Existant", ExistingSerial, "Server"), CancellationToken.None);
     }
 
     [IterationSetup]
@@ -37,8 +37,8 @@ public class RegisterAssetDuplicateSerialBenchmark : BenchmarkBase
     public async Task Register_UniqueSerial()
     {
         var handler = Resolve<RegisterAssetHandler>();
-        await handler.HandleAsync(new RegisterAssetCommand(
-            $"Asset-{_counter}", $"UNIQUE-{_counter:D6}", "Server"));
+        await handler.Handle(new RegisterAssetCommand(
+            $"Asset-{_counter}", $"UNIQUE-{_counter:D6}", "Server"), CancellationToken.None);
     }
 
     [Benchmark(Description = "Register — serial dupliqué (DomainException + AnyAsync)")]
@@ -47,8 +47,8 @@ public class RegisterAssetDuplicateSerialBenchmark : BenchmarkBase
         var handler = Resolve<RegisterAssetHandler>();
         try
         {
-            await handler.HandleAsync(new RegisterAssetCommand(
-                "Doublon", ExistingSerial, "Laptop"));
+            await handler.Handle(new RegisterAssetCommand(
+                "Doublon", ExistingSerial, "Laptop"), CancellationToken.None);
         }
         catch (DomainException)
         {
@@ -60,7 +60,7 @@ public class RegisterAssetDuplicateSerialBenchmark : BenchmarkBase
     public async Task Register_NormalizedSerial()
     {
         var handler = Resolve<RegisterAssetHandler>();
-        await handler.HandleAsync(new RegisterAssetCommand(
-            $"Asset-Norm-{_counter}", $"  norm-{_counter:D6}  ", "NetworkDevice"));
+        await handler.Handle(new RegisterAssetCommand(
+            $"Asset-Norm-{_counter}", $"  norm-{_counter:D6}  ", "NetworkDevice"), CancellationToken.None);
     }
 }

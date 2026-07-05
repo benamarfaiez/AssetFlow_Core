@@ -12,11 +12,11 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
 
     private static MemoryCacheEntryOptions CacheOptions() => new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) };
 
-    public Task<Team?> GetByIdAsync(Guid id)
+    public Task<Team?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => _memory.GetOrCreateAsync(GetIdKey(id), async entry =>
         {
             entry.SetOptions(CacheOptions());
-            return await _inner.GetByIdAsync(id);
+            return await _inner.GetByIdAsync(id, cancellationToken);
         });
 
     public async Task<Team?> GetByNameAsync(string name)
