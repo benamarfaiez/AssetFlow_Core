@@ -106,13 +106,20 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
             var dbContext = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
 
             await dbContext.Database.EnsureDeletedAsync();
-            await dbContext.Database.EnsureCreatedAsync(); // Assurez-vous que les tables sont recréées
+            await dbContext.Database.EnsureCreatedAsync();
 
+            // 1. Créer et insérer un Asset valide
+            var asset = new Asset(Guid.NewGuid(), "PC Portable Test", SerialNumber.Create("SN-TEST123"), AssetType.Laptop);
+            dbContext.Assets.Add(asset);
+            await dbContext.SaveChangesAsync();
+
+            // 2. Créer la Team
             var team = new Team("teamName", AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Description de la Team A");
             dbContext.Teams.Add(team);
-            await dbContext.SaveChangesAsync(); // Sauvegarde de la team pour fixer son ID
+            await dbContext.SaveChangesAsync();
 
-            var ticket = new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "description", TicketCriticality.Low, team.Id);
+            // 3. Créer le Ticket en lui passant le VRAI id de l'asset
+            var ticket = new MaintenanceTicket(ticketId, asset.Id, "titre", "description", TicketCriticality.Low, team.Id);
             dbContext.Tickets.Add(ticket);
             await dbContext.SaveChangesAsync();
         }

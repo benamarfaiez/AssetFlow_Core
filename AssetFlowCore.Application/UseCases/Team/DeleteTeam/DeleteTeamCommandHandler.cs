@@ -13,7 +13,7 @@ public class DeleteTeamCommandHandler(IUnitOfWork unitOfWork) : IRequestHandler<
         // Vérifier côté DB s'il existe des tickets actifs assignés à cette équipe
         bool hasActive = await unitOfWork.MaintenanceTicket.ExistsActiveTicketsForTeamAsync(team.Id);
         if (hasActive)
-            throw new DomainException("Impossible de supprimer l'équipe : des tickets actifs lui sont assignés.");
+            throw new DomainException("Impossible de supprimer le team : des tickets actifs lui sont assignes.");
 
         await unitOfWork.Team.RemoveAsync(team);
         await unitOfWork.SaveChangesAsync(cancellationToken);

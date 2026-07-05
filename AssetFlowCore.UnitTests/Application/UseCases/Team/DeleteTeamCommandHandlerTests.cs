@@ -67,7 +67,6 @@ public class DeleteTeamCommandHandlerTests
         // Arrange
         var team = new DomainTeam("Réseau", "Network", "High");
         _teamRepoMock.Setup(r => r.GetByIdAsync(team.Id)).ReturnsAsync(team);
-        // Simulation de la présence de tickets actifs
         _ticketRepoMock.Setup(r => r.ExistsActiveTicketsForTeamAsync(team.Id)).ReturnsAsync(true);
 
         var command = new DeleteTeamCommand(team.Id);
@@ -77,7 +76,7 @@ public class DeleteTeamCommandHandlerTests
 
         // Assert
         await act.Should().ThrowAsync<DomainException>()
-            .WithMessage("Impossible de supprimer l'équipe : des tickets actifs lui sont assignés.");
+            .WithMessage("Impossible de supprimer le team : des tickets actifs lui sont assignes.");
 
         _teamRepoMock.Verify(r => r.RemoveAsync(It.IsAny<DomainTeam>()), Times.Never);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
