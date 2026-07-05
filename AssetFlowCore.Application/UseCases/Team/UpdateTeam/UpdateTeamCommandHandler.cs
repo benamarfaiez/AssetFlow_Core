@@ -9,7 +9,7 @@ public class UpdateTeamCommandHandler(IUnitOfWork unitOfWork) : IRequestHandler<
 {
     public async Task<TeamResponseDto> Handle(UpdateTeamCommand request, CancellationToken cancellationToken)
     {
-        var team = await unitOfWork.Team.GetByIdAsync(request.TeamId) ?? throw new DomainException($"Le team avec l'ID {request.TeamId} est introuvable.");
+        var team = await unitOfWork.Team.GetByIdAsync(request.TeamId, cancellationToken) ?? throw new DomainException($"Le team avec l'ID {request.TeamId} est introuvable.");
 
         team.Update(request.Name, request.Description, request.AssetType, request.TicketCriticality);
 
