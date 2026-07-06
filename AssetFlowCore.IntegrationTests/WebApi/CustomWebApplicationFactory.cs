@@ -9,6 +9,7 @@ namespace AssetFlowCore.IntegrationTests.WebApi;
 
 public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram> where TProgram : class
 {
+    private readonly string _dbName = $"IntegrationTestsDb_{Guid.NewGuid()}";
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
@@ -19,7 +20,7 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
                 d.ServiceType == typeof(AssetFlowDbContext) ||
                 d.ServiceType == typeof(DbContextOptions<AssetFlowDbContext>) ||
                 d.ServiceType == typeof(DbContextOptions) ||
-                d.ServiceType.FullName.Contains("AssetFlowDbContext")).ToList();
+                (d.ServiceType.FullName?.Contains("AssetFlowDbContext") ?? false)).ToList();
 
             foreach (var descriptor in aspireDescriptors)
             {
@@ -35,7 +36,7 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
             // Cette méthode ré-injecte l'écosystème EF Core sain de zéro
             services.AddDbContext<AssetFlowDbContext>(options =>
             {
-                options.UseInMemoryDatabase("IntegrationTestsDb")
+                options.UseInMemoryDatabase(_dbName)
                        .UseInternalServiceProvider(internalServiceProvider);
             });
         });
