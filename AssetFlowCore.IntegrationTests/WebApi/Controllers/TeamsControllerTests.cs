@@ -71,7 +71,7 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
             var payload = new CreateTeamRequest("", "", "", null);
             var resp = await _client.PostAsJsonAsync("/api/teams", payload);
             // Creating with invalid data currently throws ArgumentException in handler -> 500
-            resp.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+            resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
         [Fact]

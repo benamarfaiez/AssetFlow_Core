@@ -33,6 +33,6 @@ public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TReq
         }
 
         // Si tout est valide, on passe au Handler (ou au behavior suivant)
-        return await next();
+        return await next(cancellationToken);
     }
 }
