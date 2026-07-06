@@ -71,24 +71,24 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
             var payload = new CreateTeamRequest("", "", "", null);
             var resp = await _client.PostAsJsonAsync("/api/teams", payload);
             // Creating with invalid data currently throws ArgumentException in handler -> 500
-            resp.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+            resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
         [Fact]
         public async Task UpdateTeam_BadRequest_ShouldReturn400()
         {
-            // Arrange: create first
+            // Arrange: Création d'une équipe valide au préalable
             var payload = new CreateTeamRequest("ToUpdateBad", "Server", "High", "Desc");
             var createResponse = await _client.PostAsJsonAsync("/api/teams", payload);
             createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
             var created = await createResponse.Content.ReadFromJsonAsync<TeamResponseDto>();
 
-            // Act: update with invalid body
+            // Act: Tentative de mise à jour avec un corps de texte invalide (chaînes vides)
             var update = new UpdateTeamRequest("", "", "", null);
             var updateResponse = await _client.PutAsJsonAsync($"/api/teams/{created!.Id}", update);
 
-            // Assert: current behavior accepts empty values and returns 201 Created
-            updateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+            // Assert: Grâce au ValidationBehavior, l'API rejette proprement la requête avant le plantage du Domaine
+            updateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest); // Attend désormais une erreur 400 !
         }
 
         [Fact]
