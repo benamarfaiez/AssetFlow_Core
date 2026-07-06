@@ -16,6 +16,7 @@ COPY AssetFlowCore.Domain/AssetFlowCore.Domain.csproj                 AssetFlowC
 COPY AssetFlowCore.Application/AssetFlowCore.Application.csproj       AssetFlowCore.Application/
 COPY AssetFlowCore.Infrastructure/AssetFlowCore.Infrastructure.csproj AssetFlowCore.Infrastructure/
 COPY AssetFlowCore.WebApi/AssetFlowCore.WebApi.csproj                 AssetFlowCore.WebApi/
+COPY AssetFlowCore.Aspire/AssetFlowCore.Aspire.ServiceDefaults/AssetFlowCore.Aspire.ServiceDefaults.csproj AssetFlowCore.Aspire/AssetFlowCore.Aspire.ServiceDefaults/
 
 # Restaure toutes les dépendances NuGet en spécifiant le runtime cible (Alpine)
 RUN dotnet restore AssetFlowCore.WebApi/AssetFlowCore.WebApi.csproj \
@@ -34,6 +35,7 @@ COPY AssetFlowCore.Domain/         AssetFlowCore.Domain/
 COPY AssetFlowCore.Application/    AssetFlowCore.Application/
 COPY AssetFlowCore.Infrastructure/ AssetFlowCore.Infrastructure/
 COPY AssetFlowCore.WebApi/         AssetFlowCore.WebApi/
+COPY AssetFlowCore.Aspire/         AssetFlowCore.Aspire/
 
 # Publication directe : supprime le conflit de dossiers et le flag --no-build
 RUN dotnet publish AssetFlowCore.WebApi/AssetFlowCore.WebApi.csproj \
