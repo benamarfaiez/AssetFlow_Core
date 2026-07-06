@@ -18,17 +18,18 @@ public class AIAssistanceWorkerTests
     private readonly Mock<IEmbeddingGenerator<string, Embedding<float>>> _embeddingMock = new();
     private readonly Mock<IAIAssistanceGenerator> _aiGeneratorMock = new();
     private readonly Mock<IMaintenanceTicketRepository> _ticketRepoMock = new();
+    private readonly Mock<IUnitOfWork> _uowMock = new();
     private readonly Mock<ILogger<AIAssistanceWorker>> _loggerMock = new();
     private readonly IServiceProvider _serviceProvider;
 
     public AIAssistanceWorkerTests()
     {
-        // Configuration du conteneur de DI interne simulé pour le Scope du Worker
         var services = new ServiceCollection();
         services.AddSingleton(_vectorStoreMock.Object);
         services.AddSingleton(_embeddingMock.Object);
         services.AddSingleton(_aiGeneratorMock.Object);
         services.AddSingleton(_ticketRepoMock.Object);
+        services.AddSingleton(_uowMock.Object);
         _serviceProvider = services.BuildServiceProvider();
     }
 
@@ -39,24 +40,19 @@ public class AIAssistanceWorkerTests
         var ticketId = Guid.NewGuid();
         var assetId = Guid.NewGuid();
         var teamId = Guid.NewGuid();
-        var ticket = new MaintenanceTicket(ticketId, assetId, "Écran cassé", "Description", TicketCriticality.Medium, teamId);
+        var ticket = new MaintenanceTicket(ticketId, assetId, "Écran cassé", "Description valide pour l'IA", TicketCriticality.Medium, teamId);
 
-        // Configuration de la file : renvoie un ticket puis lève une annulation pour arrêter le Worker propre
         var cts = new CancellationTokenSource();
         _queueMock.SetupSequence(q => q.DequeueTicketAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(ticketId)
             .ThrowsAsync(new OperationCanceledException());
 
-        _ticketRepoMock.Setup(r => r.GetByIdAsync(ticketId, CancellationToken.None)).ReturnsAsync(ticket);
+        _ticketRepoMock.Setup(r => r.GetByIdAsync(ticketId, It.IsAny<CancellationToken>())).ReturnsAsync(ticket);
 
-        // Mock du générateur d'Embedding (retourne un faux vecteur float[])
         var vector = new float[] { 0.1f, 0.2f, 0.3f };
         var embedding = new Embedding<float>(vector);
-
-        // Utilisez la classe concrète attendue par le framework comme valeur de retour
         var generatedEmbeddings = new GeneratedEmbeddings<Embedding<float>>([embedding]);
 
-        // Configurez le Setup standard (SANS SetupSequence sauf si vous simulez plusieurs appels différents)
         _embeddingMock
             .Setup(e => e.GenerateAsync(
                 It.IsAny<IEnumerable<string>>(),
@@ -64,7 +60,6 @@ public class AIAssistanceWorkerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(generatedEmbeddings);
 
-        // Mock de la recherche vectorielle DuckDB (Simule un retour de ticket similaire)
         var searchResults = new List<VectorSearchResult>
         {
             new(Guid.NewGuid().ToString(), 0.85f, new Dictionary<string, object> { { "Description", "Ancien écran" }, { "Resolution", "Remplacement fait" } })
@@ -72,17 +67,30 @@ public class AIAssistanceWorkerTests
         _vectorStoreMock.Setup(v => v.SearchAsync(It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<float>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(searchResults.AsReadOnly());
 
-        _aiGeneratorMock.Setup(g => g.GenerateAssistanceNoteAsync(It.IsAny<string>(), It.IsAny<IEnumerable<SimilarTicketResult>>(), It.IsAny<IEnumerable<ResolutionProcedure>>(), It.IsAny<CancellationToken>()))
+        _aiGeneratorMock.Setup(g => g.GenerateAssistanceNoteAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<SimilarTicketResult>>(),
+                It.IsAny<IEnumerable<ResolutionProcedure>>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync("## ✅ Suggested Resolution\nChanger la dalle d'affichage.");
+
+        // Configuration optionnelle du SaveChanges pour éviter tout comportement inattendu
+        _uowMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         var worker = new AIAssistanceWorker(_queueMock.Object, _serviceProvider, _loggerMock.Object);
 
         // Act
-        var executeTask = worker.StartAsync(cts.Token);
-        await Task.Delay(100); // Laisse le temps à la boucle Task en arrière-plan de consommer le channel
+        await worker.StartAsync(cts.Token);
+        await Task.Delay(150); // Temps nécessaire accordé au ThreadPool pour consommer le Channel
         await worker.StopAsync(CancellationToken.None);
 
         // Assert
-        _aiGeneratorMock.Verify(g => g.GenerateAssistanceNoteAsync(It.IsAny<string>(), It.IsAny<IEnumerable<SimilarTicketResult>>(), It.IsAny<IEnumerable<ResolutionProcedure>>(), It.IsAny<CancellationToken>()), Times.Once);
+        _aiGeneratorMock.Verify(g => g.GenerateAssistanceNoteAsync(
+            It.IsAny<string>(),
+            It.IsAny<IEnumerable<SimilarTicketResult>>(),
+            It.IsAny<IEnumerable<ResolutionProcedure>>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

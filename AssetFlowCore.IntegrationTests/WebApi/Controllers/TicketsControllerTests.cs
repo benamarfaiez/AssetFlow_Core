@@ -128,7 +128,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         var response = await client.GetAsync($"/api/tickets/{ticketId}");
 
         // Assert
-        response.EnsureSuccessStatusCode();
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var assets = await response.Content.ReadFromJsonAsync<TicketResponseDto>();
         assets.Should().NotBeNull();
