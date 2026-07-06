@@ -30,13 +30,33 @@ builder.Services.AddHealthChecks();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if (allowedOrigins == null || allowedOrigins.Length == 0)
+{
+    throw new InvalidOperationException(
+        "CRITICAL: La configuration CORS 'Cors:AllowedOrigins' est manquante ou vide. " +
+        "L'application refuse de démarrer pour éviter une panne silencieuse des clients web.");
+}
+else
+{
+    allowedOrigins ??= ["*"];
+}
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAspireDashboardAndSwagger", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        if (allowedOrigins?.Length == 1 && allowedOrigins[0] == "*")
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins!)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
     });
 });
 
