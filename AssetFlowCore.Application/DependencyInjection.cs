@@ -1,4 +1,5 @@
-﻿using AssetFlowCore.Application.Interfaces;
+﻿using AssetFlowCore.Application.Behaviors;
+using AssetFlowCore.Application.Interfaces;
 using AssetFlowCore.Application.Services;
 using AssetFlowCore.Application.UseCases.Assets.DecommissionAsset;
 using AssetFlowCore.Application.UseCases.Assets.GetAllAssets;
@@ -13,6 +14,7 @@ using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 using AssetFlowCore.Application.UseCases.Tickets.GetTicket;
 using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
 using FluentValidation;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AssetFlowCore.Application;
@@ -48,6 +50,7 @@ public static class DependencyInjection
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         });
 
         return services;

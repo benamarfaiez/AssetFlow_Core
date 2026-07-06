@@ -1,7 +1,6 @@
 ﻿using AssetFlowCore.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 namespace AssetFlowCore.WebApi.Middlewares;
 
@@ -26,6 +25,29 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
 
         switch (exception)
         {
+            case FluentValidation.ValidationException validationEx:
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                problemDetails.Status = StatusCodes.Status400BadRequest;
+                problemDetails.Title = "Validation de la requête échouée";
+                problemDetails.Detail = "Une ou plusieurs erreurs de validation se sont produites.";
+
+                // On peuple le dictionnaire standard d'erreurs pour l'API
+                var errors = validationEx.Errors
+                    .GroupBy(e => e.PropertyName)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Select(e => e.ErrorMessage).ToArray()
+                    );
+                problemDetails.Extensions["errors"] = errors;
+                break;
+
+            case ArgumentException argumentEx:
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                problemDetails.Status = StatusCodes.Status400BadRequest;
+                problemDetails.Title = "Données d'entrée invalides";
+                problemDetails.Detail = argumentEx.Message;
+                break;
+
             case DomainException domainEx:
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 problemDetails.Status = StatusCodes.Status400BadRequest;
@@ -45,11 +67,11 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 problemDetails.Status = StatusCodes.Status500InternalServerError;
                 problemDetails.Title = "Erreur interne du serveur";
-                problemDetails.Detail = $"{exception.Message}";
+                problemDetails.Detail = exception.Message;
                 break;
         }
 
-        var result = JsonSerializer.Serialize(problemDetails);
-        return context.Response.WriteAsync(result);
+        // FIX 3 : Utilisation de WriteAsJsonAsync pour respecter les conventions d'écriture JSON de .NET
+        return context.Response.WriteAsJsonAsync(problemDetails);
     }
 }
