@@ -71,6 +71,13 @@ public sealed class LocalVectorStore : ILocalVectorStore, IAsyncDisposable
 
     public async Task<IReadOnlyCollection<VectorSearchResult>> SearchAsync(float[] queryEmbedding, int topK, float threshold, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(queryEmbedding);
+        if (topK <= 0)
+            throw new ArgumentOutOfRangeException(nameof(topK), "topK must be positive.");
+
+        if (threshold is < 0f or > 1f)
+            throw new ArgumentOutOfRangeException(nameof(threshold), "Threshold must be between 0 and 1.");
+
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
 
         var sql = $"""
