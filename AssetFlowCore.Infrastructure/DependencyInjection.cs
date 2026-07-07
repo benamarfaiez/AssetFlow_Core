@@ -9,6 +9,7 @@ using AssetFlowCore.Infrastructure.Persistence.Repositories;
 using AssetFlowCore.Infrastructure.RAG;
 using AssetFlowCore.Infrastructure.RAG.BackgroundQueue;
 using AssetFlowCore.Infrastructure.RAG.Providers.Ollama;
+using Azure.AI.OpenAI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -77,18 +78,29 @@ public static class DependencyInjection
     }
     private static void ConfigureAzureOpenAi(IServiceCollection services, IConfiguration config)
     {
-        var endpoint = config["AzureOpenAi:Endpoint"] ?? throw new InvalidOperationException("Endpoint Azure manquant.");
-        var apiKey = config["AzureOpenAi:ApiKey"] ?? throw new InvalidOperationException("ApiKey Azure manquante.");
+        var endpoint = config["AzureOpenAi:Endpoint"];
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            throw new InvalidOperationException("Endpoint Azure manquant.");
+        }
+
+        var apiKey = config["AzureOpenAi:ApiKey"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new InvalidOperationException("ApiKey Azure manquante.");
+        }
         var chatModel = config["AzureOpenAi:ChatDeploymentName"] ?? "gpt-4o";
         var embedModel = config["AzureOpenAi:EmbeddingDeploymentName"] ?? "text-embedding-3-small";
 
         // 1. Embeddings Azure via OpenAIClient standard (Méthode de compatibilité robuste)
         services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
         {
-            var azureClient = new OpenAIClient(
-                new ApiKeyCredential(apiKey),
-                new OpenAIClientOptions { Endpoint = new Uri($"{endpoint.TrimEnd('/')}/openai/deployments/{embedModel}/") });
+            // Le SDK attend uniquement l'URI racine de la ressource
+            var azureClient = new AzureOpenAIClient(
+                new Uri(endpoint),
+                new ApiKeyCredential(apiKey));
 
+            // .AsIEmbeddingGenerator() sait comment extraire le sous-client d'embeddings Azure
             return azureClient.GetEmbeddingClient(embedModel).AsIEmbeddingGenerator();
         });
 

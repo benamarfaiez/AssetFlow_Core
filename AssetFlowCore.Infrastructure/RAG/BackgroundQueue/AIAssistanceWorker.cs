@@ -39,13 +39,28 @@ public sealed class AIAssistanceWorker(
                 var connectivityService = scope.ServiceProvider.GetService<IOllamaConnectivityService>();
                 if (connectivityService != null)
                 {
-                    bool isAlive = await connectivityService.IsAliveAsync(stoppingToken);
+                    var isAlive = await connectivityService.IsAliveAsync(stoppingToken);
                     if (!isAlive)
                     {
                         logger.LogWarning("Démon Ollama indisponible. Ré-injection du ticket {TicketId} dans la file.", ticketId);
-                        await queue.QueueTicketAsync(ticketId);
+                        try
+                        {
+                            // Tentative de ré-injection normale dans le canal
+                            await queue.QueueTicketAsync(ticketId);
+                        }
+                        catch (Exception queueEx)
+                        {
+                            // CRITICAL FALLBACK : Si le canal est plein/bloqué, on ne doit pas perdre le ticket.
+                            // On consigne l'erreur avec un niveau Critique et on logue l'ID du ticket de manière isolée
+                            // pour permettre une trace d'audit ou une re-consommation forcée.
+                            logger.LogCritical(queueEx,
+                                "FATAL : Échec de la ré-injection automatique du ticket {TicketId} suite à l'indisponibilité d'Ollama. Le ticket doit être traité manuellement.",
+                                ticketId);
+                        }
+
+                        // On applique la pause pour éviter le bombardement CPU avant le cycle suivant
                         await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
-                        continue;
+                        continue; // Passe directement au ticket suivant
                     }
                 }
 
