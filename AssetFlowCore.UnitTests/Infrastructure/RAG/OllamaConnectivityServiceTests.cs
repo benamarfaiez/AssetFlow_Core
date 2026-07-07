@@ -1,6 +1,8 @@
-﻿using AssetFlowCore.Infrastructure.RAG.Providers.Ollama;
+﻿using AssetFlowCore.Application.Interfaces.RAG;
+using AssetFlowCore.Infrastructure.RAG.Providers.Ollama;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -196,6 +198,83 @@ public class OllamaConnectivityServiceTests
         await service.Invoking(s => s.ListModelsAsync(CancellationToken.None))
             .Should().ThrowAsync<HttpRequestException>()
             .WithMessage("Connection timed out");
+    }
+
+    #endregion
+
+    #region Tests pour la couverture de ConfigureAzureOpenAi
+
+    [Fact]
+    public void AddInfrastructure_ShouldExecuteConfigureAzureOpenAi_WhenUseAzureIsTrue()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // On prépare les configurations pour simuler le mode Azure OpenAI
+        var azureSettings = new Dictionary<string, string?>
+        {
+            { "AiSettings:UseAzure", "true" },
+            { "AzureOpenAi:Endpoint", "https://assetflow-test.openai.azure.com/" },
+            { "AzureOpenAi:ApiKey", "une-cle-api-de-test-123" },
+            { "AzureOpenAi:ChatDeploymentName", "gpt-4o" },
+            { "AzureOpenAi:EmbeddingDeploymentName", "text-embedding-3-small" },
+            { "VectorStore:DataPath", "./test_duckdb_path" },
+            { "DatabaseOptions:SectionName", "Test" } // Évite un crash lors du binding des options
+        };
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(azureSettings)
+            .Build();
+
+        services.AddLogging();
+
+        // Act - Appel direct de la classe que vous venez de me montrer
+        AssetFlowCore.Infrastructure.DependencyInjection.AddInfrastructure(services, configuration);
+        var provider = services.BuildServiceProvider();
+
+        // Assert - On valide le bon enregistrement des briques configurées par ConfigureAzureOpenAi
+        var chatService = provider.GetService<Microsoft.SemanticKernel.ChatCompletion.IChatCompletionService>();
+        chatService.Should().NotBeNull();
+
+        var embeddingGenerator = provider.GetService<Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>>>();
+        embeddingGenerator.Should().NotBeNull();
+
+        var kernel = provider.GetService<Microsoft.SemanticKernel.Kernel>();
+        kernel.Should().NotBeNull();
+
+        // On vérifie que la connectivité Ollama est bien restée à NULL en mode Azure
+        var connectivityService = provider.GetService<IOllamaConnectivityService>();
+        connectivityService.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("AzureOpenAi:Endpoint", "Endpoint Azure manquant.")]
+    [InlineData("AzureOpenAi:ApiKey", "ApiKey Azure manquante.")]
+    public void AddInfrastructure_ConfigureAzureOpenAi_ShouldThrow_WhenConfigIsMissing(string missingKey, string expectedMessage)
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        var azureSettings = new Dictionary<string, string?>
+        {
+            { "AiSettings:UseAzure", "true" },
+            { "AzureOpenAi:Endpoint", "https://assetflow-test.openai.azure.com/" },
+            { "AzureOpenAi:ApiKey", "une-cle-api-de-test-123" }
+        };
+
+        // Enlever la clé ciblée pour forcer le throw de vos gardes de sécurité
+        azureSettings.Remove(missingKey);
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(azureSettings)
+            .Build();
+
+        // Act & Assert
+        Action act = () => AssetFlowCore.Infrastructure.DependencyInjection.AddInfrastructure(services, configuration);
+
+        act.Should().Throw<InvalidOperationException>()
+           .WithMessage(expectedMessage);
     }
 
     #endregion
