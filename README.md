@@ -17,6 +17,35 @@ AssetFlow Core est une application d'exemple conçue avec les principes de la Cl
 - **Haute Performance :** Couche de mise en cache avancée éliminant la fragmentation mémoire, validée par des tests rigoureux de benchmarking.
 - **Extensibilité :** Architecture modulaire facilitant l'ajout de nouvelles fonctionnalités, types d'actifs ou stratégies d'assignation sans impact sur les composants existants.
 
+## Nouvelle fonctionnalité : Assistance IA (RAG)
+
+La couche Infrastructure inclut désormais une intégration RAG (Retrieval‑Augmented Generation) pour générer des notes d'assistance et des résumés de résolution à l'aide d'un modèle local (Ollama).
+
+Principales caractéristiques :
+- Utilise Microsoft Semantic Kernel pour le pipeline de chat completion.
+- Génération d'embeddings pour recherche vectorielle locale (LocalVectorStore).
+- Services principaux situés dans : `AssetFlowCore.Infrastructure/RAG` (ex. `AIAssistanceGenerator`, `OllamaConnectivityService`, `OllamaSemanticKernelSetup`).
+- File d'attente et worker pour traitement asynchrone des demandes IA : `AIAssistanceQueue`, `AIAssistanceWorker`.
+
+Configuration minimale (appsettings.json / variables d'environnement) :
+
+```json
+"Ollama": {
+  "BaseUrl": "http://localhost:11434",
+  "ChatModel": "mistral",
+  "EmbeddingModel": "nomic-embed-text"
+}
+```
+
+Activation :
+- Le module RAG est enregistré automatiquement par `services.AddInfrastructure(configuration)` (voir `AssetFlowCore.Infrastructure/DependencyInjection.cs`).
+
+Conseils :
+- Vérifier que le démon Ollama est démarré et que l'endpoint `/api/tags` retourne la liste des modèles.
+- Les logs d'infrastructure exposent l'état de la connexion et les erreurs de génération IA.
+
+Si vous souhaitez désactiver l'IA, retirez l'appel `AddOllamaRagServices(configuration)` de l'enregistrement des services.
+
 ## Cas d'usage (UseCases)
 - Assets
   - `RegisterAsset` : enregistrer un nouvel asset
