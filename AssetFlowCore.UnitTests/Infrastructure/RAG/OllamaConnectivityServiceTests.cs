@@ -1,10 +1,9 @@
-﻿using AssetFlowCore.Infrastructure.RAG;
+﻿using AssetFlowCore.Infrastructure.RAG.Providers.Ollama;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
-using RestSharp;
 using System.Net;
 using System.Text.Json;
 
@@ -18,7 +17,6 @@ public class OllamaConnectivityServiceTests
 
     public OllamaConnectivityServiceTests()
     {
-        // Configuration in-memory minimale pour le constructeur
         var inMemorySettings = new Dictionary<string, string?>
         {
             { "Ollama:BaseUrl", BaseUrl }
@@ -30,14 +28,12 @@ public class OllamaConnectivityServiceTests
     }
 
     /// <summary>
-    /// Helper pour créer le service tout en injectant un HttpMessageHandler simulé (Mock)
-    /// afin d'intercepter les requêtes HTTP de RestSharp.
+    /// Helper optimisé utilisant le constructeur interne de couplage de test (sans réflexion).
     /// </summary>
-    private OllamaConnectivityService CreateServiceWithMockHttpMessageHandler(HttpResponseMessage mockResponse)
+    private OllamaConnectivityService CreateServiceWithMockHttpMessageHandler(HttpResponseMessage mockResponse, bool throwOnAnyError = false)
     {
         var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
 
-        // 1. Setup existant pour l'envoi de la requête HTTP
         handlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
@@ -46,29 +42,37 @@ public class OllamaConnectivityServiceTests
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(mockResponse);
 
-        // 2. AJOUT : Autoriser le nettoyage (Dispose) du handler par RestSharp sans lever d'exception
         handlerMock
             .Protected()
             .Setup("Dispose", ItExpr.IsAny<bool>())
-            .Verifiable(); // Permet de dire que cet appel est valide et attendu
+            .Verifiable();
 
-        var service = new OllamaConnectivityService(_configuration, _loggerMock.Object);
-
-        var testOptions = new RestClientOptions(BaseUrl)
+        // Utilisation directe du constructeur internal prévu pour intercepter les options RestClient
+        return new OllamaConnectivityService(_configuration, _loggerMock.Object, options =>
         {
-            Timeout = TimeSpan.FromSeconds(5),
-            ConfigureMessageHandler = _ => handlerMock.Object
-        };
+            options.ConfigureMessageHandler = _ => handlerMock.Object;
+            options.ThrowOnAnyError = throwOnAnyError;
+        });
+    }
 
-        var testClient = new RestClient(testOptions);
-        var clientField = typeof(OllamaConnectivityService).GetField("_client", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    /// <summary>
+    /// Helper pour simuler une levée d'exception réseau directe du HttpMessageHandler.
+    /// </summary>
+    private OllamaConnectivityService CreateServiceWithFaultyHandler(Exception exceptionToThrow, bool throwOnAnyError = false)
+    {
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(exceptionToThrow);
 
-        var oldClient = (RestClient)clientField!.GetValue(service)!;
-        oldClient?.Dispose();
-
-        clientField.SetValue(service, testClient);
-
-        return service;
+        return new OllamaConnectivityService(_configuration, _loggerMock.Object, options =>
+        {
+            options.ConfigureMessageHandler = _ => handlerMock.Object;
+            options.ThrowOnAnyError = throwOnAnyError;
+        });
     }
 
     #region Tests pour IsAliveAsync
@@ -105,36 +109,7 @@ public class OllamaConnectivityServiceTests
     public async Task IsAliveAsync_ShouldReturnFalse_WhenHttpRequestExceptionIsThrown()
     {
         // Arrange
-        var handlerMock = new Mock<HttpMessageHandler>();
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Network down"));
-
-        // 1. Instanciation initiale du service
-        var service = new OllamaConnectivityService(_configuration, _loggerMock.Object);
-
-        // 2. Préparation des NOUVELLES options avec notre Handler simulé (AVANT la création du client)
-        var testOptions = new RestClientOptions(BaseUrl)
-        {
-            Timeout = TimeSpan.FromSeconds(5),
-            ConfigureMessageHandler = _ => handlerMock.Object // Assignation valide ici !
-        };
-
-        // 3. Création du client de test
-        var testClient = new RestClient(testOptions);
-
-        // 4. Remplacement par Réflexion pour contourner le ReadOnly
-        var clientField = typeof(OllamaConnectivityService).GetField("_client", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-        // Libération de l'ancien client pour éviter les fuites de sockets
-        var oldClient = (RestClient)clientField!.GetValue(service)!;
-        oldClient?.Dispose();
-
-        // Injection du client configuré pour le test
-        clientField.SetValue(service, testClient);
+        using var service = CreateServiceWithFaultyHandler(new HttpRequestException("Network down"));
 
         // Act
         var result = await service.IsAliveAsync(CancellationToken.None);
@@ -173,7 +148,6 @@ public class OllamaConnectivityServiceTests
 
         // Assert
         result.Should().NotBeNull().And.HaveCount(2);
-        // Doit être trié par nom (codellama en premier, mistral en second)
         result[0].Name.Should().Be("codellama:7b");
         result[1].Name.Should().Be("mistral:latest");
         result[1].SizeBytes.Should().Be(4100000000L);
@@ -215,34 +189,10 @@ public class OllamaConnectivityServiceTests
     [Fact]
     public async Task ListModelsAsync_ShouldRethrow_WhenNetworkErrorOccurs()
     {
-        // Arrange
-        var handlerMock = new Mock<HttpMessageHandler>();
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Connection timed out"));
+        // Arrange & Act
+        using var service = CreateServiceWithFaultyHandler(new HttpRequestException("Connection timed out"), throwOnAnyError: true);
 
-        var service = new OllamaConnectivityService(_configuration, _loggerMock.Object);
-
-        // Configurer les options de test en FORÇANT la levée d'exceptions
-        var testOptions = new RestClientOptions(BaseUrl)
-        {
-            Timeout = TimeSpan.FromSeconds(5),
-            ConfigureMessageHandler = _ => handlerMock.Object,
-            ThrowOnAnyError = true
-        };
-
-        var testClient = new RestClient(testOptions);
-
-        var clientField = typeof(OllamaConnectivityService).GetField("_client", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var oldClient = (RestClient)clientField!.GetValue(service)!;
-        oldClient?.Dispose();
-
-        clientField.SetValue(service, testClient);
-
-        // Act & Assert
+        // Assert
         await service.Invoking(s => s.ListModelsAsync(CancellationToken.None))
             .Should().ThrowAsync<HttpRequestException>()
             .WithMessage("Connection timed out");

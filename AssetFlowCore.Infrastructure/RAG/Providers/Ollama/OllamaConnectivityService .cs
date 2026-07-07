@@ -6,7 +6,7 @@ using RestSharp;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace AssetFlowCore.Infrastructure.RAG;
+namespace AssetFlowCore.Infrastructure.RAG.Providers.Ollama;
 
 /// <summary>
 /// Checks the availability of the local Ollama daemon and queries its model catalogue
@@ -31,7 +31,7 @@ public sealed class OllamaConnectivityService : IOllamaConnectivityService, IDis
     {
     }
 
-    internal OllamaConnectivityService(
+    public OllamaConnectivityService(
         IConfiguration config,
         ILogger<OllamaConnectivityService> logger,
         Action<RestClientOptions>? configureOptions)

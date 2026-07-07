@@ -106,12 +106,14 @@ public class AIAssistanceGeneratorTests
             .Should().ThrowAsync<InvalidOperationException>();
 
         // Vérifie qu'un log d'erreur a bien été écrit (Couverture du bloc catch)
-        _loggerMock.Verify(l => l.Log(
+        _loggerMock.Verify(
+        l => l.Log<It.IsAnyType>(
             LogLevel.Error,
             It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to generate AI assistance note")),
+            It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Échec de la génération de la note d'assistance IA")),
             It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()!),
+        Times.Once);
     }
 
     #endregion
@@ -159,12 +161,14 @@ public class AIAssistanceGeneratorTests
             .Should().ThrowAsync<KernelException>();
 
         // Vérifie la couverture du bloc catch de GenerateResolutionSummaryAsync
-        _loggerMock.Verify(l => l.Log(
+        _loggerMock.Verify(
+        l => l.Log<It.IsAnyType>(
             LogLevel.Error,
             It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to generate resolution summary")),
+            It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Échec de la génération du résumé de résolution")),
             It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()!),
+        Times.Once);
     }
 
     #endregion

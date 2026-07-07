@@ -1,42 +1,35 @@
 ﻿using AssetFlowCore.Application.Interfaces.RAG;
 using AssetFlowCore.Application.Models.RAG;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace AssetFlowCore.Infrastructure.RAG;
 
 /// <summary>
-/// Generates AI-assisted notes and resolution summaries for maintenance tickets
-/// by invoking a local Mistral model via the Semantic Kernel chat completion pipeline.
+/// Générateur de notes d'assistance et de résumés de résolution pour les tickets de maintenance.
+/// Communique de manière transparente avec Azure OpenAI ou un LLM local (Ollama) via Semantic Kernel.
 /// </summary>
-/// <remarks>
-/// Uses C# 12 primary constructors.
-/// The <see cref="Kernel"/> is intentionally NOT injected here; only the
-/// <see cref="IChatCompletionService"/> is required, keeping the service lean
-/// and independently testable.
-/// </remarks>
 public sealed class AIAssistanceGenerator(
     IChatCompletionService chatCompletionService,
     ILogger<AIAssistanceGenerator> logger)
     : IAIAssistanceGenerator
 {
-    // ── Execution settings (Mistral on Ollama) ────────────────────────────────
-
+    // Configuration de l'exécution (Température créative pour la rédaction technique)
     private static OpenAIPromptExecutionSettings AssistanceSettings => new()
     {
         Temperature = 0.7,
         MaxTokens = 1024
     };
 
+    // Configuration de l'exécution (Température basse pour des résumés factuels et déterministes)
     private static OpenAIPromptExecutionSettings SummarySettings => new()
     {
-        Temperature = 0.3,   // lower temperature for more deterministic summaries
+        Temperature = 0.2,
         MaxTokens = 512
     };
 
-    // ── IAIAssistanceGenerator ────────────────────────────────────────────────
+    // ── IAIAssistanceGenerator Implementation ────────────────────────────────
 
     /// <inheritdoc />
     public async Task<string> GenerateAssistanceNoteAsync(
@@ -48,7 +41,7 @@ public sealed class AIAssistanceGenerator(
         ArgumentException.ThrowIfNullOrWhiteSpace(ticketDescription);
 
         logger.LogInformation(
-            "Generating AI assistance note for ticket (description length: {Length} chars).",
+            "Génération de la note d'assistance IA pour le ticket (Description : {Length} caractères).",
             ticketDescription.Length);
 
         var systemPrompt = BuildAssistanceSystemPrompt();
@@ -60,22 +53,20 @@ public sealed class AIAssistanceGenerator(
             history.AddSystemMessage(systemPrompt);
             history.AddUserMessage(userPrompt);
 
+            // polymorphe : s'exécute sur Azure ou Ollama selon la configuration IoC active
             var response = await chatCompletionService
                 .GetChatMessageContentAsync(history, AssistanceSettings, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
             var content = response.Content ?? string.Empty;
 
-            logger.LogInformation(
-                "AI assistance note generated successfully ({Tokens} tokens used).",
-                response.Metadata?.TryGetValue("Usage", out var usage) == true ? usage : "unknown");
-
+            logger.LogInformation("Note d'assistance IA générée avec succès.");
             return content;
         }
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "Failed to generate AI assistance note for ticket description starting with: '{Preview}'.",
+                "Échec de la génération de la note d'assistance IA pour le ticket commençant par : '{Preview}'.",
                 ticketDescription[..Math.Min(80, ticketDescription.Length)]);
             throw;
         }
@@ -91,7 +82,7 @@ public sealed class AIAssistanceGenerator(
         ArgumentException.ThrowIfNullOrWhiteSpace(resolution);
 
         logger.LogInformation(
-            "Generating resolution summary (description length: {DescLen}, resolution length: {ResLen}).",
+            "Génération du résumé de résolution (Desc: {DescLen}, Résolution: {ResLen}).",
             description.Length, resolution.Length);
 
         try
@@ -100,26 +91,23 @@ public sealed class AIAssistanceGenerator(
             history.AddSystemMessage(BuildSummarySystemPrompt());
             history.AddUserMessage(BuildSummaryUserPrompt(description, resolution));
 
+            // Appel polymorphe identique
             var response = await chatCompletionService
                 .GetChatMessageContentAsync(history, SummarySettings, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
-            var content = response.Content ?? string.Empty;
-
-            logger.LogInformation("Resolution summary generated successfully.");
-
-            return content;
+            return response.Content ?? string.Empty;
         }
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "Failed to generate resolution summary for ticket starting with: '{Preview}'.",
+                "Échec de la génération du résumé de résolution pour le ticket commençant par : '{Preview}'.",
                 description[..Math.Min(80, description.Length)]);
             throw;
         }
     }
 
-    // ── Prompt builders ───────────────────────────────────────────────────────
+    // ── Prompt Builders Privés ───────────────────────────────────────────────────
 
     private static string BuildAssistanceSystemPrompt() =>
         """
