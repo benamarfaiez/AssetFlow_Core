@@ -21,10 +21,11 @@ public sealed class AIAssistanceWorker(
         {
             try
             {
-                // 1. Attente d'un ticket dans le Channel
+                // Attente d'un ticket dans le Channel
                 var ticketId = await queue.DequeueTicketAsync(stoppingToken);
                 logger.LogInformation("Prise en charge RAG directe pour le ticket : {TicketId}", ticketId);
-                // 2. Utilisation de CreateAsyncScope() + await using pour libérer proprement le LocalVectorStore (IAsyncDisposable)
+
+                // Utilisation de CreateAsyncScope() + await using pour libérer proprement le LocalVectorStore (IAsyncDisposable)
                 await using var scope = serviceProvider.CreateAsyncScope();
 
                 // Récupération des composants d'infrastructure requis depuis le scope
@@ -32,7 +33,36 @@ public sealed class AIAssistanceWorker(
                 var embeddingGenerator = scope.ServiceProvider.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
                 var aiGenerator = scope.ServiceProvider.GetRequiredService<IAIAssistanceGenerator>();
                 var ticketRepository = scope.ServiceProvider.GetRequiredService<IMaintenanceTicketRepository>();
-                var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>(); // FIX : Requis pour sauvegarder la note en BD
+                var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+                // Résolution facultative du service de connectivité (Uniquement présent si mode local Ollama actif)
+                var connectivityService = scope.ServiceProvider.GetService<IOllamaConnectivityService>();
+                if (connectivityService != null)
+                {
+                    var isAlive = await connectivityService.IsAliveAsync(stoppingToken);
+                    if (!isAlive)
+                    {
+                        logger.LogWarning("Démon Ollama indisponible. Ré-injection du ticket {TicketId} dans la file.", ticketId);
+                        try
+                        {
+                            // Tentative de ré-injection normale dans le canal
+                            await queue.QueueTicketAsync(ticketId);
+                        }
+                        catch (Exception queueEx)
+                        {
+                            // CRITICAL FALLBACK : Si le canal est plein/bloqué, on ne doit pas perdre le ticket.
+                            // On consigne l'erreur avec un niveau Critique et on logue l'ID du ticket de manière isolée
+                            // pour permettre une trace d'audit ou une re-consommation forcée.
+                            logger.LogCritical(queueEx,
+                                "FATAL : Échec de la ré-injection automatique du ticket {TicketId} suite à l'indisponibilité d'Ollama. Le ticket doit être traité manuellement.",
+                                ticketId);
+                        }
+
+                        // On applique la pause pour éviter le bombardement CPU avant le cycle suivant
+                        await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                        continue; // Passe directement au ticket suivant
+                    }
+                }
 
                 var ticket = await ticketRepository.GetByIdAsync(ticketId, stoppingToken);
 
@@ -48,14 +78,16 @@ public sealed class AIAssistanceWorker(
 
                     try
                     {
-                        // 4. FLUX RAG ÉTAPE A : Vectorisation sémantique de la description (nomic-embed-text)
+                        await vectorStore.InitializeAsync(stoppingToken);
+
+                        // FLUX RAG ÉTAPE A : Vectorisation sémantique de la description
                         var embeddingResult = await embeddingGenerator.GenerateAsync([ticket.Description], cancellationToken: stoppingToken);
                         var queryVector = embeddingResult[0].Vector.ToArray();
 
-                        // 5. FLUX RAG ÉTAPE B : Recherche de similarité cosinus dans DuckDB
+                        // FLUX RAG ÉTAPE B : Recherche de similarité cosinus dans DuckDB
                         var vectorResults = await vectorStore.SearchAsync(queryVector, topK: 3, threshold: 0.7f, stoppingToken);
 
-                        // 6. Mapping des vecteurs DuckDB en objets métiers lisibles par le rédacteur IA
+                        // Mapping des vecteurs DuckDB en objets métiers lisibles par le rédacteur IA
                         var similarTickets = vectorResults.Select(v => new SimilarTicketResult(
                             TicketId: v.Id,
                             Description: v.Metadata.TryGetValue("Description", out var t) ? t.ToString()! : "Ticket Description",
@@ -63,21 +95,18 @@ public sealed class AIAssistanceWorker(
                             SimilarityScore: v.Score
                         ));
 
-                        // Collection optionnelle de procédures de maintenance
                         var suggestedProcedures = Enumerable.Empty<ResolutionProcedure>();
 
-                        // 7. FLUX RAG ÉTAPE C : Génération de la note Markdown par le LLM (Mistral)
-                        logger.LogDebug("Appel au modèle local pour la rédaction de la note du ticket {TicketId}...", ticketId);
+                        // FLUX RAG ÉTAPE C : Génération de la note Markdown par le LLM (Configuré via IChatCompletionService)
+                        logger.LogDebug("Appel au modèle IA pour la rédaction de la note du ticket {TicketId}...", ticketId);
                         string markdownNote = await aiGenerator.GenerateAssistanceNoteAsync(
                             ticket.Description,
                             similarTickets,
                             suggestedProcedures,
                             stoppingToken);
 
-                        // 8. Sauvegarde du résultat, mise à jour du ticket et persistance SQL
+                        // Sauvegarde du résultat, mise à jour du ticket et persistance SQL
                         ticket.SetAssistanceNote(markdownNote);
-
-                        // FIX : Persister les changements dans la base SQL
                         await unitOfWork.SaveChangesAsync(stoppingToken);
 
                         logger.LogInformation("Analyse RAG terminée et enregistrée avec succès pour le ticket {TicketId}.", ticketId);
@@ -91,18 +120,17 @@ public sealed class AIAssistanceWorker(
                 }
                 else
                 {
-                    // FIX : Changement du throw global qui arrêtait le Worker pour un log préventif
                     logger.LogWarning("Le ticket avec l'ID {TicketId} n'existe pas ou a été supprimé avant traitement RAG.", ticketId);
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                // Sortie propre standard lors de l'arrêt de l'application / de l'API
                 break;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Erreur critique non gérée dans la boucle principale du AIAssistanceWorker.");
+                await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
             }
         }
 
