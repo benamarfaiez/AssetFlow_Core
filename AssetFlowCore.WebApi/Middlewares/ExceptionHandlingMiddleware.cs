@@ -83,7 +83,12 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 break;
         }
 
-        // FIX 3 : Utilisation de WriteAsJsonAsync pour respecter les conventions d'écriture JSON de .NET
-        return context.Response.WriteAsJsonAsync(problemDetails);
+        // WriteAsJsonAsync respecte les conventions d'écriture JSON de .NET.
+        // L'écriture est volontairement NON annulable : nous sommes dans le gestionnaire
+        // d'exceptions, et l'abandon du client est justement une cause fréquente d'exception.
+        // Passer context.RequestAborted — déjà annulé dans ce cas — ferait lever une
+        // OperationCanceledException depuis le bloc catch, masquant l'exception d'origine
+        // sans qu'aucun code ne puisse la traiter.
+        return context.Response.WriteAsJsonAsync(problemDetails, CancellationToken.None);
     }
 }
