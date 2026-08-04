@@ -54,3 +54,6 @@ AssetFlowCore.Aspire/AssetFlowCore.Aspire.AppHost/bin
 AssetFlowCore.Aspire/AssetFlowCore.Aspire.ServiceDefaults/bin/Debug/net8.0/AssetFlowCore.Aspire.ServiceDefaults.dll
 AssetFlowCore.Aspire/AssetFlowCore.Aspire.ServiceDefaults/bin/Debug/net8.0/AssetFlowCore.Aspire.ServiceDefaults.pdb
 AssetFlowCore.Aspire/AssetFlowCore.Aspire.ServiceDefaults/bin/Debug/net8.0/AssetFlowCore.Aspire.ServiceDefaults.deps.json
+
+# Réglages Claude Code propres au poste (les agents et skills partagés sont versionnés)
+.claude/settings.local.json
