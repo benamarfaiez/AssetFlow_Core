@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Domain.Entities;
+using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Repositories;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -6,7 +6,6 @@ namespace AssetFlowCore.Infrastructure.Cache;
 
 public class CachedAssetRepository(IAssetRepository innerRepository, IMemoryCache memoryCache) : IAssetRepository
 {
-    private const string AssetListCacheKey = "Assets_List_ReadOnly";
     private readonly IAssetRepository _inner = innerRepository ?? throw new ArgumentNullException(nameof(innerRepository));
     private readonly IMemoryCache _memory = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
 
@@ -14,19 +13,19 @@ public class CachedAssetRepository(IAssetRepository innerRepository, IMemoryCach
 
     public async Task<IEnumerable<Asset>> GetAllReadOnlyAsync(CancellationToken cancellationToken = default)
     {
-        return await _memory.GetOrCreateAsync(AssetListCacheKey, async entry =>
+        return await _memory.GetOrCreateAsync(CacheKeys.AssetsList, async entry =>
         {
             entry.SetOptions(CacheOptions());
             return await _inner.GetAllReadOnlyAsync(cancellationToken);
         }) ?? [];
     }
 
+    // Volontairement sans cache : tous les appelants de GetByIdAsync sont des cas d'usage d'écriture
+    // (ouverture, prise en charge, clôture d'incident, mise au rebut) qui mutent l'actif retourné.
+    // Servir une instance mise en cache — donc détachée du DbContext de la requête courante —
+    // ferait échouer silencieusement la persistance de ces mutations.
     public Task<Asset?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-        => _memory.GetOrCreateAsync(GetIdKey(id), async entry =>
-        {
-            entry.SetOptions(CacheOptions());
-            return await _inner.GetByIdAsync(id, cancellationToken);
-        });
+        => _inner.GetByIdAsync(id, cancellationToken);
 
     public Task<bool> ExistsWithSerialNumberAsync(string serialNumber, CancellationToken cancellationToken = default)
         => _inner.ExistsWithSerialNumberAsync(serialNumber.ToUpper().Trim(), cancellationToken);
@@ -35,9 +34,6 @@ public class CachedAssetRepository(IAssetRepository innerRepository, IMemoryCach
     {
         ArgumentNullException.ThrowIfNull(asset);
         await _inner.AddAsync(asset, cancellationToken);
-        _memory.Remove(AssetListCacheKey);
-        _memory.Set(GetIdKey(asset.Id), asset, CacheOptions());
+        _memory.Remove(CacheKeys.AssetsList);
     }
-
-    private static string GetIdKey(Guid id) => $"asset_{id:N}";
 }

@@ -1,4 +1,4 @@
-using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
+﻿using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
@@ -36,7 +36,7 @@ public class RequestTicketTransferCommandHandlerTests
         var team = new DomainTeam("Nouvelle-Equipe", "Server", TicketCriticality.Low.ToString(), "Description");
 
         _teamRepositoryMock
-            .Setup(r => r.GetByNameAsync(team.Name))
+            .Setup(r => r.GetByNameAsync(team.Name, It.IsAny<CancellationToken>()))
             .ReturnsAsync(team);
 
         var command = new RequestTicketTransferCommand(Guid.NewGuid(), team.Name, "Motif valide");
@@ -48,7 +48,7 @@ public class RequestTicketTransferCommandHandlerTests
         var existingTicket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Title", "Desc", TicketCriticality.Low, Guid.NewGuid());
 
         _ticketRepositoryMock
-            .Setup(repo => repo.GetByIdWithTrackingAsync(command.TicketId))
+            .Setup(repo => repo.GetByIdWithTrackingAsync(command.TicketId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingTicket);
 
         // Act
@@ -67,7 +67,7 @@ public class RequestTicketTransferCommandHandlerTests
         var command = new RequestTicketTransferCommand(Guid.NewGuid(), "Nouvelle-Equipe", "Motif valide");
 
         _ticketRepositoryMock
-            .Setup(repo => repo.GetByIdWithTrackingAsync(command.TicketId))
+            .Setup(repo => repo.GetByIdWithTrackingAsync(command.TicketId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((MaintenanceTicket?)null); // Simule un retour vide de la BDD
 
         // Act

@@ -93,19 +93,21 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        // Adding health checks endpoints to applications in non-development environments has security implications.
-        // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
-        if (app.Environment.IsDevelopment())
-        {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks(HealthEndpointPath);
+        // Les sondes sont exposées dans tous les environnements : le HEALTHCHECK du Dockerfile
+        // et celui de docker-compose.yml interrogent /health alors que le conteneur tourne en Production.
+        // Les restreindre à Development laissait le conteneur définitivement "unhealthy".
+        // Voir https://aka.ms/dotnet/aspire/healthchecks : ces sondes ne divulguent aucune donnée métier
+        // (uniquement l'état des contrôles) et doivent rester inaccessibles depuis l'extérieur du réseau
+        // de déploiement, ce que garantit le reverse proxy en production.
 
-            // Only health checks tagged with the "live" tag must pass for app to be considered alive
-            app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
-            {
-                Predicate = r => r.Tags.Contains("live")
-            });
-        }
+        // Tous les contrôles doivent passer pour que l'application soit jugée prête à recevoir du trafic
+        app.MapHealthChecks(HealthEndpointPath);
+
+        // Seuls les contrôles marqués "live" doivent passer pour que l'application soit jugée vivante
+        app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("live")
+        });
 
         return app;
     }

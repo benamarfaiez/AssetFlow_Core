@@ -1,4 +1,4 @@
-using AssetFlowCore.Application.Interfaces;
+﻿using AssetFlowCore.Application.Interfaces;
 using AssetFlowCore.Application.Interfaces.RAG;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
 using AssetFlowCore.Domain.Entities;
@@ -38,7 +38,7 @@ public class CreateMaintenanceTicketHandlerTests
             .Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(asset);
         _engineMock
-            .Setup(e => e.ResolveTeamIdAsync(It.IsAny<AssetType>(), It.IsAny<TicketCriticality>()))
+            .Setup(e => e.ResolveTeamIdAsync(It.IsAny<AssetType>(), It.IsAny<TicketCriticality>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("Team-Alpha");
         _validator
             .Setup(v => v.ValidateAsync(It.IsAny<CreateMaintenanceTicketCommand>(), It.IsAny<CancellationToken>()))
@@ -46,7 +46,7 @@ public class CreateMaintenanceTicketHandlerTests
         var team = new DomainTeam("Team-Alpha", "Server", "High", "Description");
 
         _teamMock
-            .Setup(r => r.GetByNameAsync("Team-Alpha"))
+            .Setup(r => r.GetByNameAsync("Team-Alpha", It.IsAny<CancellationToken>()))
             .ReturnsAsync(team);
         _validator
             .Setup(v => v.ValidateAsync(It.IsAny<CreateMaintenanceTicketCommand>(), It.IsAny<CancellationToken>()))
@@ -57,7 +57,7 @@ public class CreateMaintenanceTicketHandlerTests
 
         result.Should().NotBeNull();
         asset.Status.Should().Be(AssetStatus.Down);
-        _ticketRepoMock.Verify(t => t.AddAsync(It.IsAny<MaintenanceTicket>()), Times.Once);
+        _ticketRepoMock.Verify(t => t.AddAsync(It.IsAny<MaintenanceTicket>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

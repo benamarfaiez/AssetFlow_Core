@@ -129,7 +129,7 @@ Base vectorielle : fichier **DuckDB** local (`{VectorStore:DataPath}/tickets.duc
 
 | Suite | Contenu | Exécution |
 |---|---|---|
-| Unitaires | domaine, handlers, validateurs, décorateurs de cache, module RAG (Moq) | `dotnet test AssetFlowCore.UnitTests/...` — 176 tests, tous verts |
+| Unitaires | domaine, handlers, validateurs, décorateurs de cache, composition de l'unité de travail, propagation du jeton d'annulation, module RAG (Moq) | `dotnet test AssetFlowCore.UnitTests/...` — 195 tests, tous verts |
 | Intégration | dépôts sur **EF InMemory**, controllers via `CustomWebApplicationFactory` (les enregistrements de `DbContext` injectés par Aspire sont retirés puis remplacés) | `dotnet test AssetFlowCore.IntegrationTests/...` |
 | Architecture | dépendances entre couches, absence de setter public sur les entités, immuabilité des commandes, emplacement des handlers, préfixe des interfaces, isolation des dépôts, configuration de l'AppHost | `dotnet test AssetFlowCore.ArchitectureTests/...` |
 
@@ -277,7 +277,7 @@ Les **noms de propriétés** sont en `camelCase`, les **valeurs d'enums** resten
 | Codes de statut | `PUT /api/teams/{id}` répond **201** ; **aucun endpoint ne renvoie 404** (introuvable → 400) : ne pas coder de branche sur 404 |
 | Temps réel | `@microsoft/signalr` sur `/ticketHub` ; `JoinTeamGroup(nomEquipe)` puis écoute de `ReceiveNewTicket` |
 | Authentification | ⛔ inexistante côté API : l'interceptor de jeton peut être préparé, il n'a rien à porter |
-| Fraîcheur des données | `GET /api/assets` est servi d'un cache serveur de 5 minutes non invalidé par les écritures : après une création, utiliser le corps de la réponse `201`, **pas** un rechargement |
+| Fraîcheur des données | `GET /api/assets` est servi d'un cache serveur de 5 minutes **invalidé par les écritures** : un rechargement après création ou mise au rebut reflète immédiatement l'état réel |
 
 ---
 
@@ -298,18 +298,26 @@ Constats vérifiés, classés par gravité. Le détail comportemental est dans [
 | Gravité | Constat | Effet |
 |---|---|---|
 | **Critique** | aucune authentification ni autorisation | API totalement ouverte |
-| **Critique** | cache d'inventaire non invalidé par les écritures (les commandes passent par `IUnitOfWork`, qui instancie les dépôts sans décorateur) | lectures périmées jusqu'à 5 minutes, garde-fou « actif au rebut » contournable |
-| **Critique** | sondes de santé absentes hors Development | conteneur systématiquement `unhealthy` |
-| **Majeur** | transitions d'état d'incident levant `InvalidOperationException` | erreurs métier remontées en 500 |
-| **Majeur** | doublon de nom d'équipe non contrôlé fonctionnellement | violation d'index remontée en 500 |
 | **Majeur** | file d'analyse IA en mémoire | demandes perdues au redémarrage |
 | **Majeur** | base vectorielle jamais alimentée en production | assistance IA sans corpus, valeur nulle |
 | **Majeur** | absence d'endpoints de liste (incidents, équipes) | interface utilisateur non réalisable |
-| **Moyen** | `CancellationToken` absent des controllers et partiel dans les dépôts | traitement poursuivi après abandon du client |
+| **Moyen** | migrations non appliquées au démarrage | une base neuve reste inexploitable tant que `dotnet ef database update` n'a pas été lancé |
 | **Moyen** | clés de configuration divergentes (`assetflow-db`, `ConnectionString`, `DefaultConnection`) | exécution par composition Docker inopérante sans ajustement |
-| **Moyen** | `detail` d'une erreur 500 = message d'exception brut | fuite d'informations techniques |
+| **Moyen** | décorateurs d'équipe réécrivant le cache **avant** `SaveChangesAsync` | un échec de persistance laisse une valeur non persistée en cache |
 | **Moyen** | dépôts d'équipe à double chemin selon le fournisseur | production non couverte par les tests |
 | **Mineur** | `TicketStatus.Resolved` jamais atteint · `IDbContextFactory` et `DatabaseOptions` non consommés · `Team.IsActive` non pilotable | code mort ou inachevé |
-| **Mineur** | messages de validation de criticité copiés depuis le type d'actif | message trompeur |
 | **Mineur** | dérive documentaire (`README.md`, `Benchmarks.md`) | information obsolète |
 | **Mineur** | dépendance implicite au SDK de l'exécuteur CI pour `.slnx` | build fragile |
+
+### 5.1 Dette résorbée par le Lot 1 (2026-08-05)
+
+| Constat d'origine | Correction |
+|---|---|
+| cache d'inventaire non invalidé par les écritures | `UnitOfWork` résout ses dépôts par le conteneur ; les listes sont invalidées à la persistance, y compris pour les mutations d'entités suivies. Les lectures d'actif **par identifiant** ne sont plus mises en cache : elles alimentent des cas d'usage d'écriture |
+| sondes de santé absentes hors Development | `/health` et `/alive` exposées dans tous les environnements |
+| transitions d'état d'incident levant `InvalidOperationException` | `DomainException`, donc 400 |
+| doublon de nom d'équipe non contrôlé fonctionnellement | contrôle applicatif à la création et au renommage |
+| `CancellationToken` absent des controllers et partiel dans les dépôts | propagé du controller au dépôt sur l'ensemble des cas d'usage |
+| `detail` d'une erreur 500 = message d'exception brut | message générique + `traceId`, exception journalisée |
+| messages de validation de criticité copiés depuis le type d'actif | messages propres à la criticité ; la criticité d'un incident est désormais validée en liste fermée (`IsEnumName`) |
+| aucune équipe de référence sur une base neuve | migration `SeedReferenceTeams` (9 combinaisons) |

@@ -30,7 +30,7 @@ public class TicketAssignmentEngineBenchmark
     {
         var repoMock = new Mock<ITeamRepository>();
         repoMock
-            .Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Team("Infra-Serveurs", "Server", "High", "Description"));
 
         _teamRepository = repoMock.Object;

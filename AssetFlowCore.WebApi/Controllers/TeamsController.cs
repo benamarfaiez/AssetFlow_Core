@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Application.DTOs;
+using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.Application.UseCases.Team.CreateTeam;
 using AssetFlowCore.Application.UseCases.Team.DeleteTeam;
 using AssetFlowCore.Application.UseCases.Team.GetTeam;
@@ -17,20 +17,20 @@ public class TeamsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TeamResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTeam(Guid id)
+    public async Task<IActionResult> GetTeam(Guid id, CancellationToken cancellationToken)
     {
         var query = new GetTeamQuery(id);
-        var response = await mediator.Send(query);
+        var response = await mediator.Send(query, cancellationToken);
         return Ok(response);
     }
 
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TeamResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<TeamResponseDto>> Create([FromBody] CreateTeamRequest request)
+    public async Task<ActionResult<TeamResponseDto>> Create([FromBody] CreateTeamRequest request, CancellationToken cancellationToken)
     {
         var command = new CreateTeamCommand(request.Name, request.AssetType, request.TicketCriticality, request.Description);
-        var result = await mediator.Send(command);
+        var result = await mediator.Send(command, cancellationToken);
         return StatusCode(StatusCodes.Status201Created, result);
     }
 
@@ -38,10 +38,10 @@ public class TeamsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TeamResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<TeamResponseDto>> Update(Guid id, [FromBody] UpdateTeamRequest request)
+    public async Task<ActionResult<TeamResponseDto>> Update(Guid id, [FromBody] UpdateTeamRequest request, CancellationToken cancellationToken)
     {
         var command = new UpdateTeamCommand(id, request.Name, request.AssetType, request.TicketCriticality, request.Description);
-        var result = await mediator.Send(command);
+        var result = await mediator.Send(command, cancellationToken);
         return StatusCode(StatusCodes.Status201Created, result);
     }
 
@@ -49,10 +49,10 @@ public class TeamsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var command = new DeleteTeamCommand(id);
-        await mediator.Send(command);
+        await mediator.Send(command, cancellationToken);
         return NoContent();
     }
 }

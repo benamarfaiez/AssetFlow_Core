@@ -17,9 +17,9 @@ public class CreateTeamCommandValidator : AbstractValidator<CreateTeamCommand>
             .WithMessage("Le type d'asset doit être l'un des suivants : Server, Laptop ou NetworkDevice.");
 
         RuleFor(x => x.TicketCriticality)
-            .NotEmpty().WithMessage("Le type d'asset est obligatoire.")
+            .NotEmpty().WithMessage("La criticité prise en charge par l'équipe est obligatoire.")
             .IsEnumName(typeof(TicketCriticality), caseSensitive: false)
-            .WithMessage("Le type d'asset doit être l'un des suivants : Server, Laptop ou NetworkDevice.");
+            .WithMessage("La criticité doit être l'une des suivantes : Low, Medium ou High.");
 
         RuleFor(x => x.Description)
             .MaximumLength(500).WithMessage("La description ne doit pas dépasser 500 caractères.");

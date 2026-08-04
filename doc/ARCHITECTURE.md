@@ -296,7 +296,7 @@ sequenceDiagram
 | **Contrat de types** | dérivé du C# ; propriétés `camelCase`, **valeurs d'enums `PascalCase`** ; aucune génération automatisée en place hors skill `/sync-api-dtos` |
 | **Absence de versioning d'API** | toute évolution de contrat casse immédiatement le client : la synchronisation des types est une opération de maintenance récurrente, pas ponctuelle |
 | **Codes de statut** | `PUT /api/teams/{id}` → 201 ; **aucun 404** (introuvable → 400) : le client ne peut pas s'appuyer sur le code seul pour distinguer les cas |
-| **Cohérence de lecture** | cache serveur de 5 minutes non invalidé par les écritures : le client doit traiter la réponse d'écriture comme source de vérité |
+| **Cohérence de lecture** | cache serveur de 5 minutes sur les **listes**, invalidé par les écritures : une relecture après écriture est fiable |
 | **Temps réel** | le groupe d'abonnement est un **nom d'équipe** ; sans notion d'utilisateur, l'appartenance à une équipe n'est pas déterminable côté client |
 | **Sécurité** | aucune authentification : le frontend ne peut porter aucun contexte utilisateur ni protéger une route de façon significative |
 
@@ -329,9 +329,9 @@ Le pipeline enchaîne compilation et vérification de format, tests d'architectu
 | AD-01 | **Clean Architecture en quatre couches** | isoler le métier des choix techniques | dépendances contrôlées et **vérifiées automatiquement** ; coût : plus de fichiers, indirections par interfaces |
 | AD-02 | **CQRS en tranches verticales avec MediatR** | un cas d'usage = un dossier autonome | ajout de fonctionnalité sans toucher l'existant ; les handlers sont enregistrés **deux fois** (scan MediatR + `AddScoped` explicite pour les benchmarks), ce qui doit être maintenu de pair |
 | AD-03 | **Validation par comportement de pipeline** | éviter la validation dispersée dans les handlers | contrôle systématique et homogène ; la validation métier profonde reste dans les entités |
-| AD-04 | **L'exception comme canal d'erreur** | simplicité des handlers, traduction centralisée | code de cas d'usage lisible ; toute exception non prévue par le middleware devient un 500 — c'est ce qui arrive aux transitions d'état d'incident |
+| AD-04 | **L'exception comme canal d'erreur** | simplicité des handlers, traduction centralisée | code de cas d'usage lisible ; toute exception non prévue par le middleware devient un 500, d'où la règle : une règle métier lève une `DomainException`, jamais une exception technique |
 | AD-05 | **Routage par stratégies + données de référence** | ouvrir l'extension sans modifier le code | nouvelle règle = nouvelle classe + nouvelle équipe ; dépendance forte à un référentiel complet, et priorité déterminée par l'ordre d'injection |
-| AD-06 | **Cache par décorateur** plutôt que dans les dépôts | garder les dépôts ignorants du cache | gain mesuré considérable en lecture ; **l'invalidation devient une responsabilité manuelle**, non tenue par les écritures passant par `IUnitOfWork` |
+| AD-06 | **Cache par décorateur** plutôt que dans les dépôts | garder les dépôts ignorants du cache | gain mesuré considérable en lecture ; **l'invalidation reste une responsabilité manuelle** à tenir dans chaque décorateur, complétée par une invalidation des listes à la persistance ; le cache porte sur les listes, jamais sur un actif lu par identifiant en vue d'une mutation |
 | AD-07 | **Mapping DTO manuel** | éviter la réflexion d'un mapper | coût CPU quasi nul, contrat explicite ; maintenance à la main à chaque évolution de DTO |
 | AD-08 | **Concurrence optimiste sur les incidents** | plusieurs techniciens sur le même incident | conflit détecté et traduit en 409 ; le client doit savoir recharger |
 | AD-09 | **Orchestration Aspire en développement** | démarrer la base et l'API d'un seul geste | expérience de développement fluide, télémétrie intégrée ; la clé de chaîne de connexion devient `assetflow-db`, ce qui complique l'exécution hors Aspire |
@@ -347,16 +347,25 @@ Classés par cause racine, avec la conséquence observable et la piste de correc
 
 | Cause racine | Conséquence | Piste |
 |---|---|---|
-| **Deux chemins vers la même abstraction** : `IUnitOfWork` instancie les dépôts EF directement, tandis que l'injection fournit les décorateurs de cache | les écritures n'invalident pas le cache → lectures périmées 5 minutes, garde-fou métier contournable | faire résoudre les dépôts de `UnitOfWork` par le conteneur, ou supprimer l'un des deux chemins d'accès |
-| **Exceptions métier non homogènes** : `Asset` lève `DomainException`, `MaintenanceTicket` lève `InvalidOperationException` | erreurs métier normales remontées en 500 | unifier sur `DomainException` ou étendre le middleware |
-| **Invariants d'unicité délégués à la base** : nom d'équipe unique en index seulement | violation d'unicité en 500 au lieu de 400/409 | contrôle applicatif préalable + traduction de `DbUpdateException` |
 | **Ressources introuvables traitées comme des violations métier** | aucun 404 n'est jamais renvoyé, malgré les attributs déclarés | exception dédiée `NotFoundException` mappée en 404 |
 | **État de traitement asynchrone non exposé** : `is_ai_processing` et `assistance_note` restent en base | la fonctionnalité IA est invisible et sans valeur perçue | enrichir le contrat de sortie, et notifier la fin de traitement |
 | **Corpus vectoriel jamais alimenté** | recherche de similarité systématiquement vide | indexer les incidents à la clôture |
 | **Portée du processus unique** : API, hub et worker ensemble ; file et base vectorielle locales | mise à l'échelle horizontale impossible sans perte de fonctionnalité | file et vecteurs externalisés si la charge le justifie |
-| **Sondes de santé conditionnées à l'environnement** | conteneur systématiquement `unhealthy` en production | exposer les sondes hors Development, en maîtrisant leur exposition |
 | **Configuration à trois noms de clé pour une même chaîne de connexion** | exécution par composition Docker inopérante sans ajustement | une clé unique, documentée |
-| **Absence de jeton d'annulation aux points d'entrée** | traitement serveur poursuivi après abandon du client | propager `CancellationToken` du controller au dépôt |
+| **Migrations non appliquées au démarrage** | une base neuve n'a ni schéma ni équipes de référence tant que `dotnet ef database update` n'a pas été lancé | intégrer l'application des migrations au processus de déploiement |
+| **Cache d'équipe mis à jour avant persistance** : les décorateurs réécrivent l'entrée de cache dans `AddAsync`/`UpdateAsync`, avant `SaveChangesAsync` | un échec de persistance laisse une valeur non persistée en cache jusqu'à 5 minutes | invalider plutôt que réécrire, ou déplacer la réécriture après la persistance |
 | **Tests empruntant un chemin distinct de la production** (dépôts d'équipe, fournisseur InMemory) | faux sentiment de couverture | tests d'intégration sur un vrai SQL Server (conteneur éphémère) |
 
-Aucune de ces fragilités n'est bloquante pour le fonctionnement nominal en développement ; les trois premières et la huitième sont à traiter avant toute mise en service, en même temps que l'authentification (AD-14).
+Aucune de ces fragilités n'est bloquante pour le fonctionnement nominal en développement ; la première est à traiter avant toute mise en service, en même temps que l'authentification (AD-14).
+
+### Fragilités levées par le Lot 1 (2026-08-05)
+
+| Cause racine | Correction appliquée |
+|---|---|
+| **Deux chemins vers la même abstraction** : `IUnitOfWork` instanciait les dépôts EF directement | `UnitOfWork` reçoit ses dépôts du conteneur ; les listes en cache sont invalidées à la persistance, y compris pour les mutations d'entités suivies |
+| **Exceptions métier non homogènes** : `MaintenanceTicket` levait `InvalidOperationException` | les transitions d'état lèvent une `DomainException`, traduite en 400 |
+| **Invariants d'unicité délégués à la base** : nom d'équipe unique en index seulement | contrôle applicatif à la création et au renommage, l'index restant un garde-fou |
+| **Sondes de santé conditionnées à l'environnement** | `/health` et `/alive` exposées dans tous les environnements |
+| **Absence de jeton d'annulation aux points d'entrée** | `CancellationToken` propagé du controller aux dépôts ; notification SignalR et mise en file IA volontairement exclues, car postérieures à la persistance |
+| **Absence de données de référence** : aucune équipe sur une base neuve | migration `SeedReferenceTeams` couvrant les 9 combinaisons (type × criticité) |
+| **Message d'exception brut renvoyé en 500** | `detail` générique et `traceId`, message journalisé côté serveur |

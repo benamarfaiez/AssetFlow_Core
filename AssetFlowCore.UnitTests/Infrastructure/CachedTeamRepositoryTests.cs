@@ -1,4 +1,4 @@
-using AssetFlowCore.Domain.Entities;
+﻿using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Repositories;
 using AssetFlowCore.Infrastructure.Cache;
 using FluentAssertions;
@@ -43,7 +43,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
 
             var innerMock = new Mock<ITeamRepository>();
             innerMock.Setup(r => r.GetByIdAsync(teamId, CancellationToken.None)).ReturnsAsync(team);
-            innerMock.Setup(r => r.UpdateAsync(It.IsAny<Team>())).Returns(Task.CompletedTask);
+            innerMock.Setup(r => r.UpdateAsync(It.IsAny<Team>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
             var cache = new CachedTeamRepository(innerMock.Object, memory);
@@ -63,7 +63,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             afterUpdate!.Name.Should().Be("Team A - Renamed");
 
             innerMock.Verify(r => r.GetByIdAsync(teamId, CancellationToken.None), Times.Once);
-            innerMock.Verify(r => r.UpdateAsync(It.Is<Team>(t => t.Id == team.Id && t.Name == "Team A - Renamed")), Times.Once);
+            innerMock.Verify(r => r.UpdateAsync(It.Is<Team>(t => t.Id == team.Id && t.Name == "Team A - Renamed"), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -74,10 +74,10 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             var team2 = new Team("Team B", "Network", "Low", "Description B");
 
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.SetupSequence(r => r.GetAllActiveAsync())
+            innerMock.SetupSequence(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync([team1])
                 .ReturnsAsync([team1, team2]);
-            innerMock.Setup(r => r.AddAsync(team2)).Returns(Task.CompletedTask);
+            innerMock.Setup(r => r.AddAsync(team2, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
             var cache = new CachedTeamRepository(innerMock.Object, memory);
@@ -101,8 +101,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             secondList.Should().HaveCount(1);
             afterAdd.Should().HaveCount(2);
 
-            innerMock.Verify(r => r.GetAllActiveAsync(), Times.Exactly(2));
-            innerMock.Verify(r => r.AddAsync(team2), Times.Once);
+            innerMock.Verify(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+            innerMock.Verify(r => r.AddAsync(team2, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -113,10 +113,10 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             var team2 = new Team("Team B", "Network", "Low", "Description B");
 
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.SetupSequence(r => r.GetAllActiveAsync())
+            innerMock.SetupSequence(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync([team1, team2])
                 .ReturnsAsync([team2]);
-            innerMock.Setup(r => r.RemoveAsync(team1)).Returns(Task.CompletedTask);
+            innerMock.Setup(r => r.RemoveAsync(team1, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
             var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
             var cache = new CachedTeamRepository(innerMock.Object, memory);
@@ -134,8 +134,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             afterRemove.Should().HaveCount(1);
             afterRemove.Should().OnlyContain(t => t.Id == team2.Id);
 
-            innerMock.Verify(r => r.GetAllActiveAsync(), Times.Exactly(2));
-            innerMock.Verify(r => r.RemoveAsync(team1), Times.Once);
+            innerMock.Verify(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+            innerMock.Verify(r => r.RemoveAsync(team1, It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }

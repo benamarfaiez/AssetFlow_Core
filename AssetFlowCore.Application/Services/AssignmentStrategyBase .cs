@@ -1,5 +1,4 @@
-﻿using AssetFlowCore.Application.Interfaces;
-using AssetFlowCore.Domain.Entities;
+using AssetFlowCore.Application.Interfaces;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
@@ -11,9 +10,9 @@ public abstract class AssignmentStrategyBase(ITeamRepository teamRepository) : I
     public abstract bool IsMatch(AssetType assetType, TicketCriticality criticality);
 
     // Résolution de l'Id depuis la base — centralisée ici une seule fois
-    public async Task<string> GetTeamNameAsync(string assetType, string criticality)
+    public async Task<string> GetTeamNameAsync(string assetType, string criticality, CancellationToken cancellationToken = default)
     {
-        var team = await teamRepository.GetByAssetTypeAndCriticalityAsync(assetType, criticality)
+        var team = await teamRepository.GetByAssetTypeAndCriticalityAsync(assetType, criticality, cancellationToken)
             ?? throw new DomainException(
                 $"L'équipe est introuvable en base. " +
                 "Vérifiez que les données de référence sont à jour.");

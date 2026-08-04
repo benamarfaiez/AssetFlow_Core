@@ -29,7 +29,7 @@ public class CloseTicketHandlerTests
 
         _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id, CancellationToken.None)).ReturnsAsync(ticket);
         _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(asset);
-        _ticketRepoMock.Setup(t => t.HasOtherActiveTicketsAsync(asset.Id, ticket.Id)).ReturnsAsync(false);
+        _ticketRepoMock.Setup(t => t.HasOtherActiveTicketsAsync(asset.Id, ticket.Id, It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
         var command = new CloseTicketCommand(ticket.Id, "Repaired");
 

@@ -6,7 +6,7 @@ namespace AssetFlowCore.Infrastructure.Cache;
 
 public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache memoryCache) : ITeamRepository
 {
-    private const string TeamsListCacheKey = "Teams_List_Active";
+    private const string TeamsListCacheKey = CacheKeys.TeamsList;
     private readonly ITeamRepository _inner = innerRepository ?? throw new ArgumentNullException(nameof(innerRepository));
     private readonly IMemoryCache _memory = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
 
@@ -19,7 +19,7 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
             return await _inner.GetByIdAsync(id, cancellationToken);
         });
 
-    public async Task<Team?> GetByNameAsync(string name)
+    public async Task<Team?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
 
@@ -31,7 +31,7 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
         }
 
         // Cache Miss : Récupération bdd
-        var team = await _inner.GetByNameAsync(name);
+        var team = await _inner.GetByNameAsync(name, cancellationToken);
         if (team != null)
         {
             _memory.Set(GetIdKey(team.Id), team, CacheOptions());
@@ -39,17 +39,17 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
         return team;
     }
 
-    public Task<IEnumerable<Team>> GetAllActiveAsync()
+    public Task<IEnumerable<Team>> GetAllActiveAsync(CancellationToken cancellationToken = default)
     {
         return _memory.GetOrCreateAsync(TeamsListCacheKey, async entry =>
         {
             entry.SetOptions(CacheOptions());
-            var teams = await _inner.GetAllActiveAsync();
+            var teams = await _inner.GetAllActiveAsync(cancellationToken);
             return teams ?? [];
         })!;
     }
 
-    public async Task<Team?> GetByAssetTypeAndCriticalityAsync(string assetType, string criticality)
+    public async Task<Team?> GetByAssetTypeAndCriticalityAsync(string assetType, string criticality, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(assetType) || string.IsNullOrWhiteSpace(criticality)) return null;
 
@@ -64,7 +64,7 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
         }
 
         // Cache Miss
-        var team = await _inner.GetByAssetTypeAndCriticalityAsync(assetType, criticality);
+        var team = await _inner.GetByAssetTypeAndCriticalityAsync(assetType, criticality, cancellationToken);
         if (team != null)
         {
             _memory.Set(GetIdKey(team.Id), team, CacheOptions());
@@ -72,37 +72,37 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
         return team;
     }
 
-    public async Task AddAsync(Team team)
+    public async Task AddAsync(Team team, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(team);
 
-        await _inner.AddAsync(team);
+        await _inner.AddAsync(team, cancellationToken);
 
         _memory.Remove(TeamsListCacheKey);
         _memory.Set(GetIdKey(team.Id), team, CacheOptions());
     }
 
-    public async Task UpdateAsync(Team team)
+    public async Task UpdateAsync(Team team, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(team);
 
-        await _inner.UpdateAsync(team);
+        await _inner.UpdateAsync(team, cancellationToken);
 
         _memory.Remove(TeamsListCacheKey);
         _memory.Set(GetIdKey(team.Id), team, CacheOptions());
     }
 
-    public async Task RemoveAsync(Team team)
+    public async Task RemoveAsync(Team team, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(team);
 
-        await _inner.RemoveAsync(team);
+        await _inner.RemoveAsync(team, cancellationToken);
 
         _memory.Remove(GetIdKey(team.Id));
         _memory.Remove(TeamsListCacheKey);
     }
 
-    public async Task<bool> ExistsWithNameAsync(string name)
+    public async Task<bool> ExistsWithNameAsync(string name, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name)) return false;
 
@@ -111,7 +111,7 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
             return list.Any(t => string.Equals(t.Name, name.Trim(), StringComparison.OrdinalIgnoreCase));
         }
 
-        return await _inner.ExistsWithNameAsync(name);
+        return await _inner.ExistsWithNameAsync(name, cancellationToken);
     }
 
     public void RefreshCacheFor(Team team)
@@ -121,5 +121,5 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
         _memory.Set(GetIdKey(team.Id), team, CacheOptions());
     }
 
-    private static string GetIdKey(Guid id) => $"team_{id:N}";
+    private static string GetIdKey(Guid id) => CacheKeys.Team(id);
 }

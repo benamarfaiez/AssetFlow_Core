@@ -100,6 +100,52 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
             resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        /// <summary>
+        /// Couvre la correction 1.4 : le doublon de nom n'était détecté que par l'index unique
+        /// de la base, donc restitué au client sous la forme d'une 500.
+        /// </summary>
+        [Fact]
+        public async Task CreateTeam_WithDuplicateName_ShouldReturn400WithBusinessMessage()
+        {
+            // Arrange
+            var payload = new CreateTeamRequest("Equipe-Doublon", "Server", "High", "Première création");
+            var first = await _client.PostAsJsonAsync("/api/teams", payload);
+            first.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            // Act
+            var duplicate = await _client.PostAsJsonAsync("/api/teams", payload);
+
+            // Assert
+            duplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var problem = await duplicate.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+            problem.Should().NotBeNull();
+            problem!.Title.Should().Be("Règle métier violée");
+            problem.Detail.Should().Contain("Une équipe nommée 'Equipe-Doublon' existe déjà.");
+        }
+
+        [Fact]
+        public async Task UpdateTeam_WithNameOfAnotherTeam_ShouldReturn400WithBusinessMessage()
+        {
+            // Arrange : deux équipes distinctes
+            var existing = await _client.PostAsJsonAsync("/api/teams",
+                new CreateTeamRequest("Equipe-Occupee", "Server", "High", "Nom déjà pris"));
+            existing.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            var toRename = await _client.PostAsJsonAsync("/api/teams",
+                new CreateTeamRequest("Equipe-A-Renommer", "Laptop", "Low", "À renommer"));
+            toRename.StatusCode.Should().Be(HttpStatusCode.Created);
+            var created = await toRename.Content.ReadFromJsonAsync<TeamResponseDto>();
+
+            // Act
+            var response = await _client.PutAsJsonAsync($"/api/teams/{created!.Id}",
+                new UpdateTeamRequest("Equipe-Occupee", "Laptop", "Low", "À renommer"));
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var problem = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+            problem!.Detail.Should().Contain("Une équipe nommée 'Equipe-Occupee' existe déjà.");
+        }
+
         [Fact]
         public async Task UpdateTeam_ShouldReturnUpdated()
         {

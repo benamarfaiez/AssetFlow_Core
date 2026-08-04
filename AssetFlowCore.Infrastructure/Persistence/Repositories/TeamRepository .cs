@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Domain.Entities;
+using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,27 +6,27 @@ namespace AssetFlowCore.Infrastructure.Persistence.Repositories;
 
 public class TeamRepository(AssetFlowDbContext context) : ITeamRepository
 {
-    public async Task<Team?> GetByNameAsync(string name)
+    public async Task<Team?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
         => await context.Teams
             .FirstOrDefaultAsync(t =>
-                t.Name == name.Trim() && t.IsActive);
+                t.Name == name.Trim() && t.IsActive, cancellationToken);
 
     public async Task<Team?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => await context.Teams
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
-    public async Task<IEnumerable<Team>> GetAllActiveAsync()
+    public async Task<IEnumerable<Team>> GetAllActiveAsync(CancellationToken cancellationToken = default)
         => await context.Teams
             .AsNoTracking()
             .Where(t => t.IsActive)
             .OrderBy(t => t.Name)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
-    public async Task AddAsync(Team team)
-        => await context.Teams.AddAsync(team);
+    public async Task AddAsync(Team team, CancellationToken cancellationToken = default)
+        => await context.Teams.AddAsync(team, cancellationToken);
 
-    public async Task UpdateAsync(Team team)
+    public async Task UpdateAsync(Team team, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(team);
         // If provider supports ExecuteUpdate, prefer set-based update to avoid tracking and materialization overhead.
@@ -41,7 +41,7 @@ public class TeamRepository(AssetFlowDbContext context) : ITeamRepository
                     .SetProperty(t => t.AssetType, _ => team.AssetType)
                     .SetProperty(t => t.TicketCriticality, _ => team.TicketCriticality)
                     .SetProperty(t => t.IsActive, _ => team.IsActive)
-                );
+                , cancellationToken);
             return;
         }
 
@@ -54,13 +54,13 @@ public class TeamRepository(AssetFlowDbContext context) : ITeamRepository
         entry.State = EntityState.Modified;
     }
 
-    public async Task RemoveAsync(Team team)
+    public async Task RemoveAsync(Team team, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(team);
         var provider = context.Database.ProviderName ?? string.Empty;
         if (!provider.Contains("InMemory", StringComparison.OrdinalIgnoreCase))
         {
-            await context.Teams.Where(t => t.Id == team.Id).ExecuteDeleteAsync();
+            await context.Teams.Where(t => t.Id == team.Id).ExecuteDeleteAsync(cancellationToken);
             return;
         }
 
@@ -71,13 +71,13 @@ public class TeamRepository(AssetFlowDbContext context) : ITeamRepository
         context.Teams.Remove(team);
     }
 
-    public async Task<bool> ExistsWithNameAsync(string name)
+    public async Task<bool> ExistsWithNameAsync(string name, CancellationToken cancellationToken = default)
         => await context.Teams
-            .AnyAsync(t => t.Name == name.Trim());
+            .AnyAsync(t => t.Name == name.Trim(), cancellationToken);
 
-    public async Task<Team?> GetByAssetTypeAndCriticalityAsync(string assetType, string criticality)
+    public async Task<Team?> GetByAssetTypeAndCriticalityAsync(string assetType, string criticality, CancellationToken cancellationToken = default)
         => await context.Teams
         .AsNoTracking()
         .FirstOrDefaultAsync(t =>
-            t.AssetType == assetType.Trim() && t.IsActive && t.TicketCriticality == criticality.Trim());
+            t.AssetType == assetType.Trim() && t.IsActive && t.TicketCriticality == criticality.Trim(), cancellationToken);
 }

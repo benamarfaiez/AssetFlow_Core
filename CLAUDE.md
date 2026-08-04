@@ -41,7 +41,7 @@ dotnet ef migrations add <Nom> --project AssetFlowCore.Infrastructure --startup-
 dotnet ef database update --project AssetFlowCore.Infrastructure --startup-project AssetFlowCore.WebApi
 ```
 
-`Program.cs` **n'applique aucune migration au démarrage** : la base doit être migrée manuellement (ou recréée) avant de faire tourner l'API.
+`Program.cs` **n'applique aucune migration au démarrage** : la base doit être migrée manuellement (ou recréée) avant de faire tourner l'API. La migration `SeedReferenceTeams` amorce les 9 équipes de référence (3 types d'actifs × 3 criticités) sans lesquelles toute création de ticket échoue — `dotnet ef database update` est donc indispensable sur une base neuve.
 
 ## Structure des couches et règles imposées par les tests
 
@@ -58,7 +58,7 @@ dotnet ef database update --project AssetFlowCore.Infrastructure --startup-proje
 
 `Controller (ISender)` → `Command`/`Query` → `ValidationBehavior` (FluentValidation) → `Handler` → entités du domaine + repositories → `IUnitOfWork.SaveChangesAsync()` → notification SignalR → DTO.
 
-- Les controllers n'injectent que `ISender` ; chaque endpoint construit son `Command`/`Query` depuis un `Requests/*Request`.
+- Les controllers n'injectent que `ISender` ; chaque endpoint construit son `Command`/`Query` depuis un `Requests/*Request`, et reçoit un `CancellationToken` propagé jusqu'aux dépôts — toute nouvelle méthode asynchrone de dépôt doit accepter et propager ce jeton. Exceptions assumées : la notification SignalR et la mise en file de l'analyse IA, postérieures à la persistance, ne sont pas annulables.
 - Les handlers sont enregistrés **deux fois** dans [DependencyInjection.cs](AssetFlowCore.Application/DependencyInjection.cs) : par le scan MediatR (chemin réel de l'API) et explicitement en `AddScoped` (les benchmarks les résolvent directement depuis le conteneur). Ajouter un handler implique de mettre à jour l'enregistrement explicite et, si besoin, [BenchmarkBase.cs](AssetFlowCore.Benchmarks/BenchmarkBase.cs).
 - Le mapping DTO est **manuel** ([MappingExtensions.cs](AssetFlowCore.Application/DTOs/MappingExtensions.cs)) — choix assumé de performance, ne pas introduire AutoMapper.
 - [ExceptionHandlingMiddleware.cs](AssetFlowCore.WebApi/Middlewares/ExceptionHandlingMiddleware.cs) traduit les exceptions en `ProblemDetails` : `ValidationException` / `ArgumentException` / `DomainException` → 400, `DbUpdateConcurrencyException` → 409 (via `MaintenanceTicket.RowVersion`), reste → 500. Les handlers lèvent donc des exceptions plutôt que de retourner des résultats d'erreur.
@@ -67,11 +67,15 @@ dotnet ef database update --project AssetFlowCore.Infrastructure --startup-proje
 
 [TicketAssignmentEngine.cs](AssetFlowCore.Application/Services/TicketAssignmentEngine.cs) prend la **première** `IAssignmentStrategy` dont `IsMatch(assetType, criticality)` répond `true` : l'ordre d'enregistrement dans [DependencyInjection.cs](AssetFlowCore.Application/DependencyInjection.cs#L29-L32) fait office de priorité, avec repli explicite sur `LaptopStandardStrategy`.
 
-`Team.AssetType` et `Team.TicketCriticality` sont des **`string`**, pas les enums du domaine ; la résolution compare `assetType.ToString()` / `criticality.ToString()` en base. Conséquence : sans équipe correspondant au couple `(AssetType, TicketCriticality)` en base, `AssignmentStrategyBase.GetTeamNameAsync` lève une `DomainException` et la création de ticket échoue. Toute nouvelle stratégie exige donc aussi le seed des équipes correspondantes.
+`Team.AssetType` et `Team.TicketCriticality` sont des **`string`**, pas les enums du domaine ; la résolution compare `assetType.ToString()` / `criticality.ToString()` en base. Conséquence : sans équipe correspondant au couple `(AssetType, TicketCriticality)` en base, `AssignmentStrategyBase.GetTeamNameAsync` lève une `DomainException` et la création de ticket échoue. Toute nouvelle stratégie exige donc aussi le seed des équipes correspondantes — les 9 combinaisons actuelles sont amorcées par la migration `SeedReferenceTeams`, dont les noms doivent rester **uniques** (index `IX_t_teams_name`).
 
 ## Cache : décorateurs autour des repositories
 
-`IAssetRepository` et `ITeamRepository` sont résolus vers `CachedAssetRepository` / `CachedTeamRepository`, qui décorent les implémentations EF concrètes (enregistrées en tant que types concrets) avec `IMemoryCache` (expiration absolue 5 min). En ajoutant une méthode d'écriture sur un repository, il faut **invalider les clés correspondantes dans le décorateur**, sinon les lectures servent des données périmées.
+`IAssetRepository` et `ITeamRepository` sont résolus vers `CachedAssetRepository` / `CachedTeamRepository`, qui décorent les implémentations EF concrètes (enregistrées en tant que types concrets) avec `IMemoryCache` (expiration absolue 5 min). En ajoutant une méthode d'écriture sur un repository, il faut **invalider les clés correspondantes dans le décorateur** (clés partagées dans [CacheKeys.cs](AssetFlowCore.Infrastructure/Cache/CacheKeys.cs)), sinon les lectures servent des données périmées.
+
+`UnitOfWork` **reçoit ses dépôts du conteneur** : les écritures passant par lui traversent donc les décorateurs. Les mutations d'entités suivies qui n'appellent aucune méthode de dépôt (`asset.Decommission()`, `asset.MarkAsDown()`) sont détectées via le `ChangeTracker` dans `SaveChangesAsync`, qui invalide alors les listes concernées.
+
+Le cache d'actifs porte **uniquement sur la liste** : `CachedAssetRepository.GetByIdAsync` délègue sans mise en cache, car tous ses appelants mutent l'actif retourné — servir une instance détachée du `DbContext` courant ferait échouer silencieusement la persistance. Même précaution à conserver pour toute nouvelle lecture destinée à une mutation.
 
 `TeamRepository.UpdateAsync`/`RemoveAsync` branchent sur `ProviderName` : `ExecuteUpdate`/`ExecuteDelete` sur un provider relationnel, repli `Attach` + `EntityState.Modified` pour InMemory. Les tests exercent donc un chemin de code différent de la production — valider les changements de ces méthodes aussi en intégration/benchmark.
 

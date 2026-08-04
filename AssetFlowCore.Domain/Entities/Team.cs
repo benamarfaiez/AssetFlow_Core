@@ -55,7 +55,7 @@ public class Team
 
     public void Update(string? name, string? description, string? assetType, string? ticketCriticality)
     {
-        if (name != null) Name = name;
+        if (name != null) Name = name.Trim();
         if (description != null) Description = description.Trim();
         if (assetType != null) AssetType = assetType.Trim();
         if (ticketCriticality != null) TicketCriticality = ticketCriticality.Trim();

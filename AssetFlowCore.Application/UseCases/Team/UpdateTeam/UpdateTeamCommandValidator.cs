@@ -20,7 +20,7 @@ namespace AssetFlowCore.Application.UseCases.Team.UpdateTeam
 
             RuleFor(x => x.TicketCriticality)
                 .IsEnumName(typeof(TicketCriticality), caseSensitive: false)
-                .WithMessage("Le type d'asset doit être l'un des suivants : Server, Laptop ou NetworkDevice.");
+                .WithMessage("La criticité doit être l'une des suivantes : Low, Medium ou High.");
 
             RuleFor(x => x.Description)
                 .MaximumLength(500).WithMessage("La description ne doit pas dépasser 500 caractères.");
