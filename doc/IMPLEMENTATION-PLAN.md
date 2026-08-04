@@ -14,8 +14,8 @@ Documents de référence : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) (e
 
 | Domaine | État vérifié au 2026-08-05 |
 |---|---|
-| Backend | ✅ fonctionnel : 12 endpoints, 195 tests unitaires verts, tests d'architecture et d'intégration, benchmarks, CI/CD complète, déploiement conteneurisé ; **Lot 1 appliqué** |
-| Contrat d'API | 🟡 incomplet : pas de liste d'incidents ni d'équipes, plusieurs champs absents des DTOs, aucun 404, un `PUT` répondant 201 |
+| Backend | ✅ fonctionnel : 15 endpoints, 216 tests unitaires verts, tests d'architecture et d'intégration, benchmarks, CI/CD complète, déploiement conteneurisé ; **Lots 1 et 2 appliqués** |
+| Contrat d'API | ✅ complété : listes d'incidents (paginée) et d'équipes, fiche d'actif, DTOs enrichis, 404 pour les ressources absentes, `Location` sur les créations |
 | Sécurité | ⛔ aucune authentification ni autorisation |
 | Frontend | ⛔ inexistant (aucun `angular.json`) |
 | Assistance IA | 🟡 mécanisme complet mais corpus vectoriel vide et état non exposé |
@@ -42,7 +42,7 @@ Documents de référence : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) (e
 flowchart LR
     L0["Lot 0<br/>Décisions ❓"] --> L1["Lot 1 ✅<br/>Corrections backend"]
     L0 --> L3["Lot 3<br/>Fondation frontend"]
-    L1 --> L2["Lot 2<br/>Complétion du contrat"]
+    L1 --> L2["Lot 2 ✅<br/>Complétion du contrat"]
     L3 --> L4["Lot 4<br/>Design system"]
     L2 --> L5["Lot 5<br/>Fonctionnalités"]
     L4 --> L5
@@ -75,7 +75,7 @@ flowchart LR
 | 0.11 | Runner de tests frontend (Vitest ou Karma) | Lot 3 | S |
 | 0.12 | Stratégie d'état (Signals natifs — défaut — ou SignalStore en préversion) | Lot 5 | S |
 | 0.13 | Mode de déploiement du frontend (conteneur dédié, servi par l'API, statique + reverse proxy) | Lot 8, contrainte CORS | M |
-| 0.14 | Périmètre de la pagination et du filtrage serveur des listes | Lot 2 | M |
+| ~~0.14~~ | ~~Périmètre de la pagination et du filtrage serveur des listes~~ — **tranchée le 2026-08-05** : enveloppe JSON paginée sur `GET /api/tickets` (filtres état, criticité, équipe, actif ; tri ; taille de page ≤ 100) ; inventaire et équipes servis en intégralité | Lot 2 | M |
 | 0.15 | Politique de rupture de contrat (versioning d'API ou coordination directe) | Lot 2 | S |
 
 **Étapes**
@@ -124,32 +124,38 @@ flowchart LR
 
 ---
 
-## 5. Lot 2 — Complétion du contrat d'API ⛔ pour le frontend
+## 5. Lot 2 — Complétion du contrat d'API ✅ (2026-08-05)
 
 **Objectif** : rendre réalisables les 6 écrans aujourd'hui impossibles ou dégradés. **Ce lot introduit des ruptures de contrat assumées** (décision 0.15).
 
 | # | Étape | Exigence levée | Charge |
 |---|---|---|---|
-| 2.1 | `GET /api/tickets` — liste avec filtres (état, criticité, équipe, actif), tri et **pagination** (périmètre fixé en 0.14) | `EF-19`, écran `E-06`, parcours `P-03` | L |
-| 2.2 | `GET /api/teams` — liste des équipes, avec l'état actif | `EF-27`, écran `E-07`, parcours `P-05`/`P-08` | M |
-| 2.3 | Enrichir `TicketResponseDto` : `description`, `resolutionComment`, `createdAt`, `assistanceNote`, `isAiProcessing` | `EF-20`, `EF-34`, `EF-35`, écrans `E-05`/`E-08` | M |
-| 2.4 | Enrichir `TeamResponseDto` : `assetType`, `ticketCriticality` | écran `E-07` (préremplissage du formulaire) | S |
-| 2.5 | `GET /api/assets/{id}` — fiche unitaire, avec ses incidents | `EF-06`, écran `E-03` | M |
-| 2.6 | Sémantique **404** pour les ressources introuvables (exception dédiée mappée) — aujourd'hui tout remonte en 400 | cohérence REST, `E-01`→`E-09` | M |
-| 2.7 | Aligner `PUT /api/teams/{id}` sur **200** au lieu de 201 | cohérence REST | S |
-| 2.8 | Ajouter l'en-tête `Location` sur les réponses 201 | cohérence REST | S |
-| 2.9 | Décisions 0.3, 0.5, 0.6 appliquées si retenues (statut `Resolved`, motif de transfert isolé, désactivation d'équipe) | `EF-17`, `EF-28` | M |
-| 2.10 | **Relecture** | agent `dotnet-code-reviewer` | S |
-| 2.11 | **Mise à jour du contrat documenté** — [API-Specification.md](API-Specification.md) intégralement, puis resynchronisation frontend | S |
-| 2.12 | **Resynchronisation des types frontend** | skill **`/sync-api-dtos`** sur chaque controller modifié, agent `dotnet-api-bridge` en cas d'écart | S |
+| 2.1 ✅ | `GET /api/tickets` — liste avec filtres (état, criticité, équipe, actif), tri et **pagination** — enveloppe `{ items, page, pageSize, totalCount, totalPages }`, taille de page bornée à 100 (décision 0.14 tranchée le 2026-08-05) | `EF-19`, écran `E-06`, parcours `P-03` | L |
+| 2.2 ✅ | `GET /api/teams` — liste des équipes, avec l'état actif ; `?onlyActive=true` pour le sélecteur de transfert | `EF-27`, écran `E-07`, parcours `P-05`/`P-08` | M |
+| 2.3 ✅ | Enrichir `TicketResponseDto` : `description`, `resolutionComment`, `createdAt`, `assistanceNote`, `isAiProcessing` | `EF-20`, `EF-34`, `EF-35`, écrans `E-05`/`E-08` | M |
+| 2.4 ✅ | Enrichir `TeamResponseDto` : `assetType`, `ticketCriticality` | écran `E-07` (préremplissage du formulaire) | S |
+| 2.5 ✅ | `GET /api/assets/{id}` — fiche unitaire, avec ses incidents du plus récent au plus ancien | `EF-06`, écran `E-03` | M |
+| 2.6 ✅ | Sémantique **404** pour les ressources introuvables — `NotFoundException` mappée ; une référence invalide du **corps** reste un 400 | cohérence REST, `E-01`→`E-09` | M |
+| 2.7 ✅ | Aligner `PUT /api/teams/{id}` sur **200** au lieu de 201 | cohérence REST | S |
+| 2.8 ✅ | Ajouter l'en-tête `Location` sur les réponses 201 | cohérence REST | S |
+| 2.9 ⛔ | Décisions 0.3, 0.5, 0.6 appliquées si retenues (statut `Resolved`, motif de transfert isolé, désactivation d'équipe) | `EF-17`, `EF-28` | M |
+| 2.10 ✅ | **Relecture** | session principale (aucun agent sollicité) | S |
+| 2.11 ✅ | **Mise à jour du contrat documenté** — [API-Specification.md](API-Specification.md) intégralement | S |
+| 2.12 ⛔ | **Resynchronisation des types frontend** | skill **`/sync-api-dtos`** sur chaque controller modifié | S |
 
 **Critères d'acceptation du lot**
 
-- Chaque nouvel endpoint est couvert par un test d'intégration (cas nominal + cas d'erreur) et documenté dans [API-Specification.md](API-Specification.md).
-- La pagination expose le nombre total d'éléments, faute de quoi aucune interface de pagination n'est possible.
-- Les ressources introuvables renvoient 404 sur **tous** les endpoints, sans exception résiduelle.
-- Le skill `/sync-api-dtos` s'exécute sans signaler de dérive après mise à jour.
-- Les écrans `E-05`, `E-06`, `E-07`, `E-08` sont déclarés réalisables dans [PRODUCT-SPECIFICATIONS.md](PRODUCT-SPECIFICATIONS.md) §7.
+- ✅ Chaque nouvel endpoint est couvert par un test d'intégration (cas nominal + cas d'erreur) et documenté dans [API-Specification.md](API-Specification.md).
+- ✅ La pagination expose le nombre total d'éléments (`totalCount`), indépendant de la page reçue.
+- ✅ Les ressources introuvables renvoient 404 sur **tous** les endpoints à identifiant, sans exception résiduelle.
+- ⛔ Le skill `/sync-api-dtos` ne peut pas s'exécuter : il s'arrête de lui-même en l'absence d'`angular.json` (Lot 3 non démarré).
+- ✅ Les écrans `E-05`, `E-06`, `E-07` sont déclarés réalisables dans [PRODUCT-SPECIFICATIONS.md](PRODUCT-SPECIFICATIONS.md) §7 ; `E-08` reste dégradé, la fin d'analyse IA n'étant pas notifiée (Lot 6, étape 6.4).
+
+**Écarts assumés du lot**
+
+- **2.9 reportée** : les décisions 0.3, 0.5 et 0.6 n'étant pas tranchées, le statut `Resolved` reste inatteignable, le motif de transfert reste concaténé à la description et aucune équipe ne peut être désactivée par l'API. Le filtre `onlyActive` et le champ `isActive` sont néanmoins en place pour accueillir la décision 0.6.
+- **2.12 impossible** : aucun workspace Angular n'existe encore. À exécuter au Lot 3, étape 3.6.
+- Pagination livrée sur `GET /api/tickets` uniquement ; l'inventaire et les équipes restent des collections complètes, leur volume ne le justifiant pas.
 
 ---
 

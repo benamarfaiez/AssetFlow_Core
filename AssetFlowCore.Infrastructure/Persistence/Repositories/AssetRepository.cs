@@ -22,4 +22,11 @@ public class AssetRepository(AssetFlowDbContext context) : IAssetRepository
         => await context.Assets
         .AsNoTracking()
         .ToListAsync(cancellationToken);
+
+    public async Task<Asset?> GetByIdWithTicketsAsync(Guid id, CancellationToken cancellationToken = default)
+        => await context.Assets
+        .AsNoTracking()
+        .Include(a => a.Tickets)
+        .ThenInclude(t => t.AssignedTeam)
+        .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 }

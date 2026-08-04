@@ -9,7 +9,8 @@ public class UpdateTeamCommandHandler(IUnitOfWork unitOfWork) : IRequestHandler<
 {
     public async Task<TeamResponseDto> Handle(UpdateTeamCommand request, CancellationToken cancellationToken)
     {
-        var team = await unitOfWork.Team.GetByIdAsync(request.TeamId, cancellationToken) ?? throw new DomainException($"Le team avec l'ID {request.TeamId} est introuvable.");
+        var team = await unitOfWork.Team.GetByIdAsync(request.TeamId, cancellationToken)
+            ?? throw NotFoundException.For("L'équipe", request.TeamId);
 
         // Même contrainte d'unicité qu'à la création : un renommage vers un nom déjà pris
         // ne doit pas attendre la violation de l'index pour être signalé.

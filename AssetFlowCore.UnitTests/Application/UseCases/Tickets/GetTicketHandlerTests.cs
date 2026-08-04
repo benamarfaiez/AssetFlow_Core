@@ -40,7 +40,7 @@ public class GetTicketHandlerTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenTicketDoesNotExist_ShouldThrowDomainException()
+    public async Task ExecuteAsync_WhenTicketDoesNotExist_ShouldThrowNotFoundException()
     {
         // Arrange
         var ticketId = Guid.NewGuid();
@@ -54,7 +54,7 @@ public class GetTicketHandlerTests
         Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<DomainException>()
-            .WithMessage($"Le ticket avec l'ID {ticketId} est introuvable.");
+        await act.Should().ThrowAsync<NotFoundException>()
+            .WithMessage($"L'incident {ticketId} est introuvable.");
     }
 }

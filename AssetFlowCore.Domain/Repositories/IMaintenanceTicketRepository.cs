@@ -13,4 +13,10 @@ public interface IMaintenanceTicketRepository
     Task<bool> HasOtherActiveTicketsAsync(Guid assetId, Guid excludingTicketId, CancellationToken cancellationToken = default);
     // Return true if there exists at least one active ticket assigned to the given team
     Task<bool> ExistsActiveTicketsForTeamAsync(Guid teamId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Recherche paginée d'incidents, équipe assignée incluse. Le décompte total porte sur
+    /// l'ensemble des incidents correspondant aux filtres, indépendamment de la pagination.
+    /// </summary>
+    Task<PagedResult<MaintenanceTicket>> SearchAsync(TicketSearchCriteria criteria, CancellationToken cancellationToken = default);
 }

@@ -220,19 +220,21 @@ Créer, modifier, supprimer une équipe. ⛔ **Écran non réalisable** faute de
 
 ## 7. Écrans proposés 🎯
 
+Faisabilité réévaluée au 2026-08-05, après la complétion du contrat d'API (Lot 2).
+
 | Id | Écran | Données affichées | Actions | Faisabilité |
 |---|---|---|---|---|
-| E-01 | **Inventaire des actifs** | libellé, numéro de série, type, état, date de création | enregistrer, mettre au rebut, filtrer localement | ✅ réalisable (liste complète, filtrage et tri **côté client** faute de pagination serveur) |
+| E-01 | **Inventaire des actifs** | libellé, numéro de série, type, état, date de création | enregistrer, mettre au rebut, filtrer localement | ✅ réalisable (liste complète, filtrage et tri **côté client** faute de pagination serveur sur l'inventaire) |
 | E-02 | **Formulaire d'actif** | libellé, numéro de série, type | enregistrer | ✅ réalisable |
-| E-03 | **Fiche d'un actif** | attributs + incidents liés | ouvrir un incident | 🟡 partiel : aucun endpoint unitaire, aucun historique d'incidents ; à reconstituer depuis la liste |
+| E-03 | **Fiche d'un actif** | attributs + incidents liés | ouvrir un incident | ✅ réalisable — `GET /api/assets/{id}` renvoie l'actif et ses incidents |
 | E-04 | **Formulaire d'incident** | actif sélectionné, titre, description, criticité | ouvrir | ✅ réalisable |
-| E-05 | **Fiche d'un incident** | titre, criticité, état, équipe affectée | prendre en charge, clôturer, transférer | 🟡 dégradé : ni description, ni compte rendu, ni note d'assistance IA dans le contrat |
-| E-06 | **File de travail des incidents** | liste filtrable par état, criticité, équipe | ouvrir une fiche | ⛔ **impossible** : aucun endpoint de liste |
-| E-07 | **Administration des équipes** | nom, type d'actif, criticité, état actif | créer, modifier, supprimer | ⛔ **impossible** : aucune liste ; le contrat de sortie n'expose ni type d'actif ni criticité |
-| E-08 | **Aide au diagnostic** | note d'assistance IA, incidents similaires | — | ⛔ **impossible** : non exposée |
-| E-09 | **Notifications temps réel** | nouveaux incidents de l'équipe suivie | ouvrir la fiche | 🟡 dégradé : le groupe suivi doit être saisi manuellement |
+| E-05 | **Fiche d'un incident** | titre, description, criticité, état, équipe, compte rendu | prendre en charge, clôturer, transférer | ✅ réalisable — le contrat expose description, compte rendu et date d'ouverture |
+| E-06 | **File de travail des incidents** | liste filtrable par état, criticité, équipe, actif | ouvrir une fiche | ✅ réalisable — `GET /api/tickets` filtre, trie et pagine |
+| E-07 | **Administration des équipes** | nom, type d'actif, criticité, état actif | créer, modifier, supprimer | ✅ réalisable — `GET /api/teams` et le couple (type × criticité) dans le contrat de sortie ; la **désactivation** reste indisponible (décision 0.6) |
+| E-08 | **Aide au diagnostic** | note d'assistance IA, incidents similaires | — | 🟡 dégradé : `assistanceNote` et `isAiProcessing` sont exposés, mais la fin d'analyse n'est pas notifiée — l'écran doit relire l'incident ; les incidents similaires restent hors contrat |
+| E-09 | **Notifications temps réel** | nouveaux incidents de l'équipe suivie | ouvrir la fiche | 🟡 dégradé : le groupe suivi doit être saisi manuellement, faute de notion d'utilisateur |
 
-**Conséquence de cadrage** : sur 9 écrans, **3 sont réalisables sans modification du backend**, 3 sont dégradés et 3 sont impossibles. Un frontend utile pour un technicien exige au minimum les endpoints de liste (incidents, équipes) et l'enrichissement de deux contrats de sortie.
+**Conséquence de cadrage** : sur 9 écrans, **7 sont désormais réalisables** et 2 restent dégradés. Les deux limitations résiduelles relèvent du Lot 6 (notification de fin d'analyse IA) et du Lot 7 (rattachement d'un utilisateur à une équipe), pas du contrat d'API.
 
 ## 8. Messages destinés à l'utilisateur 🎯
 

@@ -48,6 +48,14 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 problemDetails.Detail = argumentEx.Message;
                 break;
 
+            // Avant DomainException, dont NotFoundException dérive : l'ordre des cas fait foi.
+            case NotFoundException notFoundEx:
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                problemDetails.Status = StatusCodes.Status404NotFound;
+                problemDetails.Title = "Ressource introuvable";
+                problemDetails.Detail = notFoundEx.Message;
+                break;
+
             case DomainException domainEx:
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 problemDetails.Status = StatusCodes.Status400BadRequest;

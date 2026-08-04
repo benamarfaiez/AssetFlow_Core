@@ -42,7 +42,7 @@ public class DeleteTeamCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenTeamNotFound_ShouldThrowDomainException()
+    public async Task Handle_WhenTeamNotFound_ShouldThrowNotFoundException()
     {
         // Arrange
         var unknownId = Guid.NewGuid();
@@ -54,8 +54,8 @@ public class DeleteTeamCommandHandlerTests
         Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<DomainException>()
-            .WithMessage("Team introuvable.");
+        await act.Should().ThrowAsync<NotFoundException>()
+            .WithMessage($"L'équipe {unknownId} est introuvable.");
 
         _teamRepoMock.Verify(r => r.RemoveAsync(It.IsAny<DomainTeam>(), It.IsAny<CancellationToken>()), Times.Never);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

@@ -46,6 +46,7 @@ public class UnitOfWork(
         if (invalidateTeams)
         {
             memoryCache.Remove(CacheKeys.TeamsList);
+            memoryCache.Remove(CacheKeys.TeamsListAll);
         }
 
         return affected;

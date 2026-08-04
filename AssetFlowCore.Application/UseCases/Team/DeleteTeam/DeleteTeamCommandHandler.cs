@@ -8,7 +8,8 @@ public class DeleteTeamCommandHandler(IUnitOfWork unitOfWork) : IRequestHandler<
 {
     public async Task Handle(DeleteTeamCommand command, CancellationToken cancellationToken)
     {
-        var team = await unitOfWork.Team.GetByIdAsync(command.TeamId, cancellationToken) ?? throw new DomainException("Team introuvable.");
+        var team = await unitOfWork.Team.GetByIdAsync(command.TeamId, cancellationToken)
+            ?? throw NotFoundException.For("L'équipe", command.TeamId);
 
         // Vérifier côté DB s'il existe des tickets actifs assignés à cette équipe
         bool hasActive = await unitOfWork.MaintenanceTicket.ExistsActiveTicketsForTeamAsync(team.Id, cancellationToken);

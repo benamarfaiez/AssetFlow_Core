@@ -27,6 +27,11 @@ public class CachedAssetRepository(IAssetRepository innerRepository, IMemoryCach
     public Task<Asset?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => _inner.GetByIdAsync(id, cancellationToken);
 
+    // Sans cache également : la fiche agrège les incidents de l'actif, dont l'état change à
+    // chaque étape du cycle de vie d'un incident sans passer par une écriture sur l'actif.
+    public Task<Asset?> GetByIdWithTicketsAsync(Guid id, CancellationToken cancellationToken = default)
+        => _inner.GetByIdWithTicketsAsync(id, cancellationToken);
+
     public Task<bool> ExistsWithSerialNumberAsync(string serialNumber, CancellationToken cancellationToken = default)
         => _inner.ExistsWithSerialNumberAsync(serialNumber.ToUpper().Trim(), cancellationToken);
 

@@ -41,10 +41,15 @@ public class SignalRNotificationServiceTests
             Id: Guid.NewGuid(),
             AssetId: Guid.NewGuid(),
             Title: "Écran cassé",
+            Description: "L'écran du poste ne s'allume plus.",
             Criticality: "High",
             Status: "Opened",
             AssignedTeamId: Guid.NewGuid(),
-            AssignedTeamName: targetTeam
+            AssignedTeamName: targetTeam,
+            ResolutionComment: null,
+            CreatedAt: DateTime.UtcNow,
+            AssistanceNote: null,
+            IsAiProcessing: true
         );
 
         // Act

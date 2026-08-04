@@ -8,7 +8,8 @@ public class CloseTicketHandler(IMaintenanceTicketRepository ticketRepository, I
 {
     public async Task Handle(CloseTicketCommand command, CancellationToken cancellationToken)
     {
-        var ticket = await ticketRepository.GetByIdAsync(command.TicketId, cancellationToken) ?? throw new DomainException("Ticket introuvable.");
+        var ticket = await ticketRepository.GetByIdAsync(command.TicketId, cancellationToken)
+            ?? throw NotFoundException.For("L'incident", command.TicketId);
         var asset = await assetRepository.GetByIdAsync(ticket.AssetId, cancellationToken) ?? throw new DomainException("Actif associé introuvable.");
 
         ticket.Close(command.ResolutionComment);

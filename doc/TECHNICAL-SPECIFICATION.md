@@ -274,7 +274,8 @@ Les **noms de propriétés** sont en `camelCase`, les **valeurs d'enums** resten
 | Production | **même origine derrière un reverse proxy** : hors Development, l'API n'applique **aucune** politique CORS, un appel navigateur d'une autre origine échoue |
 | Types | générés depuis le C# (`/sync-api-dtos`), regroupés dans `shared/models/` |
 | Erreurs | intercepteur unique traduisant `ProblemDetails` ; le dictionnaire `errors` est reporté sur les champs de formulaire ; le `detail` d'une 500 n'est **jamais** affiché |
-| Codes de statut | `PUT /api/teams/{id}` répond **201** ; **aucun endpoint ne renvoie 404** (introuvable → 400) : ne pas coder de branche sur 404 |
+| Codes de statut | ressource absente → **404** ; règle métier refusée → 400 ; création → 201 avec en-tête `Location` ; mise à jour d'équipe → 200 |
+| Listes | seul `GET /api/tickets` est paginé (enveloppe `{ items, page, pageSize, totalCount, totalPages }`) ; l'inventaire et les équipes se filtrent côté client |
 | Temps réel | `@microsoft/signalr` sur `/ticketHub` ; `JoinTeamGroup(nomEquipe)` puis écoute de `ReceiveNewTicket` |
 | Authentification | ⛔ inexistante côté API : l'interceptor de jeton peut être préparé, il n'a rien à porter |
 | Fraîcheur des données | `GET /api/assets` est servi d'un cache serveur de 5 minutes **invalidé par les écritures** : un rechargement après création ou mise au rebut reflète immédiatement l'état réel |
@@ -287,7 +288,7 @@ Les **noms de propriétés** sont en `camelCase`, les **valeurs d'enums** resten
 |---|---|---|---|---|---|
 | **Development** (Aspire) | SQL Server conteneurisé, chaîne injectée par Aspire | ✅ `/swagger` | ✅ `/health`, `/alive` | ✅ `Cors:AllowedOrigins` (`*` par défaut) | tableau de bord Aspire, redirection HTTPS, mot de passe en User Secret |
 | **Testing** (tests d'intégration) | EF **InMemory**, base isolée par test | — | — | — | enregistrements `DbContext` d'Aspire retirés et remplacés |
-| **Production** (conteneur) | SQL Server externe ou composé | ⛔ | ⛔ **absentes** alors que le conteneur les interroge | ⛔ aucune politique | image Alpine non root, port 8080 |
+| **Production** (conteneur) | SQL Server externe ou composé | ⛔ | ✅ `/health`, `/alive` | ⛔ aucune politique | image Alpine non root, port 8080 |
 
 ---
 
@@ -300,16 +301,27 @@ Constats vérifiés, classés par gravité. Le détail comportemental est dans [
 | **Critique** | aucune authentification ni autorisation | API totalement ouverte |
 | **Majeur** | file d'analyse IA en mémoire | demandes perdues au redémarrage |
 | **Majeur** | base vectorielle jamais alimentée en production | assistance IA sans corpus, valeur nulle |
-| **Majeur** | absence d'endpoints de liste (incidents, équipes) | interface utilisateur non réalisable |
+| **Majeur** | fin d'analyse IA non notifiée | l'état `isAiProcessing` est exposé mais son évolution n'est observable que par relecture |
 | **Moyen** | migrations non appliquées au démarrage | une base neuve reste inexploitable tant que `dotnet ef database update` n'a pas été lancé |
 | **Moyen** | clés de configuration divergentes (`assetflow-db`, `ConnectionString`, `DefaultConnection`) | exécution par composition Docker inopérante sans ajustement |
 | **Moyen** | décorateurs d'équipe réécrivant le cache **avant** `SaveChangesAsync` | un échec de persistance laisse une valeur non persistée en cache |
 | **Moyen** | dépôts d'équipe à double chemin selon le fournisseur | production non couverte par les tests |
-| **Mineur** | `TicketStatus.Resolved` jamais atteint · `IDbContextFactory` et `DatabaseOptions` non consommés · `Team.IsActive` non pilotable | code mort ou inachevé |
+| **Mineur** | `TicketStatus.Resolved` jamais atteint · `IDbContextFactory` et `DatabaseOptions` non consommés · `Team.IsActive` exposé mais non pilotable par l'API · motif de transfert concaténé à la description | code mort ou inachevé ; dépend des décisions 0.3, 0.5 et 0.6 |
 | **Mineur** | dérive documentaire (`README.md`, `Benchmarks.md`) | information obsolète |
 | **Mineur** | dépendance implicite au SDK de l'exécuteur CI pour `.slnx` | build fragile |
 
-### 5.1 Dette résorbée par le Lot 1 (2026-08-05)
+### 5.1 Dette résorbée par le Lot 2 (2026-08-05)
+
+| Constat d'origine | Correction |
+|---|---|
+| absence d'endpoints de liste (incidents, équipes) | `GET /api/tickets` (filtres, tri, pagination) et `GET /api/teams` (avec ou sans les équipes désactivées) |
+| absence de fiche d'actif | `GET /api/assets/{id}`, incidents inclus |
+| aucun 404 : toute ressource absente remontait en 400 | `NotFoundException` dédiée, mappée en 404 sur l'ensemble des routes à identifiant |
+| `PUT /api/teams/{id}` répondait 201 | répond 200 |
+| réponses 201 sans en-tête `Location` | `Location` sur les trois créations, adresse directement suivable |
+| champs absents des DTOs | `TicketResponseDto` expose description, compte rendu, date d'ouverture, note d'assistance et état d'analyse ; `TeamResponseDto` expose le couple (type d'actif × criticité) |
+
+### 5.2 Dette résorbée par le Lot 1 (2026-08-05)
 
 | Constat d'origine | Correction |
 |---|---|

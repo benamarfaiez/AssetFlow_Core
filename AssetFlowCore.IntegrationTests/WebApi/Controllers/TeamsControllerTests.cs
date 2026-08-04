@@ -52,17 +52,22 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
             // Assert delete
             deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-            // Act: get should return 400 (DomainException -> 400 in middleware)
+            // Act : la ressource n'existe plus, le middleware traduit NotFoundException en 404
             var getAfter = await _client.GetAsync($"/api/teams/{created.Id}");
-            getAfter.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            getAfter.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
         [Fact]
         public async Task GetTeam_NotFound_ShouldReturn404()
         {
-            var resp = await _client.GetAsync($"/api/teams/{Guid.NewGuid()}");
-            // Handler throws DomainException which is mapped to 400 by middleware
-            resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var unknownId = Guid.NewGuid();
+
+            var resp = await _client.GetAsync($"/api/teams/{unknownId}");
+
+            resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            var problem = await resp.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+            problem!.Title.Should().Be("Ressource introuvable");
+            problem.Detail.Should().Be($"L'équipe {unknownId} est introuvable.");
         }
 
         [Fact]
@@ -96,8 +101,7 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
         {
             var update = new UpdateTeamRequest("Name", "Server", "High", "Desc");
             var resp = await _client.PutAsJsonAsync($"/api/teams/{Guid.NewGuid()}", update);
-            // GetById throws DomainException mapped to 400
-            resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
         /// <summary>
@@ -159,14 +163,15 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
             var update = new UpdateTeamRequest("UpdatedName", "Laptop", "Low", "NewDesc");
             var updateResponse = await _client.PutAsJsonAsync($"/api/teams/{created!.Id}", update);
 
-            // Assert
-            updateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+            // Assert : une mise à jour répond 200, plus 201
+            updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             var updated = await updateResponse.Content.ReadFromJsonAsync<TeamResponseDto>();
             updated.Should().NotBeNull();
             updated!.Name.Should().Be("UpdatedName");
-            // AssetType and TicketCriticality are not exposed in the response DTO; verify Description and Name instead
             updated.Description.Should().Be("NewDesc");
-            updated.Name.Should().Be("UpdatedName");
+            // Le DTO expose désormais le couple de routage : le formulaire peut se préremplir
+            updated.AssetType.Should().Be("Laptop");
+            updated.TicketCriticality.Should().Be("Low");
         }
     }
 }

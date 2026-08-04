@@ -295,7 +295,7 @@ sequenceDiagram
 | **CORS** | politique active **en Development uniquement** → en production, même origine derrière un reverse proxy ; en développement, proxy du serveur Angular |
 | **Contrat de types** | dérivé du C# ; propriétés `camelCase`, **valeurs d'enums `PascalCase`** ; aucune génération automatisée en place hors skill `/sync-api-dtos` |
 | **Absence de versioning d'API** | toute évolution de contrat casse immédiatement le client : la synchronisation des types est une opération de maintenance récurrente, pas ponctuelle |
-| **Codes de statut** | `PUT /api/teams/{id}` → 201 ; **aucun 404** (introuvable → 400) : le client ne peut pas s'appuyer sur le code seul pour distinguer les cas |
+| **Codes de statut** | 404 pour une ressource absente de l'URI, 400 pour une référence invalide du corps : le client distingue les deux cas sans lire le message |
 | **Cohérence de lecture** | cache serveur de 5 minutes sur les **listes**, invalidé par les écritures : une relecture après écriture est fiable |
 | **Temps réel** | le groupe d'abonnement est un **nom d'équipe** ; sans notion d'utilisateur, l'appartenance à une équipe n'est pas déterminable côté client |
 | **Sécurité** | aucune authentification : le frontend ne peut porter aucun contexte utilisateur ni protéger une route de façon significative |
@@ -347,8 +347,7 @@ Classés par cause racine, avec la conséquence observable et la piste de correc
 
 | Cause racine | Conséquence | Piste |
 |---|---|---|
-| **Ressources introuvables traitées comme des violations métier** | aucun 404 n'est jamais renvoyé, malgré les attributs déclarés | exception dédiée `NotFoundException` mappée en 404 |
-| **État de traitement asynchrone non exposé** : `is_ai_processing` et `assistance_note` restent en base | la fonctionnalité IA est invisible et sans valeur perçue | enrichir le contrat de sortie, et notifier la fin de traitement |
+| **Fin de traitement asynchrone non notifiée** : `is_ai_processing` et `assistance_note` sont exposés, mais leur évolution n'est annoncée par aucun événement | l'interface doit relire l'incident pour découvrir la note | émettre une notification temps réel en fin d'analyse |
 | **Corpus vectoriel jamais alimenté** | recherche de similarité systématiquement vide | indexer les incidents à la clôture |
 | **Portée du processus unique** : API, hub et worker ensemble ; file et base vectorielle locales | mise à l'échelle horizontale impossible sans perte de fonctionnalité | file et vecteurs externalisés si la charge le justifie |
 | **Configuration à trois noms de clé pour une même chaîne de connexion** | exécution par composition Docker inopérante sans ajustement | une clé unique, documentée |
@@ -357,6 +356,14 @@ Classés par cause racine, avec la conséquence observable et la piste de correc
 | **Tests empruntant un chemin distinct de la production** (dépôts d'équipe, fournisseur InMemory) | faux sentiment de couverture | tests d'intégration sur un vrai SQL Server (conteneur éphémère) |
 
 Aucune de ces fragilités n'est bloquante pour le fonctionnement nominal en développement ; la première est à traiter avant toute mise en service, en même temps que l'authentification (AD-14).
+
+### Fragilités levées par le Lot 2 (2026-08-05)
+
+| Cause racine | Correction appliquée |
+|---|---|
+| **Ressources introuvables traitées comme des violations métier** | `NotFoundException` dédiée, mappée en 404 ; une référence invalide portée par le corps reste un 400, la distinction étant explicite dans le contrat |
+| **Contrat de sortie incomplet** : incidents et équipes amputés de champs déjà persistés | DTOs enrichis, fiche d'actif et endpoints de liste ajoutés — 7 écrans sur 9 deviennent réalisables |
+| **Lecture des incidents limitée à l'unité** | recherche paginée avec filtres et tri, le décompte total étant renvoyé avec la page |
 
 ### Fragilités levées par le Lot 1 (2026-08-05)
 

@@ -68,7 +68,7 @@ public class GetTeamHandlerTests
     // ──────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Handle_WhenTeamDoesNotExist_ShouldThrowDomainException()
+    public async Task Handle_WhenTeamDoesNotExist_ShouldThrowNotFoundException()
     {
         // Arrange
         var unknownId = Guid.NewGuid();
@@ -80,7 +80,7 @@ public class GetTeamHandlerTests
         Func<Task> act = async () => await _handler.Handle(new GetTeamQuery(unknownId), CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<DomainException>().WithMessage($"Le team avec l'ID {unknownId} est introuvable.");
+        await act.Should().ThrowAsync<NotFoundException>().WithMessage($"L'équipe {unknownId} est introuvable.");
     }
 
     [Fact]
