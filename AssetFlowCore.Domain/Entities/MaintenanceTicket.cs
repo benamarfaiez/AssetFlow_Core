@@ -61,7 +61,7 @@ public class MaintenanceTicket
     public void AssignToTechnician()
     {
         if (Status != TicketStatus.Opened)
-            throw new InvalidOperationException("Seul un ticket ouvert peut être pris en charge.");
+            throw new DomainException("Seul un ticket ouvert peut être pris en charge.");
 
         Status = TicketStatus.InProgress;
     }
@@ -69,7 +69,7 @@ public class MaintenanceTicket
     public void Close(string resolutionComment)
     {
         if (Status != TicketStatus.InProgress)
-            throw new InvalidOperationException("Seul un ticket en cours peut être clôturé.");
+            throw new DomainException("Seul un ticket en cours peut être clôturé.");
 
         if (string.IsNullOrWhiteSpace(resolutionComment))
             throw new ArgumentException("Un commentaire de résolution est obligatoire.");

@@ -30,7 +30,7 @@ public class DecommissionAssetHandlerTests
     {
         var asset = new Asset(Guid.NewGuid(), "PC", SerialNumber.Create("SRV12345"), AssetType.Laptop);
         _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(asset);
-        _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(asset.Id)).ReturnsAsync(0);
+        _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(0);
 
         await _handler.Handle(new DecommissionAssetCommand(asset.Id), CancellationToken.None);
 
@@ -43,7 +43,7 @@ public class DecommissionAssetHandlerTests
     {
         var asset = new Asset(Guid.NewGuid(), "PC", SerialNumber.Create("SRV12345"), AssetType.Laptop);
         _assetRepoMock.Setup(r => r.GetByIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(asset);
-        _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(asset.Id)).ReturnsAsync(2);
+        _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(asset.Id, It.IsAny<CancellationToken>())).ReturnsAsync(2);
 
         Func<Task> act = async () => await _handler.Handle(new DecommissionAssetCommand(asset.Id), CancellationToken.None);
 

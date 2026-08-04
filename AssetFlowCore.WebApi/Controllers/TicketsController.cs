@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Application.DTOs;
+using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.Application.UseCases.Tickets.AssignTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CloseTicket;
 using AssetFlowCore.Application.UseCases.Tickets.CreateTicket;
@@ -20,19 +20,19 @@ public class TicketsController(ISender mediator) : ControllerBase
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TicketResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<TicketResponseDto>> Create([FromBody] CreateTicketRequest request)
+    public async Task<ActionResult<TicketResponseDto>> Create([FromBody] CreateTicketRequest request, CancellationToken cancellationToken)
     {
         var command = new CreateMaintenanceTicketCommand(request.AssetId, request.Title, request.Description, request.Criticality);
-        var result = await mediator.Send(command);
+        var result = await mediator.Send(command, cancellationToken);
         return StatusCode(StatusCodes.Status201Created, result);
     }
 
 
     [HttpPost("{id:guid}/transfer")]
-    public async Task<IActionResult> TransferTicket(Guid id, [FromBody] TransferTicketRequest request)
+    public async Task<IActionResult> TransferTicket(Guid id, [FromBody] TransferTicketRequest request, CancellationToken cancellationToken)
     {
         var command = new RequestTicketTransferCommand(id, request.TargetTeam, request.Reason);
-        await mediator.Send(command);
+        await mediator.Send(command, cancellationToken);
         return NoContent();
     }
 
@@ -43,10 +43,10 @@ public class TicketsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Assign(Guid id)
+    public async Task<IActionResult> Assign(Guid id, CancellationToken cancellationToken)
     {
         var command = new AssignTicketToTechnicianCommand(id);
-        await mediator.Send(command);
+        await mediator.Send(command, cancellationToken);
         return NoContent();
     }
 
@@ -57,10 +57,10 @@ public class TicketsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Close(Guid id, [FromBody] CloseTicketRequest request)
+    public async Task<IActionResult> Close(Guid id, [FromBody] CloseTicketRequest request, CancellationToken cancellationToken)
     {
         var command = new CloseTicketCommand(id, request.ResolutionComment);
-        await mediator.Send(command);
+        await mediator.Send(command, cancellationToken);
         return NoContent();
     }
 
@@ -68,10 +68,10 @@ public class TicketsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TicketResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTicket(Guid id)
+    public async Task<IActionResult> GetTicket(Guid id, CancellationToken cancellationToken)
     {
         var query = new GetTicketQuery(id);
-        var response = await mediator.Send(query);
+        var response = await mediator.Send(query, cancellationToken);
         return Ok(response);
     }
 }

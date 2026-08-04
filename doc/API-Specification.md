@@ -87,9 +87,10 @@ Toutes les erreurs sont produites par un middleware unique (`ExceptionHandlingMi
 | `FluentValidation.ValidationException` | 400 | `Validation de la requête échouée` |
 | `ArgumentException` (et dérivées) | 400 | `Données d'entrée invalides` |
 | `DomainException` | 400 | `Règle métier violée` |
-| `InvalidOperationException` | 500 | `Erreur interne du serveur` |
 | `DbUpdateConcurrencyException` | 409 | `Concurrence d'accès détectée` |
 | autre | 500 | `Erreur interne du serveur` |
+
+Les règles métier du domaine — y compris les transitions d'état d'un incident — lèvent toutes une `DomainException` et produisent donc un **400**.
 
 Les champs `type` et `instance` de ProblemDetails ne sont pas alimentés par le middleware. `title`, `status` et `detail` le sont systématiquement.
 
@@ -130,13 +131,14 @@ L'extension `errors` est un dictionnaire `{ "NomDePropriété": ["message", ...]
 
 ### Erreur interne (500)
 
-⚠️ Le `detail` contient le **message brut de l'exception** (`exception.Message`) : une erreur d'infrastructure peut donc exposer des informations techniques au client.
+Le `detail` est un message générique : le message d'exception est **journalisé côté serveur, jamais renvoyé**. L'extension `traceId` reprend l'identifiant de trace de la requête et permet de retrouver l'entrée de journal correspondante.
 
 ```json
 {
   "title": "Erreur interne du serveur",
   "status": 500,
-  "detail": "<message d'exception .NET>"
+  "detail": "Une erreur inattendue s'est produite. Contactez le support en communiquant l'identifiant de trace.",
+  "traceId": "0HN7Q1G4K5V2A:00000003"
 }
 ```
 
@@ -374,11 +376,9 @@ curl -X PUT https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6
 |---|---|---|
 | ticket inexistant | 400 | `Règle métier violée` — `Ticket introuvable.` |
 | actif lié inexistant | 400 | `Règle métier violée` — `Actif lié introuvable.` |
-| ticket pas au statut `Opened` | **500** | `Erreur interne du serveur` — `Seul un ticket ouvert peut être pris en charge.` |
+| ticket pas au statut `Opened` | 400 | `Règle métier violée` — `Seul un ticket ouvert peut être pris en charge.` |
 | actif pas au statut `Down` | 400 | `Règle métier violée` — `L'actif doit être en panne avant d'entrer en maintenance.` |
 | modification concurrente | 409 | `Concurrence d'accès détectée` |
-
-> ⚠️ Les transitions d'état invalides du ticket lèvent une `InvalidOperationException` (et non une `DomainException`) : elles remontent en **500**, pas en 400. Voir [§9](#transitions-détat-de-ticket-en-500).
 
 ### 6.4 `PUT /api/tickets/{id}/close` — Clôturer
 
@@ -404,7 +404,7 @@ curl -X PUT https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6
 |---|---|---|
 | ticket inexistant | 400 | `Ticket introuvable.` |
 | actif associé inexistant | 400 | `Actif associé introuvable.` |
-| ticket pas au statut `InProgress` | **500** | `Seul un ticket en cours peut être clôturé.` |
+| ticket pas au statut `InProgress` | 400 | `Seul un ticket en cours peut être clôturé.` |
 | `resolutionComment` vide | 400 | `Un commentaire de résolution est obligatoire.` |
 | modification concurrente | 409 | — |
 
@@ -474,10 +474,10 @@ curl -X POST https://localhost:7138/api/teams \
 |---|---|
 | `Name` | `Le nom de l'équipe est obligatoire.` / `Le nom ne doit pas dépasser 100 caractères.` |
 | `AssetType` | `Le type d'asset est obligatoire.` / `Le type d'asset doit être l'un des suivants : Server, Laptop ou NetworkDevice.` |
-| `TicketCriticality` | `Le type d'asset est obligatoire.` / `Le type d'asset doit être l'un des suivants : Server, Laptop ou NetworkDevice.` — messages **copiés depuis `AssetType`**, à corriger côté backend : les valeurs attendues sont `Low`, `Medium`, `High` |
+| `TicketCriticality` | `La criticité prise en charge par l'équipe est obligatoire.` / `La criticité doit être l'une des suivantes : Low, Medium ou High.` |
 | `Description` | `La description ne doit pas dépasser 500 caractères.` |
 
-> ⚠️ **Nom en doublon → `500`.** Le handler ne vérifie pas l'unicité du nom (la méthode `ExistsWithNameAsync` existe mais n'est pas appelée) : la violation de l'index unique `IX_t_teams_name` remonte en `DbUpdateException`, donc en **500** et non en 400/409.
+**Erreur `400` de règle métier** : `Une équipe nommée '{nom}' existe déjà.` — l'unicité du nom est contrôlée avant la persistance, l'index unique `IX_t_teams_name` ne sert plus que de garde-fou.
 
 ### 7.3 `PUT /api/teams/{id}` — Modifier une équipe
 
@@ -508,7 +508,7 @@ curl -X PUT https://localhost:7138/api/teams/5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5
 | champ omis ou `null` | champ ignoré, valeur existante conservée (`200`/`201`) |
 | `""` (chaîne vide) | **`400`** — la règle `IsEnumName` rejette la chaîne vide |
 
-**Erreurs `400`** : `Le teamId est obligatoire.` · messages de validation ci-dessus · `Le team avec l'ID {id} est introuvable.`
+**Erreurs `400`** : `Le teamId est obligatoire.` · messages de validation ci-dessus · `Le team avec l'ID {id} est introuvable.` · `Une équipe nommée '{nom}' existe déjà.` lorsque le renommage vise le nom d'une autre équipe.
 
 > La réponse n'exposant ni `assetType` ni `ticketCriticality`, un client ne peut pas confirmer la prise en compte de ces deux champs.
 
@@ -557,7 +557,7 @@ Le nom de groupe est le **nom de l'équipe**, tel que renvoyé dans `assignedTea
 
 ## 9. Écarts et limitations connus
 
-Points relevés dans le code au 2026-08-04. Ils décrivent le comportement **réel** de l'API et doivent être pris en compte par les clients.
+Points relevés dans le code au 2026-08-05, après le lot de corrections backend à faible risque (Lot 1). Ils décrivent le comportement **réel** de l'API et doivent être pris en compte par les clients.
 
 ### Aucun 404 n'est renvoyé
 
@@ -567,10 +567,6 @@ Les controllers déclarent `ProducesResponseType(404)`, mais **aucun `NotFound()
 
 - `PUT /api/teams/{id}` répond **`201 Created`** au lieu de `200 OK`.
 - Les réponses `201` ne comportent **pas d'en-tête `Location`**.
-
-### Transitions d'état de ticket en 500
-
-`MaintenanceTicket.AssignToTechnician()` et `Close()` lèvent une `InvalidOperationException` — non prise en charge spécifiquement par le middleware — donc **500**, alors qu'il s'agit d'erreurs métier attendues (`assign` sur un ticket déjà pris en charge, `close` sur un ticket non pris en charge). Les transitions de l'entité `Asset`, elles, lèvent bien des `DomainException` (400).
 
 ### Endpoints manquants
 
@@ -599,7 +595,7 @@ La politique CORS (`Cors:AllowedOrigins`, `["*"]` par défaut) n'est appliquée 
 
 ### Annulation des requêtes
 
-Aucune action de controller n'accepte de `CancellationToken` : l'abandon d'une requête HTTP par le client n'interrompt pas le traitement serveur.
+Chaque action de controller accepte un `CancellationToken`, propagé jusqu'aux dépôts : l'abandon d'une requête HTTP interrompt les lectures et écritures en cours. Deux traitements en sont volontairement exclus car ils suivent la persistance et ne doivent pas être annulés par le départ du client : la **notification SignalR** et la **mise en file de l'analyse IA**.
 
 ---
 
@@ -607,17 +603,15 @@ Aucune action de controller n'accepte de `CancellationToken` : l'abandon d'une r
 
 ### 10.1 Cache mémoire et fraîcheur des données
 
-Les accès aux actifs et aux équipes passent par des décorateurs de cache (`IMemoryCache`, **expiration absolue de 5 minutes**). Or les commandes d'écriture des actifs (`POST /api/assets`, `PUT .../decommission`) passent par `IUnitOfWork`, qui instancie les repositories **sans** le décorateur : elles n'invalident donc pas le cache de lecture.
-
-Conséquences observables côté client :
+Les **listes** d'actifs et d'équipes sont servies par des décorateurs de cache (`IMemoryCache`, **expiration absolue de 5 minutes**). `IUnitOfWork` résout ses dépôts par le conteneur d'injection : les écritures traversent donc les décorateurs et invalident les clés concernées. Les mutations d'entités suivies qui n'appellent aucune méthode de dépôt (mise au rebut, passage en panne, retour en service) sont détectées à la persistance et invalident elles aussi la liste correspondante.
 
 | Scénario | Effet |
 |---|---|
-| `POST /api/assets` puis `GET /api/assets` | le nouvel actif peut être **absent de la liste jusqu'à 5 minutes** |
-| `PUT /api/assets/{id}/decommission` puis `GET /api/assets` | le statut affiché peut rester `InService` jusqu'à 5 minutes |
-| `POST /api/tickets` sur un actif mis au rebut récemment | le garde-fou « actif au rebut » peut être contourné dans la fenêtre de cache si l'actif avait déjà été lu par identifiant |
+| `POST /api/assets` puis `GET /api/assets` | le nouvel actif est **présent immédiatement** |
+| `PUT /api/assets/{id}/decommission` puis `GET /api/assets` | le statut `Decommissioned` est **visible immédiatement** |
+| `POST` / `PUT` / `DELETE /api/teams` puis lecture | la liste des équipes actives est rechargée à la lecture suivante |
 
-Ne considérez pas la réponse d'une écriture comme immédiatement reflétée par les lectures : utilisez le corps de la réponse `201` comme source de vérité locale.
+Les lectures **par identifiant** d'un actif ne sont pas mises en cache : elles alimentent des cas d'usage d'écriture et doivent rester suivies par le contexte de persistance.
 
 ### 10.2 Transactions et concurrence
 
@@ -636,7 +630,13 @@ Ne considérez pas la réponse d'une écriture comme immédiatement reflétée p
 | `Server` | toutes | `ServerAssignmentStrategy` |
 | aucune correspondance | — | repli sur `LaptopStandardStrategy` |
 
-Chaque stratégie interroge la base pour trouver une équipe **active** dont `assetType` et `ticketCriticality` correspondent. **Sans données de référence adéquates, la création de ticket échoue en 400.** Une couverture complète nécessite une équipe active par combinaison utilisée, soit jusqu'à 9 équipes (3 types × 3 criticités).
+Chaque stratégie interroge la base pour trouver une équipe **active** dont `assetType` et `ticketCriticality` correspondent. **Sans données de référence adéquates, la création de ticket échoue en 400.** Une couverture complète nécessite une équipe active par combinaison utilisée, soit 9 équipes (3 types × 3 criticités).
+
+Ces 9 équipes sont amorcées par la migration `SeedReferenceTeams`. Le processus n'appliquant **aucune migration au démarrage**, une base neuve doit être mise à jour explicitement :
+
+```powershell
+dotnet ef database update --project AssetFlowCore.Infrastructure --startup-project AssetFlowCore.WebApi
+```
 
 ### 10.4 Assistance IA asynchrone
 
@@ -652,11 +652,11 @@ Ce traitement est **invisible depuis l'API** : aucun endpoint n'expose `assistan
 |---|---|---|
 | `/swagger` | Swagger UI | **Development uniquement** |
 | `/swagger/v1/swagger.json` | document OpenAPI | **Development uniquement** |
-| `/health` | état complet (toutes les sondes) | **Development uniquement** |
-| `/alive` | vivacité (sondes marquées `live`) | **Development uniquement** |
+| `/health` | état complet (toutes les sondes) | tous environnements |
+| `/alive` | vivacité (sondes marquées `live`) | tous environnements |
 | `/ticketHub` | hub SignalR | tous environnements |
 
-> ⚠️ **Incohérence de configuration.** `/health` et `/alive` sont mappés uniquement si l'environnement est `Development`, alors que le `HEALTHCHECK` du [Dockerfile](../Dockerfile) et celui de [docker-compose.yml](../docker-compose.yml) interrogent `http://localhost:8080/health` avec `ASPNETCORE_ENVIRONMENT=Production`. En conteneur, la sonde de santé reçoit donc un **404** et le conteneur est signalé `unhealthy`.
+Les deux sondes répondent `200 Healthy` dans tous les environnements : le `HEALTHCHECK` du [Dockerfile](../Dockerfile) et celui de [docker-compose.yml](../docker-compose.yml) interrogent `http://localhost:8080/health` avec `ASPNETCORE_ENVIRONMENT=Production`. Elles ne divulguent aucune donnée métier, mais restent à protéger d'un accès externe par le reverse proxy de production.
 
 En développement, l'API impose également une redirection HTTPS (`UseHttpsRedirection`) : les appels en HTTP sont redirigés vers le port sécurisé.
 

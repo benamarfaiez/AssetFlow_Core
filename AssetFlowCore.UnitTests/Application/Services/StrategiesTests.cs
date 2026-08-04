@@ -21,7 +21,7 @@ public class StrategiesTests
         var assetType = AssetType.Server.ToString();
         var criticality = TicketCriticality.Medium;
         var team = new Team("ServerAssignment", assetType, criticality.ToString(), "description");
-        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType, criticality.ToString())).ReturnsAsync(team);
+        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType, criticality.ToString(), It.IsAny<CancellationToken>())).ReturnsAsync(team);
 
         // Act
         var teamName = await strategy.GetTeamNameAsync(AssetType.Server.ToString(), criticality.ToString());
@@ -40,7 +40,7 @@ public class StrategiesTests
         var strategy = new ServerAssignmentStrategy(_teamRepository.Object);
         var assetType = AssetType.Server;
         var team = new Team("ServerAssignment", assetType.ToString(), criticality.ToString(), "description");
-        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString())).ReturnsAsync(team);
+        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString(), It.IsAny<CancellationToken>())).ReturnsAsync(team);
 
         // Act
         var result = strategy.IsMatch(assetType, criticality);
@@ -58,7 +58,7 @@ public class StrategiesTests
         var strategy = new ServerAssignmentStrategy(_teamRepository.Object);
         var criticality = TicketCriticality.Medium;
         var team = new Team("ServerAssignment", assetType.ToString(), criticality.ToString(), "description");
-        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString())).ReturnsAsync(team);
+        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString(), It.IsAny<CancellationToken>())).ReturnsAsync(team);
 
         // Act
         var result = strategy.IsMatch(assetType, TicketCriticality.High);
@@ -81,7 +81,7 @@ public class StrategiesTests
         var team = new Team("ServerAssignment", assetType, criticality.ToString(), "description");
 
         _teamRepository
-            .Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(team);
 
         // Act
@@ -117,7 +117,7 @@ public class StrategiesTests
         var strategy = new NetworkAssignmentStrategy(_teamRepository.Object);
         var criticality = TicketCriticality.Medium;
         var team = new Team("ServerAssignment", assetType.ToString(), criticality.ToString(), "description");
-        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString())).ReturnsAsync(team);
+        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString(), It.IsAny<CancellationToken>())).ReturnsAsync(team);
 
         // Act
         var result = strategy.IsMatch(assetType, TicketCriticality.High);
@@ -139,7 +139,7 @@ public class StrategiesTests
         var criticality = TicketCriticality.High;
         var team = new Team("LaptopHighCriticality", assetType, criticality.ToString(), "description");
         _teamRepository
-            .Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(team);
 
         // Act
@@ -178,7 +178,7 @@ public class StrategiesTests
         var assetType = AssetType.Server;
         var criticality = TicketCriticality.Low;
         var team = new Team("ServerAssignment", assetType.ToString(), criticality.ToString(), "description");
-        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString())).ReturnsAsync(team);
+        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString(), It.IsAny<CancellationToken>())).ReturnsAsync(team);
 
         // Act
         var result = await strategy.GetTeamNameAsync(assetType.ToString(), criticality.ToString());
@@ -197,7 +197,7 @@ public class StrategiesTests
         var assetType = AssetType.Server;
 
         var team = new Team("ServerAssignment", assetType.ToString(), criticality.ToString(), "description");
-        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString())).ReturnsAsync(team);
+        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString(), It.IsAny<CancellationToken>())).ReturnsAsync(team);
         // Act
         var result = strategy.IsMatch(AssetType.Laptop, criticality);
 
@@ -215,7 +215,7 @@ public class StrategiesTests
         var strategy = new LaptopStandardStrategy(_teamRepository.Object);
 
         var team = new Team("ServerAssignment", assetType.ToString(), criticality.ToString(), "description");
-        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString())).ReturnsAsync(team);
+        _teamRepository.Setup(r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString(), It.IsAny<CancellationToken>())).ReturnsAsync(team);
 
         // Act
         var result = strategy.IsMatch(assetType, criticality);

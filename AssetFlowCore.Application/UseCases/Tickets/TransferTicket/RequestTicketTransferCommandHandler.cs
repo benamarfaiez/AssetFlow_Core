@@ -8,8 +8,8 @@ public class RequestTicketTransferCommandHandler(IMaintenanceTicketRepository ti
 {
     public async Task Handle(RequestTicketTransferCommand command, CancellationToken cancellationToken)
     {
-        var ticket = await ticketRepository.GetByIdWithTrackingAsync(command.TicketId) ?? throw new DomainException("Ticket introuvable.");
-        var team = await teamRepository.GetByNameAsync(command.TeamName) ?? throw new DomainException("Équipe introuvable.");
+        var ticket = await ticketRepository.GetByIdWithTrackingAsync(command.TicketId, cancellationToken) ?? throw new DomainException("Ticket introuvable.");
+        var team = await teamRepository.GetByNameAsync(command.TeamName, cancellationToken) ?? throw new DomainException("Équipe introuvable.");
         ticket.TransferToTeam(team, command.Reason);
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }

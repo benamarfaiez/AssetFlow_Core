@@ -63,11 +63,15 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 break;
 
             default:
-                logger.LogError(exception, "Une erreur système non gérée s'est produite.");
+                // Le message d'exception peut porter des détails d'implémentation (requête SQL,
+                // chemin de fichier, nom de serveur) : il est journalisé mais jamais renvoyé au client.
+                // L'identifiant de trace permet de relier la réponse à l'entrée de journal correspondante.
+                logger.LogError(exception, "Une erreur système non gérée s'est produite. TraceId : {TraceId}", context.TraceIdentifier);
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 problemDetails.Status = StatusCodes.Status500InternalServerError;
                 problemDetails.Title = "Erreur interne du serveur";
-                problemDetails.Detail = exception.Message;
+                problemDetails.Detail = "Une erreur inattendue s'est produite. Contactez le support en communiquant l'identifiant de trace.";
+                problemDetails.Extensions["traceId"] = context.TraceIdentifier;
                 break;
         }
 

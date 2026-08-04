@@ -42,10 +42,10 @@ public class CreateMaintenanceTicketHandler(
         var criticality = Enum.Parse<TicketCriticality>(command.Criticality, ignoreCase: true);
 
         // 4. Utilisation du moteur algorithmique pour résoudre l'équipe technique d'astreinte (Pattern Strategy)
-        var teamName = await assignmentEngine.ResolveTeamIdAsync(asset.Type, criticality);
+        var teamName = await assignmentEngine.ResolveTeamIdAsync(asset.Type, criticality, cancellationToken);
 
         // 5. Résolution de l'entité Team depuis le nom (lecture base de données)
-        var team = await teamRepository.GetByNameAsync(teamName) ?? throw new DomainException(
+        var team = await teamRepository.GetByNameAsync(teamName, cancellationToken) ?? throw new DomainException(
                 $"L'équipe '{teamName}' n'existe pas dans la base de données. " +
                 "Vérifiez que les données de référence ont bien été insérées via la migration.");
 
@@ -63,7 +63,7 @@ public class CreateMaintenanceTicketHandler(
         asset.MarkAsDown();
 
         // 8. Notification des repositories (Suivi en mémoire par le Change Tracker d'EF Core)
-        await ticketRepository.AddAsync(ticket);
+        await ticketRepository.AddAsync(ticket, cancellationToken);
 
         // 9. Traduction manuelle en DTO de surface (Zéro réflexion CPU au runtime)
         var dto = ticket.ToDto(teamName);

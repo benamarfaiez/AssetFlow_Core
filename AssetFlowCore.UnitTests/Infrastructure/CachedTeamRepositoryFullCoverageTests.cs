@@ -1,4 +1,4 @@
-using AssetFlowCore.Domain.Entities;
+﻿using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Repositories;
 using AssetFlowCore.Infrastructure.Cache;
 using FluentAssertions;
@@ -27,7 +27,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         {
             var team = new Team("CacheAll-Team", "Srv", "High");
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync([team]);
+            innerMock.Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>())).ReturnsAsync([team]);
 
             var memory = new MemoryCache(new MemoryCacheOptions());
             var cache = new CachedTeamRepository(innerMock.Object, memory);
@@ -39,7 +39,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure
 
             first.Should().ContainSingle().Which.Should().Be(team);
             second.Should().ContainSingle().Which.Should().Be(team);
-            innerMock.Verify(r => r.GetAllActiveAsync(), Times.Once);
+            innerMock.Verify(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -47,9 +47,9 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         {
             var team = new Team("ByName-Team", "Net", "Low");
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync([team]);
+            innerMock.Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>())).ReturnsAsync([team]);
             // if GetByNameAsync were called, return null to ensure cache path is used
-            innerMock.Setup(r => r.GetByNameAsync(It.IsAny<string>())).ReturnsAsync((Team?)null);
+            innerMock.Setup(r => r.GetByNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Team?)null);
 
             var memory = new MemoryCache(new MemoryCacheOptions());
             var cache = new CachedTeamRepository(innerMock.Object, memory);
@@ -63,8 +63,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             byName.Should().NotBeNull();
             byName!.Id.Should().Be(team.Id);
 
-            innerMock.Verify(r => r.GetAllActiveAsync(), Times.Once);
-            innerMock.Verify(r => r.GetByNameAsync(It.IsAny<string>()), Times.Never);
+            innerMock.Verify(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()), Times.Once);
+            innerMock.Verify(r => r.GetByNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -72,8 +72,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         {
             var team = new Team("ByType-Team", "TypeX", "Critical");
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync([team]);
-            innerMock.Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync((Team?)null);
+            innerMock.Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>())).ReturnsAsync([team]);
+            innerMock.Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Team?)null);
 
             var memory = new MemoryCache(new MemoryCacheOptions());
             var cache = new CachedTeamRepository(innerMock.Object, memory);
@@ -83,8 +83,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             found.Should().NotBeNull();
             found!.Id.Should().Be(team.Id);
 
-            innerMock.Verify(r => r.GetAllActiveAsync(), Times.Once);
-            innerMock.Verify(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            innerMock.Verify(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()), Times.Once);
+            innerMock.Verify(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -92,8 +92,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         {
             var team = new Team("ExistsCache-Team", "T", "C");
             var innerMock = new Mock<ITeamRepository>();
-            innerMock.Setup(r => r.GetAllActiveAsync()).ReturnsAsync([team]);
-            innerMock.Setup(r => r.ExistsWithNameAsync(It.IsAny<string>())).ReturnsAsync(false);
+            innerMock.Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>())).ReturnsAsync([team]);
+            innerMock.Setup(r => r.ExistsWithNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
             var memory = new MemoryCache(new MemoryCacheOptions());
             var cache = new CachedTeamRepository(innerMock.Object, memory);
@@ -102,8 +102,8 @@ namespace AssetFlowCore.UnitTests.Infrastructure
             var exists = await cache.ExistsWithNameAsync("ExistsCache-Team");
             exists.Should().BeTrue();
 
-            innerMock.Verify(r => r.GetAllActiveAsync(), Times.Once);
-            innerMock.Verify(r => r.ExistsWithNameAsync(It.IsAny<string>()), Times.Never);
+            innerMock.Verify(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()), Times.Once);
+            innerMock.Verify(r => r.ExistsWithNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]

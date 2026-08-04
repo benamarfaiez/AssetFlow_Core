@@ -1,4 +1,4 @@
-using AssetFlowCore.Application.UseCases.Tickets.GetTicket;
+﻿using AssetFlowCore.Application.UseCases.Tickets.GetTicket;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
@@ -27,7 +27,7 @@ public class GetTicketHandlerTests
         ticket.AssignToTechnician();
 
         _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id, CancellationToken.None)).ReturnsAsync(ticket);
-        _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(Guid.NewGuid())).ReturnsAsync(1);
+        _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(Guid.NewGuid(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
         _teamRepoMock
             .Setup(r => r.GetByIdAsync(team.Id, CancellationToken.None))
             .ReturnsAsync(team);
@@ -48,7 +48,7 @@ public class GetTicketHandlerTests
 
         var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Title", "Desc", TicketCriticality.Low, Guid.NewGuid());
         _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id, CancellationToken.None)).ReturnsAsync(ticket);
-        _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(Guid.NewGuid())).ReturnsAsync(1);
+        _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(Guid.NewGuid(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         // Act
         Func<Task> act = async () => await _handler.Handle(query, CancellationToken.None);

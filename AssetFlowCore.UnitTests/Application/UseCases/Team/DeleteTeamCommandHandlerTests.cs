@@ -1,4 +1,4 @@
-using AssetFlowCore.Application.UseCases.Team.DeleteTeam;
+ï»¿using AssetFlowCore.Application.UseCases.Team.DeleteTeam;
 using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
 using FluentAssertions;
@@ -16,7 +16,7 @@ public class DeleteTeamCommandHandlerTests
 
     public DeleteTeamCommandHandlerTests()
     {
-        // Setup de l'Unit of Work pour retourner nos mocks de dépôts
+        // Setup de l'Unit of Work pour retourner nos mocks de dï¿½pï¿½ts
         _uowMock.Setup(u => u.Team).Returns(_teamRepoMock.Object);
         _uowMock.Setup(u => u.MaintenanceTicket).Returns(_ticketRepoMock.Object);
 
@@ -29,7 +29,7 @@ public class DeleteTeamCommandHandlerTests
         // Arrange
         var team = new DomainTeam("Support", "Laptop", "Low");
         _teamRepoMock.Setup(r => r.GetByIdAsync(team.Id, CancellationToken.None)).ReturnsAsync(team);
-        _ticketRepoMock.Setup(r => r.ExistsActiveTicketsForTeamAsync(team.Id)).ReturnsAsync(false);
+        _ticketRepoMock.Setup(r => r.ExistsActiveTicketsForTeamAsync(team.Id, It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
         var command = new DeleteTeamCommand(team.Id);
 
@@ -37,7 +37,7 @@ public class DeleteTeamCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        _teamRepoMock.Verify(r => r.RemoveAsync(team), Times.Once);
+        _teamRepoMock.Verify(r => r.RemoveAsync(team, It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -57,7 +57,7 @@ public class DeleteTeamCommandHandlerTests
         await act.Should().ThrowAsync<DomainException>()
             .WithMessage("Team introuvable.");
 
-        _teamRepoMock.Verify(r => r.RemoveAsync(It.IsAny<DomainTeam>()), Times.Never);
+        _teamRepoMock.Verify(r => r.RemoveAsync(It.IsAny<DomainTeam>(), It.IsAny<CancellationToken>()), Times.Never);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -65,9 +65,9 @@ public class DeleteTeamCommandHandlerTests
     public async Task Handle_WhenTeamHasActiveTickets_ShouldThrowDomainExceptionAndNotDelete()
     {
         // Arrange
-        var team = new DomainTeam("Réseau", "Network", "High");
+        var team = new DomainTeam("Rï¿½seau", "Network", "High");
         _teamRepoMock.Setup(r => r.GetByIdAsync(team.Id, CancellationToken.None)).ReturnsAsync(team);
-        _ticketRepoMock.Setup(r => r.ExistsActiveTicketsForTeamAsync(team.Id)).ReturnsAsync(true);
+        _ticketRepoMock.Setup(r => r.ExistsActiveTicketsForTeamAsync(team.Id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
         var command = new DeleteTeamCommand(team.Id);
 
@@ -78,7 +78,7 @@ public class DeleteTeamCommandHandlerTests
         await act.Should().ThrowAsync<DomainException>()
             .WithMessage("Impossible de supprimer le team : des tickets actifs lui sont assignes.");
 
-        _teamRepoMock.Verify(r => r.RemoveAsync(It.IsAny<DomainTeam>()), Times.Never);
+        _teamRepoMock.Verify(r => r.RemoveAsync(It.IsAny<DomainTeam>(), It.IsAny<CancellationToken>()), Times.Never);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

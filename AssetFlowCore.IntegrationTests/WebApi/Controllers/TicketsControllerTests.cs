@@ -181,6 +181,75 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
     }
 
     [Fact]
+    public async Task AssignTicket_WhenAlreadyAssigned_ShouldReturnBadRequest()
+    {
+        // Arrange : incident déjà pris en charge (correction 1.3 — remontait auparavant en 500)
+        var ticketId = Guid.NewGuid();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            await db.Database.EnsureDeletedAsync();
+
+            var asset = new Asset(Guid.NewGuid(), "Srv Déjà pris", SerialNumber.Create("ASSIGN-2"), AssetType.Server);
+            asset.MarkAsDown();
+            asset.MarkInMaintenance();
+            await db.Assets.AddAsync(asset);
+
+            var team = new Team("OpsAssign", AssetType.Server.ToString(), TicketCriticality.Low.ToString(), "Ops");
+            await db.Teams.AddAsync(team);
+
+            var ticket = new MaintenanceTicket(ticketId, asset.Id, "titre", "desc", TicketCriticality.Low, team.Id);
+            ticket.AssignToTechnician();
+            await db.Tickets.AddAsync(ticket);
+            await db.SaveChangesAsync();
+        }
+
+        // Act
+        var resp = await _client.PutAsync($"/api/tickets/{ticketId}/assign", null);
+
+        // Assert
+        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problem = await resp.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        problem.Should().NotBeNull();
+        problem!.Detail.Should().Contain("Seul un ticket ouvert peut être pris en charge.");
+    }
+
+    [Fact]
+    public async Task CloseTicket_WhenNotInProgress_ShouldReturnBadRequest()
+    {
+        // Arrange : incident encore ouvert, donc non clôturable (correction 1.3)
+        var ticketId = Guid.NewGuid();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            await db.Database.EnsureDeletedAsync();
+
+            var asset = new Asset(Guid.NewGuid(), "Srv Ouvert", SerialNumber.Create("CLOSE-2"), AssetType.Server);
+            asset.MarkAsDown();
+            await db.Assets.AddAsync(asset);
+
+            var team = new Team("OpsClose2", AssetType.Server.ToString(), TicketCriticality.Low.ToString(), "Ops");
+            await db.Teams.AddAsync(team);
+
+            var ticket = new MaintenanceTicket(ticketId, asset.Id, "titre", "desc", TicketCriticality.Low, team.Id);
+            await db.Tickets.AddAsync(ticket);
+            await db.SaveChangesAsync();
+        }
+
+        // Act
+        var payload = new CloseTicketRequest("Resolution");
+        var resp = await _client.PutAsJsonAsync($"/api/tickets/{ticketId}/close", payload);
+
+        // Assert
+        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problem = await resp.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        problem.Should().NotBeNull();
+        problem!.Detail.Should().Contain("Seul un ticket en cours peut être clôturé.");
+    }
+
+    [Fact]
     public async Task CloseTicket_WithValidData_ShouldReturnNoContent_And_RestoreAssetWhenNoOtherActiveTickets()
     {
         var ticketId = Guid.NewGuid();

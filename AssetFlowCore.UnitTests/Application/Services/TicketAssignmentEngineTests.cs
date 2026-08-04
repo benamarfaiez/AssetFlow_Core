@@ -17,8 +17,8 @@ public class TicketAssignmentEngineTests
     {
         _teamRepository = new Mock<ITeamRepository>();
         _teamRepository
-            .Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync((string type, string crit) =>
+            .Setup(r => r.GetByAssetTypeAndCriticalityAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string type, string crit, CancellationToken _) =>
             {
                 // On simule le contenu de la base de données selon les entrées
                 return (type, crit) switch
@@ -62,7 +62,7 @@ public class TicketAssignmentEngineTests
         // 1. On prépare l'équipe que le repository doit retourner
         var team = new Team("Team A", assetType.ToString(), criticality.ToString(), "Description");
         _teamRepository.Setup(
-            r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString())
+            r => r.GetByAssetTypeAndCriticalityAsync(assetType.ToString(), criticality.ToString(), It.IsAny<CancellationToken>())
         ).ReturnsAsync(team);
 
         // 2. On instancie la stratégie de fallback attendue par le moteur

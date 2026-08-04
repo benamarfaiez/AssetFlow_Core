@@ -39,13 +39,13 @@ public class MaintenanceTicketTests
     }
 
     [Fact]
-    public void AssignToTechnician_WhenAlreadyProcessed_ShouldThrowInvalidOperationException()
+    public void AssignToTechnician_WhenAlreadyProcessed_ShouldThrowDomainException()
     {
         var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, Guid.NewGuid());
         ticket.AssignToTechnician(); // InProgress
 
         Action act = () => ticket.AssignToTechnician();
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Seul un ticket ouvert peut être pris en charge*");
+        act.Should().Throw<DomainException>().WithMessage("*Seul un ticket ouvert peut être pris en charge*");
     }
 
     [Fact]
@@ -74,12 +74,12 @@ public class MaintenanceTicketTests
     }
 
     [Fact]
-    public void Close_WithInvalidStatus_ShouldThrowArgumentException()
+    public void Close_WithInvalidStatus_ShouldThrowDomainException()
     {
         var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, Guid.NewGuid());
 
         Action act = () => ticket.Close("Résolu");
-        act.Should().Throw<InvalidOperationException>().WithMessage("Seul un ticket en cours peut être clôturé.");
+        act.Should().Throw<DomainException>().WithMessage("Seul un ticket en cours peut être clôturé.");
     }
 
     [Fact]

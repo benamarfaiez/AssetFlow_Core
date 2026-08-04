@@ -1,5 +1,6 @@
-using AssetFlowCore.Application.DTOs;
+﻿using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.Application.UseCases.Team.CreateTeam;
+using AssetFlowCore.Domain.Exceptions;
 using AssetFlowCore.Domain.Repositories;
 using FluentAssertions;
 using Moq;
@@ -39,7 +40,7 @@ public class CreateTeamCommandHandlerTests
         result.Should().BeOfType<TeamResponseDto>();
         result.Name.Should().Be("Infrastructure-Serveurs");
         result.IsActive.Should().BeTrue();
-        _teamRepoMock.Verify(r => r.AddAsync(It.IsAny<DomainTeam>()), Times.Once);
+        _teamRepoMock.Verify(r => r.AddAsync(It.IsAny<DomainTeam>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -87,6 +88,24 @@ public class CreateTeamCommandHandlerTests
         result.Description.Should().Be("Base de données de prod");
         result.IsActive.Should().BeTrue();
         result.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Handle_WhenNameAlreadyExists_ShouldThrowDomainExceptionAndNotPersist()
+    {
+        // Arrange : correction 1.4 — le doublon était laissé à l'index unique de la base
+        _teamRepoMock.Setup(r => r.ExistsWithNameAsync("Infrastructure-Serveurs", It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var command = new CreateTeamCommand("  Infrastructure-Serveurs  ", "Server", "High", null);
+
+        // Act
+        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<DomainException>()
+                 .WithMessage("Une équipe nommée 'Infrastructure-Serveurs' existe déjà.");
+
+        _teamRepoMock.Verify(r => r.AddAsync(It.IsAny<DomainTeam>(), It.IsAny<CancellationToken>()), Times.Never);
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ──────────────────────────────────────────────────────────────────────
