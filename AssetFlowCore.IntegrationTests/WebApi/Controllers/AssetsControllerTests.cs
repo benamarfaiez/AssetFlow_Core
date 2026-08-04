@@ -89,13 +89,17 @@ public class AssetsControllerTests(CustomWebApplicationFactory<Program> factory)
     }
 
     [Fact]
-    public async Task Decommission_NotFound_ShouldReturnBadRequest()
+    public async Task Decommission_NotFound_ShouldReturnNotFound()
     {
-        // Act
-        var resp = await _client.PutAsync($"/api/assets/{Guid.NewGuid()}/decommission", null);
+        var unknownId = Guid.NewGuid();
 
-        // DomainException from handler is mapped to 400 by middleware
-        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // Act
+        var resp = await _client.PutAsync($"/api/assets/{unknownId}/decommission", null);
+
+        // Assert : NotFoundException est traduite en 404 par le middleware
+        resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var problem = await resp.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        problem!.Detail.Should().Be($"L'actif {unknownId} est introuvable.");
     }
 
     [Fact]

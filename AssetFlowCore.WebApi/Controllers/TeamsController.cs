@@ -2,6 +2,7 @@ using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.Application.UseCases.Team.CreateTeam;
 using AssetFlowCore.Application.UseCases.Team.DeleteTeam;
 using AssetFlowCore.Application.UseCases.Team.GetTeam;
+using AssetFlowCore.Application.UseCases.Team.GetTeams;
 using AssetFlowCore.Application.UseCases.Team.UpdateTeam;
 using AssetFlowCore.WebApi.Requests;
 using MediatR;
@@ -13,11 +14,25 @@ namespace AssetFlowCore.WebApi.Controllers;
 [Route("api/[controller]")]
 public class TeamsController(ISender mediator) : ControllerBase
 {
-    [HttpGet("{id:guid}")]
+    /// <summary>
+    /// Liste des équipes, triée par nom.
+    /// </summary>
+    /// <param name="onlyActive">Vrai pour ne retenir que les équipes actives.</param>
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyCollection<TeamResponseDto>))]
+    public async Task<ActionResult<IReadOnlyCollection<TeamResponseDto>>> GetTeams(
+        [FromQuery] bool onlyActive,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetTeamsQuery(onlyActive);
+        var response = await mediator.Send(query, cancellationToken);
+        return Ok(response);
+    }
+
+    [HttpGet("{id:guid}", Name = nameof(GetTeam))]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TeamResponseDto))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTeam(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<TeamResponseDto>> GetTeam(Guid id, CancellationToken cancellationToken)
     {
         var query = new GetTeamQuery(id);
         var response = await mediator.Send(query, cancellationToken);
@@ -31,18 +46,18 @@ public class TeamsController(ISender mediator) : ControllerBase
     {
         var command = new CreateTeamCommand(request.Name, request.AssetType, request.TicketCriticality, request.Description);
         var result = await mediator.Send(command, cancellationToken);
-        return StatusCode(StatusCodes.Status201Created, result);
+        return CreatedAtRoute(nameof(GetTeam), new { id = result.Id }, result);
     }
 
     [HttpPut("{id:guid}")]
-    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TeamResponseDto))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TeamResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TeamResponseDto>> Update(Guid id, [FromBody] UpdateTeamRequest request, CancellationToken cancellationToken)
     {
         var command = new UpdateTeamCommand(id, request.Name, request.AssetType, request.TicketCriticality, request.Description);
         var result = await mediator.Send(command, cancellationToken);
-        return StatusCode(StatusCodes.Status201Created, result);
+        return Ok(result);
     }
 
     [HttpDelete("{id:guid}")]

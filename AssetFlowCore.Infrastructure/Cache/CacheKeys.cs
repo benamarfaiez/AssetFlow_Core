@@ -13,6 +13,9 @@ public static class CacheKeys
     /// <summary>Liste des équipes actives.</summary>
     public const string TeamsList = "Teams_List_Active";
 
+    /// <summary>Liste de toutes les équipes, actives comme désactivées.</summary>
+    public const string TeamsListAll = "Teams_List_All";
+
     /// <summary>Entrée unitaire d'une équipe.</summary>
     public static string Team(Guid id) => $"team_{id:N}";
 }

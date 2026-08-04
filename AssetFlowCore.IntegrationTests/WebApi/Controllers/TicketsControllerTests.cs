@@ -174,10 +174,15 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
     }
 
     [Fact]
-    public async Task AssignTicket_NotFound_ShouldReturnBadRequest()
+    public async Task AssignTicket_NotFound_ShouldReturnNotFound()
     {
-        var resp = await _client.PutAsync($"/api/tickets/{Guid.NewGuid()}/assign", null);
-        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var unknownId = Guid.NewGuid();
+
+        var resp = await _client.PutAsync($"/api/tickets/{unknownId}/assign", null);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var problem = await resp.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        problem!.Detail.Should().Be($"L'incident {unknownId} est introuvable.");
     }
 
     [Fact]
@@ -291,11 +296,11 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
     }
 
     [Fact]
-    public async Task CloseTicket_NotFound_ShouldReturnBadRequest()
+    public async Task CloseTicket_NotFound_ShouldReturnNotFound()
     {
         var payload = new CloseTicketRequest("x");
         var resp = await _client.PutAsJsonAsync($"/api/tickets/{Guid.NewGuid()}/close", payload);
-        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

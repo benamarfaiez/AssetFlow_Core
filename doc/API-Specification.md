@@ -2,7 +2,9 @@
 
 Documentation de référence de l'API HTTP exposée par `AssetFlowCore.WebApi`, destinée aux consommateurs de l'API (notamment le frontend Angular).
 
-> **Portée et fiabilité de ce document.** Tout ce qui suit a été relevé directement dans le code source le **2026-08-04** (controllers, commandes, validateurs FluentValidation, handlers, entités, configurations EF Core, middleware d'exception). Les comportements documentés sont ceux **réellement implémentés**, y compris lorsqu'ils s'écartent des attributs `ProducesResponseType` déclarés sur les controllers. La section [Écarts et limitations connus](#9-écarts-et-limitations-connus) recense ces divergences.
+> **Portée et fiabilité de ce document.** Tout ce qui suit a été relevé directement dans le code source le **2026-08-05**, après les lots de corrections backend (Lot 1) et de complétion du contrat (Lot 2) — controllers, commandes, validateurs FluentValidation, handlers, entités, configurations EF Core, middleware d'exception. Les comportements documentés sont ceux **réellement implémentés**, y compris lorsqu'ils s'écartent des attributs `ProducesResponseType` déclarés sur les controllers. La section [Écarts et limitations connus](#9-écarts-et-limitations-connus) recense ces divergences.
+
+> **Ruptures de contrat du Lot 2.** Un client écrit contre la version précédente doit être repris sur quatre points : les ressources introuvables répondent désormais **404** et non 400 ; `PUT /api/teams/{id}` répond **200** et non 201 ; `TicketResponseDto` et `TeamResponseDto` portent de nouveaux champs ; les réponses `201` portent un en-tête `Location`.
 
 ## Sommaire
 
@@ -33,15 +35,15 @@ Documentation de référence de l'API HTTP exposée par `AssetFlowCore.WebApi`, 
 | Format d'échange | JSON (`application/json`), erreurs en `application/problem+json` |
 | Documentation interactive | Swagger UI sur `/swagger` — **Development uniquement** |
 | Authentification | **Aucune** (voir [§9](#authentification-absente)) |
-| Pagination / filtrage / tri | Non implémentés |
+| Pagination / filtrage / tri | sur `GET /api/tickets` uniquement ([§6.1](#61-get-apitickets--lister-les-incidents)) |
 
 ### Ressources et opérations
 
 | Ressource | Opérations disponibles |
 |---|---|
-| **Assets** (actifs matériels) | lister, créer, mettre au rebut |
-| **Tickets** (incidents de maintenance) | créer, consulter par id, prendre en charge, clôturer, transférer |
-| **Teams** (équipes d'astreinte) | consulter par id, créer, modifier, supprimer |
+| **Assets** (actifs matériels) | lister, consulter par id (avec ses incidents), créer, mettre au rebut |
+| **Tickets** (incidents de maintenance) | lister (filtres, tri, pagination), consulter par id, créer, prendre en charge, clôturer, transférer |
+| **Teams** (équipes d'astreinte) | lister, consulter par id, créer, modifier, supprimer |
 
 ---
 
@@ -67,14 +69,15 @@ Documentation de référence de l'API HTTP exposée par `AssetFlowCore.WebApi`, 
 
 | Code | Quand |
 |---|---|
-| `200 OK` | lectures (`GET /api/assets`, `GET /api/tickets/{id}`, `GET /api/teams/{id}`) |
-| `201 Created` | création d'un asset, d'un ticket, d'une équipe — **et mise à jour d'une équipe** (voir [§9](#codes-de-statut-inattendus)) |
+| `200 OK` | lectures, et **mise à jour d'une équipe** |
+| `201 Created` | création d'un asset, d'un ticket, d'une équipe |
 | `204 No Content` | mise au rebut, prise en charge, clôture, transfert, suppression d'équipe |
-| `400 Bad Request` | échec de validation, violation d'une règle métier, **et ressource introuvable** |
+| `400 Bad Request` | échec de validation, ou violation d'une règle métier |
+| `404 Not Found` | ressource désignée par l'URI absente, ou identifiant mal formé rejeté par le routage |
 | `409 Conflict` | conflit de concurrence optimiste |
 | `500 Internal Server Error` | toute autre exception non gérée |
 
-`201 Created` est produit par `StatusCode(201, result)` : **aucun en-tête `Location`** n'est renvoyé.
+`201 Created` porte l'en-tête **`Location`** pointant vers la ressource créée : `/api/Assets/{id}`, `/api/Tickets/{id}`, `/api/Teams/{id}`. La casse du segment reprend le nom du controller ; le routage étant insensible à la casse, l'adresse est directement suivable.
 
 ---
 
@@ -86,11 +89,35 @@ Toutes les erreurs sont produites par un middleware unique (`ExceptionHandlingMi
 |---|---|---|
 | `FluentValidation.ValidationException` | 400 | `Validation de la requête échouée` |
 | `ArgumentException` (et dérivées) | 400 | `Données d'entrée invalides` |
+| `NotFoundException` | 404 | `Ressource introuvable` |
 | `DomainException` | 400 | `Règle métier violée` |
 | `DbUpdateConcurrencyException` | 409 | `Concurrence d'accès détectée` |
 | autre | 500 | `Erreur interne du serveur` |
 
 Les règles métier du domaine — y compris les transitions d'état d'un incident — lèvent toutes une `DomainException` et produisent donc un **400**.
+
+### 400 ou 404 : la règle appliquée
+
+`NotFoundException` dérive de `DomainException` ; l'ordre des cas du middleware la traite en premier. La distinction suit la position de la référence dans la requête :
+
+| Situation | Code | Exemple |
+|---|---|---|
+| La ressource **désignée par l'URI** n'existe pas | **404** | `GET /api/tickets/{id}` sur un identifiant inconnu |
+| Une référence portée par le **corps** ou la chaîne de requête ne correspond à rien | **400** | `POST /api/tickets/{id}/transfer` vers une équipe inconnue ; `POST /api/tickets` sur un actif inexistant |
+
+La requête est recevable dans le second cas : c'est la donnée fournie qui est refusée, au même titre qu'une valeur d'énumération invalide.
+
+### Ressource introuvable (404)
+
+```json
+{
+  "title": "Ressource introuvable",
+  "status": 404,
+  "detail": "L'incident 3fa85f64-5717-4562-b3fc-2c963f66afa6 est introuvable."
+}
+```
+
+Un identifiant **mal formé** (non convertible en `Guid`) ne parvient pas au cas d'usage : la contrainte de route `{id:guid}` le rejette et le routage répond `404` sans corps ProblemDetails.
 
 Les champs `type` et `instance` de ProblemDetails ne sont pas alimentés par le middleware. `title`, `status` et `detail` le sont systématiquement.
 
@@ -168,6 +195,24 @@ Le `detail` est un message générique : le message d'exception est **journalis�
 | `status` | `AssetStatus` | |
 | `createdAt` | `string` (date-heure) | UTC |
 
+### `AssetDetailResponseDto`
+
+Renvoyé par `GET /api/assets/{id}`. Reprend tous les champs d'`AssetResponseDto` et y ajoute :
+
+| Propriété JSON | Type | Description |
+|---|---|---|
+| `tickets` | `AssetTicketDto[]` | incidents de l'actif, **du plus récent au plus ancien** ; tableau vide, jamais `null` |
+
+#### `AssetTicketDto`
+
+| Propriété JSON | Type | Description |
+|---|---|---|
+| `id` · `title` · `criticality` · `status` · `createdAt` | | mêmes valeurs que dans `TicketResponseDto` |
+| `assignedTeamId` | `string` (Guid) | équipe assignée |
+| `assignedTeamName` | `string` | nom de l'équipe |
+
+Le contexte de l'actif étant déjà porté par la fiche, cette forme réduite ne répète ni `assetId`, ni la description, ni la note d'assistance.
+
 ### `TicketResponseDto`
 
 | Propriété JSON | Type | Description |
@@ -175,12 +220,17 @@ Le `detail` est un message générique : le message d'exception est **journalis�
 | `id` | `string` (Guid) | |
 | `assetId` | `string` (Guid) | actif concerné |
 | `title` | `string` | max. 150 caractères |
+| `description` | `string` | description de l'anomalie, **enrichie du motif à chaque transfert** |
 | `criticality` | `TicketCriticality` | |
 | `status` | `TicketStatus` | |
 | `assignedTeamId` | `string \| null` | équipe résolue par le moteur d'assignation |
 | `assignedTeamName` | `string` | nom de l'équipe |
+| `resolutionComment` | `string \| null` | compte rendu de clôture ; `null` tant que l'incident n'est pas clôturé |
+| `createdAt` | `string` (date-heure) | UTC, date d'ouverture |
+| `assistanceNote` | `string \| null` | note d'assistance **Markdown** produite par l'analyse IA ; `null` tant qu'elle n'a pas abouti |
+| `isAiProcessing` | `boolean` | vrai tant que l'analyse IA est en cours ; repasse à faux qu'elle réussisse ou échoue |
 
-> Ce DTO **n'expose pas** `description`, `resolutionComment`, `assistanceNote`, `isAiProcessing` ni `createdAt`. Voir [§9](#champs-absents-des-dtos).
+> Le couple `assistanceNote` / `isAiProcessing` permet à un écran d'afficher « analyse en cours » puis la note. La fin de traitement n'étant notifiée par aucun événement temps réel, le client doit relire l'incident pour l'observer (voir [§10.4](#104-assistance-ia-asynchrone)).
 
 ### `TeamResponseDto`
 
@@ -191,8 +241,22 @@ Le `detail` est un message générique : le message d'exception est **journalis�
 | `description` | `string \| null` | max. 500 caractères |
 | `isActive` | `boolean` | |
 | `createdAt` | `string` (date-heure) | UTC |
+| `assetType` | `AssetType` | type d'actif pris en charge |
+| `ticketCriticality` | `TicketCriticality` | criticité prise en charge |
 
-> Ce DTO **n'expose ni `assetType` ni `ticketCriticality`**, alors que la création et la mise à jour les manipulent. Voir [§9](#champs-absents-des-dtos).
+### `PagedResultDto<T>`
+
+Enveloppe de pagination, aujourd'hui utilisée par `GET /api/tickets`.
+
+| Propriété JSON | Type | Description |
+|---|---|---|
+| `items` | `T[]` | éléments de la page demandée |
+| `page` | `number` | numéro de page demandé, à partir de 1 |
+| `pageSize` | `number` | taille de page demandée |
+| `totalCount` | `number` | **nombre total d'éléments correspondant aux filtres**, toutes pages confondues |
+| `totalPages` | `number` | nombre de pages, arrondi au supérieur ; `0` si aucun élément |
+
+Une page au-delà de la dernière renvoie `items` vide avec un `totalCount` inchangé — ce n'est pas une erreur.
 
 ### Contraintes de persistance (SQL Server)
 
@@ -211,7 +275,7 @@ Le `detail` est un message générique : le message d'exception est **journalis�
 Retourne l'inventaire complet, sans pagination ni filtre.
 
 - **Réponse `200 OK`** : `AssetResponseDto[]`
-- **Mise en cache** : réponse servie depuis un cache mémoire de **5 minutes** — voir [§10.1](#101-cache-mémoire-et-fraîcheur-des-données), qui décrit un cas de données périmées après création.
+- **Mise en cache** : réponse servie depuis un cache mémoire de **5 minutes**, invalidé par toute écriture sur un actif — voir [§10.1](#101-cache-mémoire-et-fraîcheur-des-données).
 
 ```bash
 curl https://localhost:7138/api/assets
@@ -230,7 +294,40 @@ curl https://localhost:7138/api/assets
 ]
 ```
 
-### 5.2 `POST /api/assets` — Enregistrer un actif
+### 5.2 `GET /api/assets/{id}` — Consulter un actif et ses incidents
+
+Fiche unitaire : les caractéristiques de l'actif et l'ensemble de ses incidents, du plus récent au plus ancien. Lecture **non mise en cache**.
+
+- **Réponse `200 OK`** : `AssetDetailResponseDto`
+- **Réponse `404`** : `L'actif {id} est introuvable.`
+
+```bash
+curl https://localhost:7138/api/assets/8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f
+```
+
+```json
+{
+  "id": "8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f",
+  "name": "Serveur de sauvegarde",
+  "serialNumber": "SRV-00042",
+  "type": "Server",
+  "status": "Down",
+  "createdAt": "2026-08-01T14:22:07.4512345Z",
+  "tickets": [
+    {
+      "id": "c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d",
+      "title": "Disque système saturé",
+      "criticality": "High",
+      "status": "Opened",
+      "createdAt": "2026-08-04T09:15:00.0000000Z",
+      "assignedTeamId": "7e1c0001-0000-4000-8000-000000000001",
+      "assignedTeamName": "Infrastructure-Serveurs-Critique"
+    }
+  ]
+}
+```
+
+### 5.3 `POST /api/assets` — Enregistrer un actif
 
 **Corps** (`RegisterAssetRequest`)
 
@@ -240,7 +337,7 @@ curl https://localhost:7138/api/assets
 | `serialNumber` | `string` | oui | **5 à 50 caractères**, normalisé en majuscules sans espaces de bord, unique |
 | `type` | `AssetType` | oui | `Server` · `Laptop` · `NetworkDevice` (casse indifférente) |
 
-- **Réponse `201 Created`** : `AssetResponseDto` (statut initial `InService`)
+- **Réponse `201 Created`** : `AssetResponseDto` (statut initial `InService`), avec l'en-tête `Location: /api/Assets/{id}`
 
 ```bash
 curl -X POST https://localhost:7138/api/assets \
@@ -271,7 +368,7 @@ curl -X POST https://localhost:7138/api/assets \
 
 > La vérification d'unicité précède la validation du format : un `serialNumber` de moins de 5 caractères déjà présent en base renvoie l'erreur de doublon, pas l'erreur de longueur.
 
-### 5.3 `PUT /api/assets/{id}/decommission` — Mettre au rebut
+### 5.4 `PUT /api/assets/{id}/decommission` — Mettre au rebut
 
 Passe l'actif en `Decommissioned`. Opération **irréversible** (aucun endpoint ne remet un actif en service).
 
@@ -282,12 +379,12 @@ Passe l'actif en `Decommissioned`. Opération **irréversible** (aucun endpoint 
 curl -X PUT https://localhost:7138/api/assets/8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f/decommission
 ```
 
-**Erreurs `400`**
+**Erreurs**
 
-| Cause | `detail` |
-|---|---|
-| actif inexistant | `L'actif {id} est introuvable.` |
-| incidents en cours | `Action interdite : l'actif fait l'objet de N incident(s) en cours de traitement.` |
+| Cause | Code | `detail` |
+|---|---|---|
+| actif inexistant | **404** | `L'actif {id} est introuvable.` |
+| incidents en cours | 400 | `Action interdite : l'actif fait l'objet de N incident(s) en cours de traitement.` |
 
 > Un incident « en cours » est un ticket au statut `Opened` ou `InProgress`.
 
@@ -295,7 +392,69 @@ curl -X PUT https://localhost:7138/api/assets/8f14e45f-ceea-467a-9c33-1b2f3c4d5e
 
 ## 6. Endpoints — Tickets
 
-### 6.1 `POST /api/tickets` — Ouvrir un ticket
+### 6.1 `GET /api/tickets` — Lister les incidents
+
+Liste **paginée** des incidents, avec filtres et tri. Lecture directe en base, sans cache.
+
+**Paramètres de requête** — tous facultatifs ; les filtres fournis se cumulent (ET logique).
+
+| Paramètre | Type | Défaut | Description |
+|---|---|---|---|
+| `status` | `TicketStatus` | — | `Opened` · `InProgress` · `Resolved` · `Closed` |
+| `criticality` | `TicketCriticality` | — | `Low` · `Medium` · `High` |
+| `teamId` | `string` (Guid) | — | équipe assignée |
+| `assetId` | `string` (Guid) | — | actif concerné |
+| `sortBy` | `string` | `CreatedAt` | `CreatedAt` · `Criticality` · `Status` · `Title` |
+| `sortDescending` | `boolean` | `true` | ordre décroissant |
+| `page` | `number` | `1` | numéro de page, ≥ 1 |
+| `pageSize` | `number` | `20` | taille de page, de 1 à **100** |
+
+- **Réponse `200 OK`** : `PagedResultDto<TicketResponseDto>`
+
+Les tris sur `criticality` et `status` suivent l'**ordre métier**, non l'ordre alphabétique du texte stocké : décroissant sur la criticité place `High` en tête ; décroissant sur le statut place le stade le plus avancé du cycle de vie en tête. Le tri est complété par l'identifiant, de sorte qu'une valeur de tri partagée ne fasse pas varier la composition des pages d'un appel à l'autre.
+
+```bash
+curl "https://localhost:7138/api/tickets?status=Opened&criticality=High&sortBy=CreatedAt&page=1&pageSize=20"
+```
+
+```json
+{
+  "items": [
+    {
+      "id": "c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d",
+      "assetId": "8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f",
+      "title": "Disque système saturé",
+      "description": "Le volume C: est à 99 %, les sauvegardes échouent.",
+      "criticality": "High",
+      "status": "Opened",
+      "assignedTeamId": "7e1c0001-0000-4000-8000-000000000001",
+      "assignedTeamName": "Infrastructure-Serveurs-Critique",
+      "resolutionComment": null,
+      "createdAt": "2026-08-04T09:15:00.0000000Z",
+      "assistanceNote": null,
+      "isAiProcessing": true
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 137,
+  "totalPages": 7
+}
+```
+
+**Erreurs `400` de validation** (avec `errors`)
+
+| Champ | Message |
+|---|---|
+| `Page` | `Le numéro de page doit être supérieur ou égal à 1.` |
+| `PageSize` | `La taille de page doit être comprise entre 1 et 100.` |
+| `Status` | `L'état doit être l'un des suivants : Opened, InProgress, Resolved ou Closed.` |
+| `Criticality` | `La criticité doit être l'une des suivantes : Low, Medium ou High.` |
+| `SortBy` | `Le tri doit porter sur l'un des champs suivants : CreatedAt, Criticality, Status ou Title.` |
+
+Un `teamId` ou un `assetId` inconnu n'est pas une erreur : la liste est simplement vide.
+
+### 6.2 `POST /api/tickets` — Ouvrir un ticket
 
 Crée l'incident, **résout automatiquement l'équipe d'astreinte** (pattern Strategy) et bascule l'actif en `Down`. La demande d'assistance IA est ensuite mise en file d'attente de façon asynchrone ([§10.4](#104-assistance-ia-asynchrone)).
 
@@ -308,7 +467,7 @@ Crée l'incident, **résout automatiquement l'équipe d'astreinte** (pattern Str
 | `description` | `string` | oui | non vide (stocké en `nvarchar(max)`) |
 | `criticality` | `TicketCriticality` | oui | `Low` · `Medium` · `High` (casse indifférente) |
 
-- **Réponse `201 Created`** : `TicketResponseDto` (statut `Opened`)
+- **Réponse `201 Created`** : `TicketResponseDto` (statut `Opened`), avec l'en-tête `Location: /api/Tickets/{id}`
 - **Effets de bord** : `asset.status` → `Down` ; notification SignalR `ReceiveNewTicket` au groupe de l'équipe assignée ; ticket mis en file pour analyse IA (`isAiProcessing = true` en base).
 
 ```bash
@@ -322,10 +481,15 @@ curl -X POST https://localhost:7138/api/tickets \
   "id": "c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d",
   "assetId": "8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f",
   "title": "Disque système saturé",
+  "description": "Le volume C: est à 99 %, les sauvegardes échouent.",
   "criticality": "High",
   "status": "Opened",
-  "assignedTeamId": "5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
-  "assignedTeamName": "Infrastructure-Serveurs"
+  "assignedTeamId": "7e1c0001-0000-4000-8000-000000000001",
+  "assignedTeamName": "Infrastructure-Serveurs-Critique",
+  "resolutionComment": null,
+  "createdAt": "2026-08-04T09:15:00.0000000Z",
+  "assistanceNote": null,
+  "isAiProcessing": true
 }
 ```
 
@@ -338,29 +502,30 @@ curl -X POST https://localhost:7138/api/tickets \
 | `Description` | `La description détaillée de l'anomalie est obligatoire.` |
 | `Criticality` | `La criticité fournie n'est pas valide. Valeurs autorisées : Low, Medium, High.` |
 
-> Deux particularités du validateur : il est configuré en `ClassLevelCascadeMode = CascadeMode.Stop`, donc **`errors` ne contient qu'un seul champ à la fois** (le premier en échec) ; et la règle sur `Criticality` ne vérifie **que la présence** — malgré son message, une valeur hors énumération passe la validation et échoue plus loin dans le handler avec `title` = `Données d'entrée invalides` et le message de `Enum.Parse`.
+> Le validateur est configuré en `ClassLevelCascadeMode = CascadeMode.Stop` : **`errors` ne contient qu'un seul champ à la fois**, le premier en échec.
 
 **Erreurs `400` métier**
 
 | Cause | `detail` |
 |---|---|
-| actif inexistant | `L'actif cible {assetId} n'existe pas.` |
+| actif inexistant | `L'actif cible {assetId} n'existe pas.` — référence du corps, donc 400 et non 404 |
 | actif au rebut | `Opération interdite : impossible d'ouvrir un incident sur un actif mis au rebut.` |
 | aucune équipe pour le couple (type, criticité) | `L'équipe est introuvable en base. Vérifiez que les données de référence sont à jour.` |
 | équipe résolue absente de la base | `L'équipe '{nom}' n'existe pas dans la base de données. Vérifiez que les données de référence ont bien été insérées via la migration.` |
 
 > ⚠️ **Prérequis de données** : sans équipes de référence en base pour le couple `(AssetType, TicketCriticality)` demandé, **toute création de ticket échoue en 400**. Voir [§10.3](#103-moteur-dassignation-automatique).
 
-### 6.2 `GET /api/tickets/{id}` — Consulter un ticket
+### 6.3 `GET /api/tickets/{id}` — Consulter un ticket
 
 - **Réponse `200 OK`** : `TicketResponseDto`
-- **Erreurs `400`** : `Le ticket avec l'ID {id} est introuvable.` · `Le team avec l'ID {id} est introuvable.` (équipe assignée absente)
+- **Erreur `404`** : `L'incident {id} est introuvable.`
+- **Erreur `400`** : `Le team avec l'ID {id} est introuvable.` — incohérence référentielle, l'équipe assignée ayant disparu
 
 ```bash
 curl https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d
 ```
 
-### 6.3 `PUT /api/tickets/{id}/assign` — Prendre en charge
+### 6.4 `PUT /api/tickets/{id}/assign` — Prendre en charge
 
 Passe le ticket en `InProgress` et l'actif lié en `InMaintenance`. **Aucun corps de requête** : l'endpoint ne désigne pas de technicien, malgré son nom interne (`AssignTicketToTechnician`).
 
@@ -374,13 +539,13 @@ curl -X PUT https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6
 
 | Cause | Code | `title` / `detail` |
 |---|---|---|
-| ticket inexistant | 400 | `Règle métier violée` — `Ticket introuvable.` |
+| ticket inexistant | **404** | `Ressource introuvable` — `L'incident {id} est introuvable.` |
 | actif lié inexistant | 400 | `Règle métier violée` — `Actif lié introuvable.` |
 | ticket pas au statut `Opened` | 400 | `Règle métier violée` — `Seul un ticket ouvert peut être pris en charge.` |
 | actif pas au statut `Down` | 400 | `Règle métier violée` — `L'actif doit être en panne avant d'entrer en maintenance.` |
 | modification concurrente | 409 | `Concurrence d'accès détectée` |
 
-### 6.4 `PUT /api/tickets/{id}/close` — Clôturer
+### 6.5 `PUT /api/tickets/{id}/close` — Clôturer
 
 Passe le ticket en `Closed` et, **s'il ne reste aucun autre ticket actif sur l'actif**, remet celui-ci `InService`.
 
@@ -402,13 +567,13 @@ curl -X PUT https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6
 
 | Cause | Code | `detail` |
 |---|---|---|
-| ticket inexistant | 400 | `Ticket introuvable.` |
+| ticket inexistant | **404** | `L'incident {id} est introuvable.` |
 | actif associé inexistant | 400 | `Actif associé introuvable.` |
 | ticket pas au statut `InProgress` | 400 | `Seul un ticket en cours peut être clôturé.` |
 | `resolutionComment` vide | 400 | `Un commentaire de résolution est obligatoire.` |
 | modification concurrente | 409 | — |
 
-### 6.5 `POST /api/tickets/{id}/transfer` — Transférer à une autre équipe
+### 6.6 `POST /api/tickets/{id}/transfer` — Transférer à une autre équipe
 
 Réaffecte le ticket à une équipe **désignée par son nom** et journalise le motif **en l'ajoutant à la description du ticket** (`\n\n---\n\n**Motif du transfert :** {reason}`).
 
@@ -427,16 +592,16 @@ curl -X POST https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b
   -d '{"targetTeam":"Réseau-Télécom","reason":"Cause racine identifiée sur le commutateur."}'
 ```
 
-**Erreurs `400`**
+**Erreurs**
 
-| Cause | Message |
-|---|---|
-| `TicketId` vide | `L'identifiant du ticket est requis.` (validation, avec `errors`) |
-| `TeamName` vide | `L'équipe cible est requise.` (validation, avec `errors`) |
-| ticket inexistant | `Ticket introuvable.` |
-| équipe inexistante ou inactive | `Équipe introuvable.` |
-| ticket déjà clôturé | `Impossible de transférer un ticket clôturé.` |
-| équipe cible identique à l'actuelle | `Le ticket est déjà assigné à l'équipe '{nom}'.` |
+| Cause | Code | Message |
+|---|---|---|
+| `TicketId` vide | 400 | `L'identifiant du ticket est requis.` (validation, avec `errors`) |
+| `TeamName` vide | 400 | `L'équipe cible est requise.` (validation, avec `errors`) |
+| ticket inexistant | **404** | `L'incident {id} est introuvable.` |
+| équipe inexistante ou inactive | 400 | `L'équipe '{nom}' n'existe pas ou n'est plus active.` — référence du corps |
+| ticket déjà clôturé | 400 | `Impossible de transférer un ticket clôturé.` |
+| équipe cible identique à l'actuelle | 400 | `Le ticket est déjà assigné à l'équipe '{nom}'.` |
 
 ---
 
@@ -444,12 +609,43 @@ curl -X POST https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b
 
 Les équipes portent le couple `(assetType, ticketCriticality)` qui permet au moteur d'assignation de router les tickets. Ces deux champs sont stockés **en texte** et comparés au nom de la valeur d'enum.
 
-### 7.1 `GET /api/teams/{id}` — Consulter une équipe
+### 7.1 `GET /api/teams` — Lister les équipes
+
+Liste complète triée par nom, sans pagination : le référentiel compte au plus quelques dizaines d'équipes.
+
+| Paramètre | Type | Défaut | Description |
+|---|---|---|---|
+| `onlyActive` | `boolean` | `false` | `true` pour ne retenir que les équipes actives — celles susceptibles de recevoir un incident |
+
+- **Réponse `200 OK`** : `TeamResponseDto[]`
+- **Mise en cache** : les deux listes (complète et actives seules) sont servies depuis un cache mémoire de **5 minutes**, invalidé par toute écriture sur une équipe.
+
+```bash
+curl "https://localhost:7138/api/teams?onlyActive=true"
+```
+
+```json
+[
+  {
+    "id": "7e1c0001-0000-4000-8000-000000000001",
+    "name": "Infrastructure-Serveurs-Critique",
+    "description": "Astreinte serveurs — incidents critiques",
+    "isActive": true,
+    "createdAt": "2026-01-01T00:00:00Z",
+    "assetType": "Server",
+    "ticketCriticality": "High"
+  }
+]
+```
+
+> Aucun endpoint ne permet aujourd'hui de désactiver une équipe : une équipe inactive ne peut provenir que d'une intervention en base (décision 0.6 du plan d'implémentation non tranchée).
+
+### 7.2 `GET /api/teams/{id}` — Consulter une équipe
 
 - **Réponse `200 OK`** : `TeamResponseDto`
-- **Erreur `400`** : `Le team avec l'ID {id} est introuvable.`
+- **Erreur `404`** : `L'équipe {id} est introuvable.`
 
-### 7.2 `POST /api/teams` — Créer une équipe
+### 7.3 `POST /api/teams` — Créer une équipe
 
 **Corps** (`CreateTeamRequest`)
 
@@ -460,7 +656,7 @@ Les équipes portent le couple `(assetType, ticketCriticality)` qui permet au mo
 | `ticketCriticality` | `string` | oui | nom valide de `TicketCriticality` (casse indifférente) |
 | `description` | `string \| null` | non | max. 500 caractères |
 
-- **Réponse `201 Created`** : `TeamResponseDto` (`isActive` = `true`)
+- **Réponse `201 Created`** : `TeamResponseDto` (`isActive` = `true`), avec l'en-tête `Location: /api/Teams/{id}`
 
 ```bash
 curl -X POST https://localhost:7138/api/teams \
@@ -479,7 +675,7 @@ curl -X POST https://localhost:7138/api/teams \
 
 **Erreur `400` de règle métier** : `Une équipe nommée '{nom}' existe déjà.` — l'unicité du nom est contrôlée avant la persistance, l'index unique `IX_t_teams_name` ne sert plus que de garde-fou.
 
-### 7.3 `PUT /api/teams/{id}` — Modifier une équipe
+### 7.4 `PUT /api/teams/{id}` — Modifier une équipe
 
 Mise à jour **partielle** : chaque champ omis ou `null` est laissé inchangé.
 
@@ -492,7 +688,7 @@ Mise à jour **partielle** : chaque champ omis ou `null` est laissé inchangé.
 | `ticketCriticality` | `string \| null` | si fourni, nom valide de `TicketCriticality` |
 | `description` | `string \| null` | max. 500 caractères |
 
-- **Réponse `201 Created`** : `TeamResponseDto` — ⚠️ **201 et non 200**, voir [§9](#codes-de-statut-inattendus)
+- **Réponse `200 OK`** : `TeamResponseDto` reflétant l'état après mise à jour
 
 ```bash
 # Mise à jour de la seule description : les autres champs sont omis
@@ -512,7 +708,7 @@ curl -X PUT https://localhost:7138/api/teams/5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5
 
 > La réponse n'exposant ni `assetType` ni `ticketCriticality`, un client ne peut pas confirmer la prise en compte de ces deux champs.
 
-### 7.4 `DELETE /api/teams/{id}` — Supprimer une équipe
+### 7.5 `DELETE /api/teams/{id}` — Supprimer une équipe
 
 Suppression **physique** (pas de désactivation logique, bien que `isActive` existe).
 
@@ -557,33 +753,28 @@ Le nom de groupe est le **nom de l'équipe**, tel que renvoyé dans `assignedTea
 
 ## 9. Écarts et limitations connus
 
-Points relevés dans le code au 2026-08-05, après le lot de corrections backend à faible risque (Lot 1). Ils décrivent le comportement **réel** de l'API et doivent être pris en compte par les clients.
-
-### Aucun 404 n'est renvoyé
-
-Les controllers déclarent `ProducesResponseType(404)`, mais **aucun `NotFound()` n'existe dans le code** : une ressource introuvable lève une `DomainException`, traduite en **400**. Un client ne doit pas brancher sa logique « ressource absente » sur un 404.
-
-### Codes de statut inattendus
-
-- `PUT /api/teams/{id}` répond **`201 Created`** au lieu de `200 OK`.
-- Les réponses `201` ne comportent **pas d'en-tête `Location`**.
+Points relevés dans le code au 2026-08-05, après les lots de corrections backend (Lot 1) et de complétion du contrat (Lot 2). Ils décrivent le comportement **réel** de l'API et doivent être pris en compte par les clients.
 
 ### Endpoints manquants
 
 | Manque | Conséquence pour un client |
 |---|---|
-| pas de `GET /api/teams` (liste) | impossible d'alimenter une liste déroulante d'équipes ; le transfert exige de connaître le **nom exact** de l'équipe |
-| pas de `GET /api/tickets` (liste) | aucun tableau de bord des tickets possible ; consultation par id uniquement |
-| pas de `GET /api/assets/{id}` | la fiche d'un actif doit être extraite de la liste complète |
+| pas de modification d'un actif | nom, numéro de série et type sont figés à la création |
 | pas de remise en service d'un actif | `Decommissioned` est un état terminal |
+| pas de recherche plein texte | la liste d'incidents se filtre par état, criticité, équipe et actif, pas par mots du titre ou de la description |
+| pas de pagination sur l'inventaire ni sur les équipes | `GET /api/assets` et `GET /api/teams` renvoient l'intégralité de la collection |
 
-### Champs absents des DTOs
+### Cycle de vie incomplet
 
-| DTO | Champs non exposés | Conséquence |
-|---|---|---|
-| `TicketResponseDto` | `description`, `resolutionComment`, `assistanceNote`, `isAiProcessing`, `createdAt` | la **note d'assistance IA** générée en tâche de fond est inaccessible via l'API ; la description saisie n'est jamais relue |
-| `TeamResponseDto` | `assetType`, `ticketCriticality` | un formulaire d'édition d'équipe ne peut pas préremplir ces champs |
-| `AssetResponseDto` | tickets liés | pas de vue consolidée actif + incidents |
+- `TicketStatus.Resolved` reste inatteignable : aucun endpoint ne l'attribue, bien que le filtre `status=Resolved` l'accepte (et renvoie une liste vide).
+- Aucun endpoint ne désactive une équipe, alors que `isActive` est exposé et exploité par le filtre `onlyActive`.
+- Le **motif de transfert** est concaténé à la description de l'incident plutôt qu'historisé à part : la description s'allonge à chaque transfert et son texte d'origine n'est plus isolable.
+
+> Ces trois points dépendent des décisions 0.3, 0.5 et 0.6 du plan d'implémentation, non tranchées à ce jour.
+
+### Fin d'analyse IA non notifiée
+
+`assistanceNote` et `isAiProcessing` sont désormais exposés, mais aucun événement temps réel n'annonce la fin de l'analyse : pour l'observer, un client doit relire l'incident.
 
 ### Authentification absente
 
@@ -609,9 +800,9 @@ Les **listes** d'actifs et d'équipes sont servies par des décorateurs de cache
 |---|---|
 | `POST /api/assets` puis `GET /api/assets` | le nouvel actif est **présent immédiatement** |
 | `PUT /api/assets/{id}/decommission` puis `GET /api/assets` | le statut `Decommissioned` est **visible immédiatement** |
-| `POST` / `PUT` / `DELETE /api/teams` puis lecture | la liste des équipes actives est rechargée à la lecture suivante |
+| `POST` / `PUT` / `DELETE /api/teams` puis `GET /api/teams` | les deux listes d'équipes (complète et actives seules) sont rechargées |
 
-Les lectures **par identifiant** d'un actif ne sont pas mises en cache : elles alimentent des cas d'usage d'écriture et doivent rester suivies par le contexte de persistance.
+Ne sont **pas** mises en cache, et reflètent donc toujours l'état courant : `GET /api/assets/{id}` (fiche et incidents) et `GET /api/tickets` (liste paginée).
 
 ### 10.2 Transactions et concurrence
 
@@ -642,7 +833,7 @@ dotnet ef database update --project AssetFlowCore.Infrastructure --startup-proje
 
 À la création d'un ticket, `isAiProcessing` passe à `true` et l'identifiant du ticket est déposé dans une file en mémoire. Un worker d'arrière-plan génère une note d'assistance Markdown (via Azure OpenAI ou Ollama selon la configuration) puis repasse `isAiProcessing` à `false`.
 
-Ce traitement est **invisible depuis l'API** : aucun endpoint n'expose `assistanceNote` ni `isAiProcessing`, et aucune notification n'est émise à la fin du traitement. La file étant en mémoire, les demandes en attente sont **perdues au redémarrage** du processus.
+`assistanceNote` et `isAiProcessing` sont exposés par `TicketResponseDto` : un écran peut afficher « analyse en cours » puis la note. En revanche **aucune notification n'est émise à la fin du traitement** — l'observer suppose de relire l'incident. La file étant en mémoire, les demandes en attente sont **perdues au redémarrage** du processus.
 
 ---
 
@@ -698,17 +889,22 @@ Le transfert réaffecte l'équipe **sans changer le statut**, et est refusé sur
 | Verbe | Route | Succès | Corps |
 |---|---|---|---|
 | `GET` | `/api/assets` | 200 | — |
-| `POST` | `/api/assets` | 201 | `{ name, serialNumber, type }` |
+| `GET` | `/api/assets/{id}` | 200 | — |
+| `POST` | `/api/assets` | 201 + `Location` | `{ name, serialNumber, type }` |
 | `PUT` | `/api/assets/{id}/decommission` | 204 | — |
-| `POST` | `/api/tickets` | 201 | `{ assetId, title, description, criticality }` |
+| `GET` | `/api/tickets` | 200 | — (filtres, tri et pagination en chaîne de requête) |
 | `GET` | `/api/tickets/{id}` | 200 | — |
+| `POST` | `/api/tickets` | 201 + `Location` | `{ assetId, title, description, criticality }` |
 | `PUT` | `/api/tickets/{id}/assign` | 204 | — |
 | `PUT` | `/api/tickets/{id}/close` | 204 | `{ resolutionComment }` |
 | `POST` | `/api/tickets/{id}/transfer` | 204 | `{ targetTeam, reason }` |
+| `GET` | `/api/teams` | 200 | — (`?onlyActive=true` pour filtrer) |
 | `GET` | `/api/teams/{id}` | 200 | — |
-| `POST` | `/api/teams` | 201 | `{ name, assetType, ticketCriticality, description? }` |
-| `PUT` | `/api/teams/{id}` | 201 | mêmes champs, tous optionnels |
+| `POST` | `/api/teams` | 201 + `Location` | `{ name, assetType, ticketCriticality, description? }` |
+| `PUT` | `/api/teams/{id}` | 200 | mêmes champs, tous optionnels |
 | `DELETE` | `/api/teams/{id}` | 204 | — |
+
+Toute route comportant `{id}` répond **404** lorsque la ressource n'existe pas.
 
 ### 12.4 Sources dans le code
 

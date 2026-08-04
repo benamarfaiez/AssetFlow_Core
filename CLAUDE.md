@@ -61,7 +61,8 @@ dotnet ef database update --project AssetFlowCore.Infrastructure --startup-proje
 - Les controllers n'injectent que `ISender` ; chaque endpoint construit son `Command`/`Query` depuis un `Requests/*Request`, et reçoit un `CancellationToken` propagé jusqu'aux dépôts — toute nouvelle méthode asynchrone de dépôt doit accepter et propager ce jeton. Exceptions assumées : la notification SignalR et la mise en file de l'analyse IA, postérieures à la persistance, ne sont pas annulables.
 - Les handlers sont enregistrés **deux fois** dans [DependencyInjection.cs](AssetFlowCore.Application/DependencyInjection.cs) : par le scan MediatR (chemin réel de l'API) et explicitement en `AddScoped` (les benchmarks les résolvent directement depuis le conteneur). Ajouter un handler implique de mettre à jour l'enregistrement explicite et, si besoin, [BenchmarkBase.cs](AssetFlowCore.Benchmarks/BenchmarkBase.cs).
 - Le mapping DTO est **manuel** ([MappingExtensions.cs](AssetFlowCore.Application/DTOs/MappingExtensions.cs)) — choix assumé de performance, ne pas introduire AutoMapper.
-- [ExceptionHandlingMiddleware.cs](AssetFlowCore.WebApi/Middlewares/ExceptionHandlingMiddleware.cs) traduit les exceptions en `ProblemDetails` : `ValidationException` / `ArgumentException` / `DomainException` → 400, `DbUpdateConcurrencyException` → 409 (via `MaintenanceTicket.RowVersion`), reste → 500. Les handlers lèvent donc des exceptions plutôt que de retourner des résultats d'erreur.
+- [ExceptionHandlingMiddleware.cs](AssetFlowCore.WebApi/Middlewares/ExceptionHandlingMiddleware.cs) traduit les exceptions en `ProblemDetails` : `ValidationException` / `ArgumentException` / `DomainException` → 400, `NotFoundException` → 404, `DbUpdateConcurrencyException` → 409 (via `MaintenanceTicket.RowVersion`), reste → 500. Les handlers lèvent donc des exceptions plutôt que de retourner des résultats d'erreur.
+- `NotFoundException` **dérive de** `DomainException` : son cas doit rester **avant** celui de `DomainException` dans le `switch` du middleware, sinon les 404 redeviennent des 400. Règle d'emploi : la ressource désignée par l'URI est absente → `NotFoundException` (404) ; une référence invalide portée par le corps → `DomainException` (400).
 
 ## Moteur d'assignation (Strategy) — pièges
 
@@ -76,6 +77,10 @@ dotnet ef database update --project AssetFlowCore.Infrastructure --startup-proje
 `UnitOfWork` **reçoit ses dépôts du conteneur** : les écritures passant par lui traversent donc les décorateurs. Les mutations d'entités suivies qui n'appellent aucune méthode de dépôt (`asset.Decommission()`, `asset.MarkAsDown()`) sont détectées via le `ChangeTracker` dans `SaveChangesAsync`, qui invalide alors les listes concernées.
 
 Le cache d'actifs porte **uniquement sur la liste** : `CachedAssetRepository.GetByIdAsync` délègue sans mise en cache, car tous ses appelants mutent l'actif retourné — servir une instance détachée du `DbContext` courant ferait échouer silencieusement la persistance. Même précaution à conserver pour toute nouvelle lecture destinée à une mutation.
+
+Deux listes d'équipes sont mises en cache sous des clés distinctes (`Teams_List_Active` et `Teams_List_All`) : toute écriture doit périmer **les deux**, ce que centralise `CachedTeamRepository.InvalidateLists()`. `GET /api/tickets` et `GET /api/assets/{id}` ne sont pas mis en cache.
+
+`Criticality` et `Status` sont persistés en texte (`HasConversion<string>()`) : tout tri SQL sur ces colonnes serait alphabétique (« High » < « Low » < « Medium »). `MaintenanceTicketRepository.ApplySort` projette donc chaque valeur sur son rang métier — à reproduire pour toute nouvelle colonne d'énumération triable.
 
 `TeamRepository.UpdateAsync`/`RemoveAsync` branchent sur `ProviderName` : `ExecuteUpdate`/`ExecuteDelete` sur un provider relationnel, repli `Attach` + `EntityState.Modified` pour InMemory. Les tests exercent donc un chemin de code différent de la production — valider les changements de ces méthodes aussi en intégration/benchmark.
 

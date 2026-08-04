@@ -61,7 +61,7 @@ public class RequestTicketTransferCommandHandlerTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_Should_ThrowDomainException_When_TicketNotFound()
+    public async Task ExecuteAsync_Should_ThrowNotFoundException_When_TicketNotFound()
     {
         // Arrange
         var command = new RequestTicketTransferCommand(Guid.NewGuid(), "Nouvelle-Equipe", "Motif valide");
@@ -74,8 +74,8 @@ public class RequestTicketTransferCommandHandlerTests
         Func<Task> action = async () => await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await action.Should().ThrowAsync<DomainException>()
-                    .WithMessage("Ticket introuvable.");
+        await action.Should().ThrowAsync<NotFoundException>()
+                    .WithMessage("L'incident * est introuvable.");
 
         // On s'assure que SaveChanges n'a JAMAIS été appelé
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

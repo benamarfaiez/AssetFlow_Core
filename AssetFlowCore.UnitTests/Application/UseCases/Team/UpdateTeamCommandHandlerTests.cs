@@ -14,7 +14,7 @@ public class UpdateTeamCommandHandlerTests
 
     public UpdateTeamCommandHandlerTests()
     {
-        // On lie les sous-propriétés de l'Unit of Work à nos mocks de repositories
+        // On lie les sous-propriï¿½tï¿½s de l'Unit of Work ï¿½ nos mocks de repositories
         _uow.Setup(u => u.Team).Returns(_teamRepo.Object);
         _handler = new UpdateTeamCommandHandler(_uow.Object);
     }
@@ -42,7 +42,7 @@ public class UpdateTeamCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenTeamNotFound_ShouldThrowDomainException()
+    public async Task Handle_WhenTeamNotFound_ShouldThrowNotFoundException()
     {
         // Arrange
         var id = Guid.NewGuid();
@@ -53,7 +53,7 @@ public class UpdateTeamCommandHandlerTests
         Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<DomainException>().WithMessage($"Le team avec l'ID {id} est introuvable.");
+        await act.Should().ThrowAsync<NotFoundException>().WithMessage($"L'Ã©quipe {id} est introuvable.");
         _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

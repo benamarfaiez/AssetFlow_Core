@@ -49,6 +49,16 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
         })!;
     }
 
+    public Task<IEnumerable<Team>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return _memory.GetOrCreateAsync(CacheKeys.TeamsListAll, async entry =>
+        {
+            entry.SetOptions(CacheOptions());
+            var teams = await _inner.GetAllAsync(cancellationToken);
+            return teams ?? [];
+        })!;
+    }
+
     public async Task<Team?> GetByAssetTypeAndCriticalityAsync(string assetType, string criticality, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(assetType) || string.IsNullOrWhiteSpace(criticality)) return null;
@@ -78,7 +88,7 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
 
         await _inner.AddAsync(team, cancellationToken);
 
-        _memory.Remove(TeamsListCacheKey);
+        InvalidateLists();
         _memory.Set(GetIdKey(team.Id), team, CacheOptions());
     }
 
@@ -88,7 +98,7 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
 
         await _inner.UpdateAsync(team, cancellationToken);
 
-        _memory.Remove(TeamsListCacheKey);
+        InvalidateLists();
         _memory.Set(GetIdKey(team.Id), team, CacheOptions());
     }
 
@@ -99,7 +109,7 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
         await _inner.RemoveAsync(team, cancellationToken);
 
         _memory.Remove(GetIdKey(team.Id));
-        _memory.Remove(TeamsListCacheKey);
+        InvalidateLists();
     }
 
     public async Task<bool> ExistsWithNameAsync(string name, CancellationToken cancellationToken = default)
@@ -117,8 +127,18 @@ public class CachedTeamRepository(ITeamRepository innerRepository, IMemoryCache 
     public void RefreshCacheFor(Team team)
     {
         if (team == null) return;
-        _memory.Remove(TeamsListCacheKey);
+        InvalidateLists();
         _memory.Set(GetIdKey(team.Id), team, CacheOptions());
+    }
+
+    /// <summary>
+    /// Toute écriture sur une équipe périme les deux listes : la liste des actives et la liste
+    /// complète. En oublier une servirait un référentiel d'équipes obsolète pendant 5 minutes.
+    /// </summary>
+    private void InvalidateLists()
+    {
+        _memory.Remove(TeamsListCacheKey);
+        _memory.Remove(CacheKeys.TeamsListAll);
     }
 
     private static string GetIdKey(Guid id) => CacheKeys.Team(id);

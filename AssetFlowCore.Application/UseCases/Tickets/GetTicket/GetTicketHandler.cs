@@ -9,7 +9,8 @@ public class GetTicketHandler(IMaintenanceTicketRepository ticketRepository, ITe
 {
     public async Task<TicketResponseDto> Handle(GetTicketQuery query, CancellationToken cancellationToken)
     {
-        var ticket = await ticketRepository.GetByIdAsync(query.TicketId, cancellationToken) ?? throw new DomainException($"Le ticket avec l'ID {query.TicketId} est introuvable.");
+        var ticket = await ticketRepository.GetByIdAsync(query.TicketId, cancellationToken)
+            ?? throw NotFoundException.For("L'incident", query.TicketId);
         var team = await teamRepository.GetByIdAsync(ticket.AssignedTeamId, cancellationToken) ?? throw new DomainException($"Le team avec l'ID {ticket.AssignedTeamId} est introuvable.");
 
         var dto = ticket.ToDto(team.Name);

@@ -8,7 +8,8 @@ public class DecommissionAssetHandler(IUnitOfWork unitOfWork) : IRequestHandler<
 {
     public async Task Handle(DecommissionAssetCommand command, CancellationToken cancellationToken)
     {
-        var asset = await unitOfWork.Asset.GetByIdAsync(command.Id, cancellationToken) ?? throw new DomainException($"L'actif {command.Id} est introuvable.");
+        var asset = await unitOfWork.Asset.GetByIdAsync(command.Id, cancellationToken)
+            ?? throw NotFoundException.For("L'actif", command.Id);
 
         // Application stricte de la règle d'inviolabilité fonctionnelle
         int activeTickets = await unitOfWork.MaintenanceTicket.CountActiveTicketsByAssetIdAsync(command.Id, cancellationToken);

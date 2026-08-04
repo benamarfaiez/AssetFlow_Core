@@ -9,7 +9,8 @@ public class GetTeamHandler(ITeamRepository teamRepository) : IRequestHandler<Ge
 {
     public async Task<TeamResponseDto> Handle(GetTeamQuery query, CancellationToken cancellationToken)
     {
-        var team = await teamRepository.GetByIdAsync(query.TeamId, cancellationToken) ?? throw new DomainException($"Le team avec l'ID {query.TeamId} est introuvable.");
+        var team = await teamRepository.GetByIdAsync(query.TeamId, cancellationToken)
+            ?? throw NotFoundException.For("L'équipe", query.TeamId);
 
         var dto = team.ToDto();
         return dto;

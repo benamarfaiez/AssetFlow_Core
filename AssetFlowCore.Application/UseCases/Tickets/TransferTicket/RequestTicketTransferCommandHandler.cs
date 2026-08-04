@@ -8,8 +8,13 @@ public class RequestTicketTransferCommandHandler(IMaintenanceTicketRepository ti
 {
     public async Task Handle(RequestTicketTransferCommand command, CancellationToken cancellationToken)
     {
-        var ticket = await ticketRepository.GetByIdWithTrackingAsync(command.TicketId, cancellationToken) ?? throw new DomainException("Ticket introuvable.");
-        var team = await teamRepository.GetByNameAsync(command.TeamName, cancellationToken) ?? throw new DomainException("Équipe introuvable.");
+        var ticket = await ticketRepository.GetByIdWithTrackingAsync(command.TicketId, cancellationToken)
+            ?? throw NotFoundException.For("L'incident", command.TicketId);
+
+        // L'équipe cible est une donnée du corps, pas la ressource visée par l'URI :
+        // une valeur inconnue est un refus métier (400), pas une ressource absente (404).
+        var team = await teamRepository.GetByNameAsync(command.TeamName, cancellationToken)
+            ?? throw new DomainException($"L'équipe '{command.TeamName}' n'existe pas ou n'est plus active.");
         ticket.TransferToTeam(team, command.Reason);
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }

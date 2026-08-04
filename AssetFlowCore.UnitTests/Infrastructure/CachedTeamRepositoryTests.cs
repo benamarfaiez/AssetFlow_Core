@@ -106,6 +106,57 @@ namespace AssetFlowCore.UnitTests.Infrastructure
         }
 
         [Fact]
+        public async Task GetAllAsync_ShouldBeCached_ThenInvalidatedByAnyWrite()
+        {
+            // La liste complète alimente l'écran d'administration : elle a sa propre clé de
+            // cache, qu'une écriture doit périmer au même titre que la liste des actives.
+            var team1 = new Team("Team A", "Servers", "High", "Description A");
+            var team2 = new Team("Team B", "Network", "Low", "Description B");
+
+            var innerMock = new Mock<ITeamRepository>();
+            innerMock.SetupSequence(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync([team1])
+                .ReturnsAsync([team1, team2]);
+            innerMock.Setup(r => r.AddAsync(team2, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+            var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
+
+            var premiere = (await cache.GetAllAsync()).ToList();
+            var servieDuCache = (await cache.GetAllAsync()).ToList();
+
+            await cache.AddAsync(team2);
+            var apresEcriture = (await cache.GetAllAsync()).ToList();
+
+            premiere.Should().ContainSingle();
+            servieDuCache.Should().HaveCount(1);
+            apresEcriture.Should().HaveCount(2);
+            innerMock.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task GetAllAsync_ShouldBeInvalidated_AfterRemoveAsync()
+        {
+            var team1 = new Team("Team A", "Servers", "High", "Description A");
+            var team2 = new Team("Team B", "Network", "Low", "Description B");
+
+            var innerMock = new Mock<ITeamRepository>();
+            innerMock.SetupSequence(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync([team1, team2])
+                .ReturnsAsync([team2]);
+            innerMock.Setup(r => r.RemoveAsync(team1, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+            var memory = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
+            var cache = new CachedTeamRepository(innerMock.Object, memory);
+
+            (await cache.GetAllAsync()).Should().HaveCount(2);
+            await cache.RemoveAsync(team1);
+
+            (await cache.GetAllAsync()).Should().ContainSingle();
+            innerMock.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+        }
+
+        [Fact]
         public async Task GetAllActiveAsync_ShouldInvalidateList_AfterRemoveAsync()
         {
             // Arrange

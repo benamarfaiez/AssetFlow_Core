@@ -23,6 +23,12 @@ public class TeamRepository(AssetFlowDbContext context) : ITeamRepository
             .OrderBy(t => t.Name)
             .ToListAsync(cancellationToken);
 
+    public async Task<IEnumerable<Team>> GetAllAsync(CancellationToken cancellationToken = default)
+        => await context.Teams
+            .AsNoTracking()
+            .OrderBy(t => t.Name)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(Team team, CancellationToken cancellationToken = default)
         => await context.Teams.AddAsync(team, cancellationToken);
 
