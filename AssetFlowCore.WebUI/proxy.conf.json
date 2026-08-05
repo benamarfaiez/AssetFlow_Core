@@ -1,0 +1,13 @@
+{
+  "/api": {
+    "target": "https://localhost:7138",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/ticketHub": {
+    "target": "https://localhost:7138",
+    "secure": false,
+    "ws": true,
+    "changeOrigin": true
+  }
+}

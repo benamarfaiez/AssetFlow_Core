@@ -13,7 +13,7 @@ Documents liés : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) · [PRODUCT
 ```mermaid
 flowchart TB
     subgraph client["Poste utilisateur"]
-        SPA["Application Angular 22 🎯<br/>(standalone, Signals)"]
+        SPA["Application Angular 22<br/>(standalone, Signals, zoneless)<br/>socle ✅ · écrans 🎯"]
     end
 
     subgraph api["AssetFlowCore.WebApi (.NET 8)"]
@@ -195,7 +195,9 @@ Chaque incident est traité dans une **portée d'injection dédiée** (`CreateAs
 - Lectures d'inventaire en `AsNoTracking` derrière un cache mémoire de 5 minutes ; lectures destinées à une mutation **suivies** par le change tracker (`GetByIdAsync` tracké, `GetByIdWithTrackingAsync` pour l'accès explicite).
 - Les mises à jour et suppressions d'équipes utilisent `ExecuteUpdate`/`ExecuteDelete` en relationnel, avec un chemin de repli pour le fournisseur InMemory des tests.
 
-## 3. Frontend — Architecture cible 🎯
+## 3. Frontend — Architecture ✅ socle en place (2026-08-05)
+
+Le workspace `AssetFlowCore.WebUI` matérialise ce découpage depuis le Lot 3 : `core/` (api, http, auth, realtime), `shared/` (models) et `features/` existent, les écrans restant à produire au Lot 5. Les règles de dépendances ci-dessous sont **contrôlées par une commande** (`npm run verifier:dependances`), à l'image des tests ArchUnitNET du backend.
 
 ### 3.1 Découpage orienté fonctionnalités
 
@@ -337,7 +339,10 @@ Le pipeline enchaîne compilation et vérification de format, tests d'architectu
 | AD-09 | **Orchestration Aspire en développement** | démarrer la base et l'API d'un seul geste | expérience de développement fluide, télémétrie intégrée ; la clé de chaîne de connexion devient `assetflow-db`, ce qui complique l'exécution hors Aspire |
 | AD-10 | **Base vectorielle DuckDB locale** | pas de service vectoriel externe à exploiter | aucune dépendance d'infrastructure ; fichier **local**, donc pas de partage entre instances ni de mise à l'échelle horizontale |
 | AD-11 | **File d'analyse IA en mémoire** | sortir l'IA du chemin de requête sans courtier | réponse HTTP non pénalisée ; **demandes perdues au redémarrage**, aucune reprise |
-| AD-12 | **Frontend Angular standalone + Signals** 🎯 | aligner sur les pratiques Angular 22 | pas de `NgModule`, réactivité fine, moins de RxJS ; NgRx SignalStore indisponible en stable pour Angular 22 |
+| AD-12 | **Frontend Angular standalone + Signals** ✅ (2026-08-05) | aligner sur les pratiques Angular 22 | pas de `NgModule`, réactivité fine, moins de RxJS ; NgRx SignalStore indisponible en stable pour Angular 22, donc Signals natifs |
+| AD-15 | **Détection de changement zoneless** ✅ (2026-08-05) | défaut d'Angular 22, cohérent avec Signals + `OnPush` partout | `zone.js` absent du lot livré ; en contrepartie, tout état modifié hors d'un signal ne déclenche aucun rendu — contrainte à tenir dans chaque feature |
+| AD-16 | **Erreurs d'API normalisées une seule fois, dans un intercepteur** ✅ (2026-08-05) | éviter que chaque écran réinterprète les codes HTTP et le format `ProblemDetails` | les écrans reçoivent une `ApiError` porteuse d'une nature et d'un dictionnaire par champ ; en contrepartie, un appelant qui attendrait un `HttpErrorResponse` ne le trouvera plus |
+| AD-17 | **Règles de dépendances du frontend vérifiées par une commande** ✅ (2026-08-05) | une convention qu'aucune commande ne contrôle finit enfreinte sans que personne ne le voie | `npm run verifier:dependances`, pendant de `AssetFlowCore.ArchitectureTests` ; contrôle textuel des imports, moins fin qu'une analyse du graphe de modules |
 | AD-13 | **Absence de versioning d'API** | contexte de projet unique | simplicité immédiate ; toute évolution de contrat est cassante pour le client |
 | AD-14 | **Aucune authentification** (état de fait, non décidé) | portée initiale d'exemple | API ouverte : incompatible avec une mise en service, et bloquant pour tout écran contextualisé |
 

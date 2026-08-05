@@ -1,0 +1,12 @@
+# Fins de ligne normalisées en LF dans la copie de travail, quelle que soit la plateforme.
+# Sans cette règle, `core.autocrlf=true` livre des fichiers en CRLF sur Windows alors que
+# Prettier attend LF (`endOfLine` vaut « lf » par défaut) : `npm run format:verify` échouerait
+# après un clone, y compris en intégration continue.
+* text=auto eol=lf
+
+# Fichiers binaires : aucune conversion.
+*.ico binary
+*.png binary
+*.jpg binary
+*.woff binary
+*.woff2 binary

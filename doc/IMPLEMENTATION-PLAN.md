@@ -17,7 +17,7 @@ Documents de référence : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) (e
 | Backend | ✅ fonctionnel : 15 endpoints, 216 tests unitaires verts, tests d'architecture et d'intégration, benchmarks, CI/CD complète, déploiement conteneurisé ; **Lots 1 et 2 appliqués** |
 | Contrat d'API | ✅ complété : listes d'incidents (paginée) et d'équipes, fiche d'actif, DTOs enrichis, 404 pour les ressources absentes, `Location` sur les créations |
 | Sécurité | ⛔ aucune authentification ni autorisation |
-| Frontend | ⛔ inexistant (aucun `angular.json`) |
+| Frontend | ✅ socle en place : workspace Angular 22 `AssetFlowCore.WebUI` (standalone, Signals, zoneless, Vitest), types du contrat, 3 services d'API, intercepteurs d'erreurs et de jeton, client SignalR, 47 tests verts ; **Lot 3 appliqué**. Aucun écran produit (`E-01`→`E-09` au Lot 5) |
 | Assistance IA | 🟡 mécanisme complet mais corpus vectoriel vide et état non exposé |
 | Documentation | ✅ produit, fonctionnel, technique, architecture, contrat d'API |
 | Outillage Claude Code | ✅ 6 agents, 3 skills |
@@ -69,10 +69,10 @@ flowchart LR
 | 0.5 | Historisation séparée du motif de transfert | `RM-21`, contrat des incidents | S |
 | 0.6 | Désactivation d'équipe en remplacement de la suppression | `EF-28` | S |
 | 0.7 | Indexation des incidents clôturés dans la base vectorielle | Lot 6, valeur de l'IA | M |
-| 0.8 | Nom du dossier du workspace frontend (`AssetFlowCore.WebUI` proposé) | Lot 3 | S |
+| ~~0.8~~ | ~~Nom du dossier du workspace frontend~~ — **tranchée le 2026-08-05** : dossier `AssetFlowCore.WebUI/`, projet npm `assetflow-webui` (les majuscules et le point sont interdits dans un nom de paquet npm, d'où la dissociation) | Lot 3 | S |
 | 0.9 | Framework CSS (Tailwind · Material · DaisyUI+Tailwind · SCSS) | Lot 4 | M |
-| 0.10 | Rendu serveur (SSR) ou application cliente seule | Lot 3, Lot 8 | M |
-| 0.11 | Runner de tests frontend (Vitest ou Karma) | Lot 3 | S |
+| ~~0.10~~ | ~~Rendu serveur (SSR) ou application cliente seule~~ — **tranchée le 2026-08-05** : **application cliente seule**, pas de SSR (back-office interne destiné à passer derrière authentification, aucun enjeu de référencement ni de premier affichage public ; déploiement statique aligné sur la contrainte de même origine) | Lot 3, Lot 8 | M |
+| ~~0.11~~ | ~~Runner de tests frontend~~ — **tranchée le 2026-08-05** : **Vitest** (voie moderne du CLI, aucun navigateur à piloter en CI, couverture lcov directement exploitable par SonarCloud) | Lot 3 | S |
 | 0.12 | Stratégie d'état (Signals natifs — défaut — ou SignalStore en préversion) | Lot 5 | S |
 | 0.13 | Mode de déploiement du frontend (conteneur dédié, servi par l'API, statique + reverse proxy) | Lot 8, contrainte CORS | M |
 | ~~0.14~~ | ~~Périmètre de la pagination et du filtrage serveur des listes~~ — **tranchée le 2026-08-05** : enveloppe JSON paginée sur `GET /api/tickets` (filtres état, criticité, équipe, actif ; tri ; taille de page ≤ 100) ; inventaire et équipes servis en intégralité | Lot 2 | M |
@@ -141,48 +141,59 @@ flowchart LR
 | 2.9 ⛔ | Décisions 0.3, 0.5, 0.6 appliquées si retenues (statut `Resolved`, motif de transfert isolé, désactivation d'équipe) | `EF-17`, `EF-28` | M |
 | 2.10 ✅ | **Relecture** | session principale (aucun agent sollicité) | S |
 | 2.11 ✅ | **Mise à jour du contrat documenté** — [API-Specification.md](API-Specification.md) intégralement | S |
-| 2.12 ⛔ | **Resynchronisation des types frontend** | skill **`/sync-api-dtos`** sur chaque controller modifié | S |
+| 2.12 ✅ | **Resynchronisation des types frontend** — réalisée au Lot 3, étape 3.6, une fois le workspace créé | conventions du skill **`/sync-api-dtos`** appliquées aux 3 controllers | S |
 
 **Critères d'acceptation du lot**
 
 - ✅ Chaque nouvel endpoint est couvert par un test d'intégration (cas nominal + cas d'erreur) et documenté dans [API-Specification.md](API-Specification.md).
 - ✅ La pagination expose le nombre total d'éléments (`totalCount`), indépendant de la page reçue.
 - ✅ Les ressources introuvables renvoient 404 sur **tous** les endpoints à identifiant, sans exception résiduelle.
-- ⛔ Le skill `/sync-api-dtos` ne peut pas s'exécuter : il s'arrête de lui-même en l'absence d'`angular.json` (Lot 3 non démarré).
+- ✅ Les types frontend du contrat sont générés (Lot 3, étape 3.6) : `shared/models/` couvre les 3 ressources, l'enveloppe de pagination et `ProblemDetails`.
 - ✅ Les écrans `E-05`, `E-06`, `E-07` sont déclarés réalisables dans [PRODUCT-SPECIFICATIONS.md](PRODUCT-SPECIFICATIONS.md) §7 ; `E-08` reste dégradé, la fin d'analyse IA n'étant pas notifiée (Lot 6, étape 6.4).
 
 **Écarts assumés du lot**
 
 - **2.9 reportée** : les décisions 0.3, 0.5 et 0.6 n'étant pas tranchées, le statut `Resolved` reste inatteignable, le motif de transfert reste concaténé à la description et aucune équipe ne peut être désactivée par l'API. Le filtre `onlyActive` et le champ `isActive` sont néanmoins en place pour accueillir la décision 0.6.
-- **2.12 impossible** : aucun workspace Angular n'existe encore. À exécuter au Lot 3, étape 3.6.
+- **2.12 reportée puis levée** : aucun workspace Angular n'existait à la clôture du Lot 2 ; la synchronisation a été réalisée au Lot 3, étape 3.6.
 - Pagination livrée sur `GET /api/tickets` uniquement ; l'inventaire et les équipes restent des collections complètes, leur volume ne le justifiant pas.
 
 ---
 
-## 6. Lot 3 — Fondation frontend 🎯 (parallélisable avec les lots 1 et 2)
+## 6. Lot 3 — Fondation frontend ✅ (2026-08-05)
 
 **Objectif** : un workspace Angular 22 qui compile, se teste et appelle l'API en développement.
 
+**Décisions appliquées** : 0.8 → dossier `AssetFlowCore.WebUI/` (projet npm `assetflow-webui`) · 0.10 → application cliente seule · 0.11 → Vitest · mode **zoneless** retenu (défaut d'Angular 22, `zone.js` absent des dépendances), ce qui lève le « à évaluer » de [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md) §2.3.
+
 | # | Étape | Réalisation | Vérification | Charge |
 |---|---|---|---|---|
-| 3.1 | Créer le workspace (`npx ng new`, nom retenu en 0.8, SSR selon 0.10, runner selon 0.11) | agent **`angular-architect`** | `npx ng build` et `npx ng test --watch=false` verts | M |
-| 3.2 | Mettre en place l'arborescence `core/` · `shared/` · `features/` et les règles de dépendances | agent **`angular-architect`** | arborescence conforme à [ARCHITECTURE.md](ARCHITECTURE.md) §3.1 | S |
-| 3.3 | Configurer `app.config.ts` : `provideRouter`, `provideHttpClient(withFetch(), withInterceptors([...]))`, options de détection de changement | agent **`angular-architect`** | démarrage sans erreur de console | S |
-| 3.4 | Environnements (`environment.ts`, `environment.development.ts`) avec `apiBaseUrl` | agent **`angular-architect`** | valeur consommée, aucune URL en dur | S |
-| 3.5 | `proxy.conf.json` vers `https://localhost:7138` et script npm de démarrage associé | agent **`angular-architect`** | appel réel à `GET /api/assets` depuis l'application, sans erreur CORS ni certificat | S |
-| 3.6 | Générer les modèles de contrat et les services d'API des 3 ressources | skill **`/sync-api-dtos`** par controller | types conformes, service documenté par JSDoc | M |
-| 3.7 | Intercepteur d'erreurs `ProblemDetails` (400 avec `errors`, 409, 500) et modèle d'erreur partagé | agent **`dotnet-api-bridge`** | tests avec `provideHttpClientTesting()` sur les trois cas | M |
-| 3.8 | Squelette d'interceptor de jeton (inactif jusqu'au Lot 7) | agent **`dotnet-api-bridge`** | présent, testé, sans effet en l'absence de jeton | S |
-| 3.9 | Client temps réel typé (`@microsoft/signalr`) sur `/ticketHub` | agent **`dotnet-api-bridge`** | connexion établie, événement `ReceiveNewTicket` reçu | M |
-| 3.10 | **Relecture** | agent **`angular-code-reviewer`** | verdict « mergeable » | S |
+| 3.1 ✅ | Créer le workspace (Angular 22.1.0, CLI 22.1.3, standalone, sans SSR, Vitest, zoneless, SCSS) | session principale | `npx ng build` et `npx ng test --watch=false` verts | M |
+| 3.2 ✅ | Arborescence `core/` · `shared/` · `features/` et règles de dépendances | session principale | conforme à [ARCHITECTURE.md](ARCHITECTURE.md) §3.1 · règles **vérifiées mécaniquement** par `npm run verifier:dependances` | S |
+| 3.3 ✅ | `app.config.ts` : `provideRouter` (+ `withComponentInputBinding`), `provideHttpClient(withFetch(), withInterceptors([...]))`, détection de changement zoneless | session principale | application servie et interrogée sans erreur ; console navigateur **non relevée** (voir écarts) | S |
+| 3.4 ✅ | Environnements `environment.ts` / `environment.development.ts` (+ `environment.model.ts` qui interdit la divergence des clés), `fileReplacements` dans `angular.json` | session principale | `apiBaseUrl` consommé par les 3 services et le client SignalR, aucune URL en dur | S |
+| 3.5 ✅ | `proxy.conf.json` vers `https://localhost:7138` (`/api` et `/ticketHub`, `secure: false`, `ws: true`), branché sur la cible `serve` | session principale | appel réel traversant le proxy jusqu'à la **vraie API** : 400 de validation et 500 authentiques, sans erreur CORS ni refus de certificat. Succès sur données réelles **non vérifié** (voir écarts) | S |
+| 3.6 ✅ | Modèles de contrat et services d'API des 3 ressources | conventions du skill **`/sync-api-dtos`**, contrat relu dans le C# (post-Lot 2) | types conformes, JSDoc par méthode (verbe, route, code de succès réel, erreurs, fichier C# d'origine) | M |
+| 3.7 ✅ | Intercepteur d'erreurs `ProblemDetails` et modèle d'erreur partagé `ApiError` (`validation`, `business`, `notFound`, `conflict`, `server`, `network`) | session principale | 9 tests avec `provideHttpClientTesting()` : 400 avec `errors`, 400 métier, 404, 409, 500, absence de réponse, corps non JSON | M |
+| 3.8 ✅ | Squelette d'intercepteur de jeton + `AuthTokenService` sans source | session principale | 4 tests : sans effet sans jeton, en-tête posé dès qu'un jeton existe, jamais hors de l'API | S |
+| 3.9 ✅ | Client temps réel typé (`@microsoft/signalr` 10.0.11) sur `/ticketHub`, état en signal, restauration des groupes après reconnexion | session principale | 9 tests sur double de connexion · connexion réelle établie à travers le proxy et `JoinTeamGroup` accepté par le hub | M |
+| 3.10 ✅ | **Relecture** | session principale (aucun agent sollicité) | `prettier --check` sans écart · 47 tests verts · règles de dépendances vérifiées | S |
 
 **Critères d'acceptation du lot**
 
-- `npx ng build` et `npx ng test --watch=false` verts, sortie de commande fournie.
-- Aucun `NgModule`, aucune injection par constructeur, aucun `any` dans le code produit.
-- Un appel réel à l'API aboutit depuis l'application en développement.
-- Une erreur 400 de l'API produit un objet d'erreur exploitable par un formulaire (dictionnaire `errors` accessible).
-- `shared/models/` contient les types dérivés du C#, avec en-tête indiquant la source.
+- ✅ `npx ng build` et `npx ng test --watch=false` verts (8 fichiers, **47 tests**), sortie de commande fournie.
+- ✅ Aucun `NgModule`, aucune injection par constructeur, aucun `any`, aucun `*ngIf`/`*ngFor` ; `OnPush` sur chaque composant.
+- 🟡 Un appel réel à l'API aboutit depuis l'application : la chaîne complète (serveur de développement → proxy → API réelle → intercepteur) est vérifiée, mais **aucune réponse 200 sur données réelles** n'a pu l'être, faute de base de données sur le poste (voir écarts).
+- ✅ Une erreur 400 produit un objet exploitable par un formulaire : `ApiError.fieldErrors` convertit les clés `PascalCase` du backend en `camelCase`, vérifié sur une réponse **réelle** (`PageSize`, `Status`, `SortBy`).
+- ✅ `shared/models/` contient les types dérivés du C#, chaque fichier portant ses sources et sa commande de resynchronisation.
+
+**Écarts assumés du lot**
+
+- **Aucune réponse 200 sur données réelles.** Le poste n'a ni Docker (donc pas d'orchestration Aspire) ni instance SQL Server exploitable : LocalDB est installé mais son processus SQL refuse de démarrer. L'API a donc été lancée avec une base injoignable. Sont vérifiés sur la **vraie API** à travers le proxy : `/alive` (200), `GET /api/assets` (500 authentique, `traceId` inclus), `GET /api/tickets` avec paramètres invalides (400 avec dictionnaire `errors` réel), négociation et connexion `/ticketHub` avec `JoinTeamGroup` accepté. Reste à confirmer sur une base amorcée (étape 8.6).
+- **Console du navigateur non relevée** (vérification annoncée en 3.3) : aucun outil de pilotage de navigateur n'était disponible dans la session. Le rendu et les quatre états sont couverts par les tests de composant (jsdom), et l'application a été servie et interrogée sans erreur côté serveur de développement.
+- **Un écran hors périmètre produit** : `features/diagnostic/` existe pour prouver la chaîne complète, exigence du critère d'acceptation. Ce n'est aucun des écrans `E-01`→`E-09` ; il doit être supprimé et sa route racine réaffectée à l'inventaire au Lot 5.
+- **Aucun agent sollicité** : le lot a été réalisé en session principale, les définitions d'agents servant de référentiel de conventions. Les contrats d'API qu'elles contiennent sont **antérieurs au Lot 2** et ont été ignorés au profit du code C# ; ils gagneraient à être mis à jour (voir §13).
+- **Écart de format d'erreur relevé sur l'API** : les réponses d'erreur sortent avec `Content-Type: application/json`, non `application/problem+json` comme l'annonce [API-Specification.md](API-Specification.md) §3 — `WriteAsJsonAsync` écrase le type posé par le middleware. Sans effet sur le frontend (l'intercepteur ne filtre pas sur le type de contenu), mais à corriger côté code ou côté documentation.
+- **Framework CSS non installé** (décision 0.9 en attente) : le workspace est en SCSS nu, sans jeton de design ni habillage. C'est le périmètre du Lot 4 ; l'écran de diagnostic est donc sans style.
 
 ---
 
@@ -418,6 +429,7 @@ flowchart TB
 4. **Une décision structurante ne se prend pas dans un agent** : `angular-architect` et `ui-ux-designer` présentent les options (0.9 à 0.13) mais n'installent rien sans validation.
 5. **Toute évolution de contrat déclenche `/sync-api-dtos`** avant la reprise du code d'écran, sinon la dérive se propage silencieusement.
 6. **Redémarrage requis** après ajout ou modification d'un agent ou d'un skill : les définitions sont chargées au démarrage de la session.
+7. **Le code C# prime sur les contrats recopiés dans les définitions.** `angular-architect`, `dotnet-api-bridge` et le skill `/sync-api-dtos` embarquent un relevé du contrat daté du 2026-08-04, donc **antérieur au Lot 2** : il ignore `GET /api/tickets`, `GET /api/teams`, `GET /api/assets/{id}`, les champs ajoutés aux DTOs, le 200 de `PUT /api/teams/{id}` et la sémantique 404. Ces relevés sont à rafraîchir ; en attendant, toute génération part des fichiers `.cs`, comme les définitions le prescrivent elles-mêmes.
 
 ---
 
