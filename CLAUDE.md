@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 API .NET 8 de gestion de parc informatique (assets, équipes, tickets de maintenance) en Clean Architecture / DDD / CQRS, avec assistance IA (RAG) asynchrone. Le code, les commentaires, les messages d'exception, les logs et les messages de commit sont **en français** — conserver cette convention.
 
+Depuis le 2026-08-05, le dépôt contient aussi un **frontend Angular 22** dans `AssetFlowCore.WebUI/` : son socle est en place (types du contrat, services d'API, intercepteurs, client SignalR), **aucun écran produit** ne l'est encore. Voir la section « Frontend Angular » plus bas.
+
 ## Commandes
 
 Le fichier solution est au format **`.slnx`** : il faut un SDK ≥ 9.0.200 pour le résoudre, même si tous les projets ciblent `net8.0` (SDK installés localement : 9.0.315 et 10.0.302).
@@ -42,6 +44,28 @@ dotnet ef database update --project AssetFlowCore.Infrastructure --startup-proje
 ```
 
 `Program.cs` **n'applique aucune migration au démarrage** : la base doit être migrée manuellement (ou recréée) avant de faire tourner l'API. La migration `SeedReferenceTeams` amorce les 9 équipes de référence (3 types d'actifs × 3 criticités) sans lesquelles toute création de ticket échoue — `dotnet ef database update` est donc indispensable sur une base neuve.
+
+Sans Docker, l'API peut tout de même être lancée seule, avec une base injoignable — suffisant pour exercer le proxy du frontend, les 400 de validation et les sondes, mais **aucun endpoint de données** ne répondra 200 :
+
+```powershell
+${env:ConnectionStrings__assetflow-db} = "Server=(localdb)\MSSQLLocalDB;Database=AssetFlowCore_Dev;Trusted_Connection=True;TrustServerCertificate=True"
+dotnet run --project AssetFlowCore.WebApi --launch-profile https   # https://localhost:7138
+```
+
+### Frontend Angular (`AssetFlowCore.WebUI/`)
+
+```powershell
+cd AssetFlowCore.WebUI
+npm install
+npm start                        # ng serve sur http://localhost:4200, proxy vers https://localhost:7138
+npm run build                    # ng build (configuration production par défaut)
+npm run test:ci                  # ng test --watch=false (Vitest, 47 tests)
+npm run format:verify            # Prettier — pendant de `dotnet format`, futur gate de CI
+npm run verifier:dependances     # règles core/ shared/ features/ — pendant des ArchitectureTests
+npm run verifier:contrastes      # contrastes WCAG des jetons, dans les deux thèmes
+```
+
+`ng` n'est **pas** dans le `PATH` : passer par les scripts npm ou `npx ng ...`.
 
 ## Structure des couches et règles imposées par les tests
 
@@ -98,6 +122,22 @@ Flux : `CreateMaintenanceTicketHandler` met le `ticketId` dans `AIAssistanceQueu
 - [docker-compose.yml](docker-compose.yml) fournit `ConnectionStrings__DefaultConnection` (+ `SQL_SA_PASSWORD` dans l'environnement), qui ne correspond à aucun des deux : l'exécution via compose nécessite d'aligner ce nom de clé.
 - `Cors:AllowedOrigins` est déréférencé avec `!` dans `Program.cs` : sans cette section, la résolution de la policy CORS échoue (uniquement en Development, seul environnement où `UseCors` est branché).
 
+## Frontend Angular : structure et pièges
+
+`AssetFlowCore.WebUI/src/app` se découpe en `core/` (api, http, auth, realtime) · `shared/` (models, puis ui au Lot 4) · `features/`. Les règles de dépendances sont **vérifiées par `npm run verifier:dependances`** (pendant frontend des `ArchitectureTests`) : `shared/` n'importe ni `core/` ni `features/`, `core/` n'importe pas `features/`, et deux features ne s'importent jamais l'une l'autre. Chaque zone porte un `README.md` détaillant ses règles.
+
+- **Mode zoneless** : `zone.js` est absent des dépendances. Un état modifié hors d'un signal **ne déclenche aucun rendu**. Dans les tests, `TestBed.tick()` laisse partir la requête d'une ressource ; `await fixture.whenStable()` attend le rendu — mais bloquerait si une requête HTTP était encore en vol.
+- **Nommage** : guide de style 2025 du CLI → les composants sont sans suffixe (`app.ts` → `App`), les autres artefacts portent leur rôle (`*.service.ts`, `*.routes.ts`, `*.interceptor.ts`, `*.model.ts`). Les gabarits de `/scaffold-feature` proposent `*.component.ts` : la convention du workspace prime.
+- **Contrat d'API** : les types de `shared/models/` sont dérivés du C# et portent leurs sources en en-tête. Ne pas les éditer à la main — toute évolution backend passe par `/sync-api-dtos`. Rappel du piège de casse : les **noms de propriétés** sont en `camelCase`, mais les **valeurs d'énumérations** et les **clés du dictionnaire `errors`** restent en `PascalCase`.
+- **Erreurs** : `errorInterceptor` est le seul point qui interprète `ProblemDetails`. Il lève une `ApiError` porteuse d'une nature (`validation`, `business`, `notFound`, `conflict`, `server`, `network`) et d'un `fieldErrors` **converti en `camelCase`** pour correspondre aux contrôles d'un formulaire. Les écrans ne voient jamais de `HttpErrorResponse`. Le `detail` d'une 5xx n'est jamais affiché, seul le `traceId` l'est.
+- **Temps réel** : `TicketHubService` ne se connecte pas au démarrage ; l'appelant décide. Les groupes rejoints sont mémorisés et **restaurés après reconnexion**, le serveur ne les conservant pas. Le hub ne diffuse qu'à l'ouverture d'un incident (Lot 6 pour le reste).
+- **Jeton** : `authTokenInterceptor` et `AuthTokenService` sont en place mais **sans source** — l'API n'a aucune authentification. Le Lot 7 n'aura qu'à alimenter le service.
+- **Design system (Lot 4)** : Tailwind 4, jetons dans `src/styles.css`. Les composants n'ont **aucune feuille de styles** — que des utilitaires — et aucune couleur, taille ou durée n'y est écrite en dur. Les jetons sont déclarés une seule fois via `light-dark()` : ne **jamais** ajouter un bloc de thème sombre parallèle, et repasser `npm run verifier:contrastes` après toute retouche de couleur. La feuille racine est en `.css` et non `.scss` : Tailwind 4 ne passe pas par un préprocesseur.
+- **Champs de formulaire** : approche A — le composant reçoit le `FormControl` en entrée, donc pas d'usage avec `formControlName`. `FormControl` n'étant pas réactif au sens des signaux, les champs passent par `suivreEtatControle()` (`shared/forms/`) : sans lui, un `markAsTouched()` de soumission n'afficherait aucun message en mode zoneless. Charge de la feature : déplacer le focus sur le premier champ invalide à la soumission.
+- **API des composants partagés** : documentée dans [AssetFlowCore.WebUI/src/app/shared/README.md](AssetFlowCore.WebUI/src/app/shared/README.md). Les badges du domaine encapsulent traduction **et** tonalité — ne pas refaire ces correspondances dans un écran.
+- `features/diagnostic/` et `features/design-system/` ne sont pas des écrans produits : ce sont les preuves d'exécution du socle et la page de revue du design system, à retirer quand les écrans du Lot 5 prendront leur place.
+- **Limites de l'environnement de test** : `window.localStorage` n'existe pas (origine opaque) et jsdom ne calcule aucune géométrie — le CDK considère alors tout élément comme non focusable. Les deux se contournent dans les tests concernés (`theme.service.spec.ts`, `modal.spec.ts`), jamais dans le code de production.
+
 ## Tests
 
 xUnit + FluentAssertions + Moq. Les tests unitaires mockent les repositories ; les tests d'intégration utilisent EF InMemory :
@@ -105,6 +145,8 @@ xUnit + FluentAssertions + Moq. Les tests unitaires mockent les repositories ; l
 - [IntegrationTestBase.cs](AssetFlowCore.IntegrationTests/IntegrationTestBase.cs) : `DbContext` InMemory par test (nom de base = `Guid`).
 - [CustomWebApplicationFactory.cs](AssetFlowCore.IntegrationTests/WebApi/CustomWebApplicationFactory.cs) : retire **tous** les descripteurs liés à `AssetFlowDbContext` injectés par Aspire avant de réenregistrer InMemory avec un `internalServiceProvider` dédié. Toucher à l'enregistrement du `DbContext` dans `Program.cs` peut casser ce nettoyage.
 - Les benchmarks substituent `NoOpNotificationService` à SignalR et seedent 9 équipes (3 types d'assets × 3 criticités) dans `BenchmarkBase.SeedReferenceData()`.
+
+Côté frontend : Vitest sur jsdom, primitives globales (`vitest/globals`), `vi` importé explicitement quand un espion est nécessaire. `provideHttpClientTesting()` suit toujours `provideHttpClient()`.
 
 ## CI/CD
 

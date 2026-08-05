@@ -1,0 +1,9 @@
+<section
+  class="flex flex-col gap-3 rounded-lg border border-bordure bg-surface p-4"
+  [attr.role]="ariaLabel() === null ? null : 'group'"
+  [attr.aria-label]="ariaLabel()"
+>
+  <ng-content select="[slot=entete]" />
+  <ng-content />
+  <ng-content select="[slot=actions]" />
+</section>

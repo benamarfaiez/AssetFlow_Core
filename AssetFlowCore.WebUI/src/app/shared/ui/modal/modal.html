@@ -1,0 +1,51 @@
+@if (ouverte()) {
+  <div
+    class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
+    (click)="surClicArrierePlan($event)"
+  >
+    <!--
+      `tabindex="-1"` + `cdkFocusInitial` : le focus se pose sur le panneau lui-même, et non sur
+      son premier bouton. Un lecteur d'écran énonce ainsi le rôle du dialogue, son titre et sa
+      description, au lieu d'annoncer « Fermer, bouton » sans contexte.
+    -->
+    <div
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      cdkTrapFocus
+      cdkFocusInitial
+      [cdkTrapFocusAutoCapture]="true"
+      [class]="classesPanneau()"
+      [attr.aria-labelledby]="idTitre"
+      [attr.aria-describedby]="description() === null ? null : idDescription"
+      (keydown.escape)="fermeture.emit()"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex flex-col gap-1">
+          <h2 [id]="idTitre" class="text-lg font-semibold text-texte">{{ titre() }}</h2>
+
+          @if (description(); as texte) {
+            <p [id]="idDescription" class="text-sm text-texte-discret">{{ texte }}</p>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="flex size-(--cible-tactile) shrink-0 items-center justify-center rounded-md text-texte-discret transition-colors duration-(--duree-rapide) hover:bg-surface-creuse hover:text-texte"
+          [attr.aria-label]="libelleFermeture()"
+          (click)="fermeture.emit()"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="min-w-0">
+        <ng-content />
+      </div>
+
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <ng-content select="[slot=actions]" />
+      </div>
+    </div>
+  </div>
+}

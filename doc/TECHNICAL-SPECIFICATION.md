@@ -181,39 +181,62 @@ dotnet ef database update --project AssetFlowCore.Infrastructure --startup-proje
 
 ---
 
-## 2. Frontend — Socle technique cible 🎯
+## 2. Frontend — Socle technique ✅ (2026-08-05)
 
-### 2.1 Versions relevées sur le poste de référence (2026-08-04)
+### 2.1 Versions installées (workspace créé le 2026-08-05)
 
 | Élément | Version |
 |---|---|
 | Node.js | 26.5.1 |
 | npm | 11.17.0 |
-| Angular (dernière stable) | **22.1.0** |
-| Angular CLI | 22.1.2 |
+| Angular | **22.1.0** |
+| Angular CLI | 22.1.3 |
+| TypeScript | 6.0.x |
 | `ng` dans le `PATH` | **non** → utiliser `npx ng ...` ou les scripts npm |
-| `@ngrx/signals` | stable 21.1.1 (peer `@angular/core ^21.0.0`) · préversion `22.0.0-beta.1` |
-| Client temps réel | `@microsoft/signalr` (à installer) |
+| `@ngrx/signals` | **non installé** — Signals natifs retenus (voir §2.6) |
+| Client temps réel | `@microsoft/signalr` **10.0.11** (installé) |
+| Runner de tests | **Vitest 4.x** (jsdom) |
+| Formatage | Prettier 3.8 (`printWidth` 100, guillemets simples) |
+| Framework CSS | **Tailwind 4.3.3** (+ `@tailwindcss/postcss`) |
+| Accessibilité | **`@angular/cdk` 22.1.1** — piège de focus de la modale |
 
 > ⚠️ **NgRx SignalStore n'a pas de version stable compatible Angular 22.** L'état par défaut repose donc sur les **Signals natifs**. Recourir à SignalStore impose d'accepter une préversion, décision à acter explicitement.
 
-### 2.2 Structure cible
+### 2.2 Structure en place
 
 ```
-AssetFlowCore.WebUI/                    ❓ nom à valider
-├── angular.json · package.json · tsconfig*.json
-├── proxy.conf.json                     proxy de développement vers l'API
+AssetFlowCore.WebUI/                    projet npm « assetflow-webui »
+├── angular.json · package.json · tsconfig*.json · .prettierrc
+├── proxy.conf.json                     /api et /ticketHub → https://localhost:7138
+├── scripts/verifier-dependances.mjs    contrôle des règles de dépendances
 └── src/
     ├── main.ts                         bootstrapApplication(App, appConfig)
-    ├── environments/environment.ts · environment.development.ts
+    ├── environments/                   environment.model.ts · environment.ts · environment.development.ts
     └── app/
         ├── app.ts · app.html · app.config.ts · app.routes.ts
-        ├── core/                        singletons : http/, guards/, api/, realtime/
-        ├── shared/                      ui/, pipes/, directives/, models/
-        └── features/                    assets/, tickets/, teams/ (routes + pages + état)
+        ├── core/
+        │   ├── api/                    assets · tickets · teams (un service par ressource)
+        │   ├── http/                   error.interceptor.ts · auth-token.interceptor.ts
+        │   ├── auth/                   auth-token.service.ts (sans source jusqu'au Lot 7)
+        │   ├── realtime/               ticket-hub.service.ts (/ticketHub)
+        │   └── guards/                 🎯 Lot 7
+        ├── shared/
+        │   ├── models/                 asset · ticket · team · paged-result · problem-details · api-error
+        │   ├── ui/                     18 composants du design system (voir shared/README.md)
+        │   ├── i18n/                   libelles.ts · messages-validation.ts
+        │   ├── pipes/                  libelles.pipe.ts (4 pipes de traduction)
+        │   └── forms/                  etat-controle.ts
+        └── features/
+            ├── diagnostic/             ✅ preuve d'exécution du socle, à retirer au Lot 5
+            ├── design-system/          ✅ page de revue des composants, à retirer au Lot 5
+            └── assets/ · tickets/ · teams/   🎯 Lot 5
 ```
 
-Règles de dépendances : `features/` → `shared/` + `core/` ; `shared/` sans dépendance métier ni réseau ; `core/` sans dépendance à `features/` ; **aucun import croisé entre deux features**.
+Règles de dépendances : `features/` → `shared/` + `core/` ; `shared/` sans dépendance métier ni réseau ; `core/` sans dépendance à `features/` ; **aucun import croisé entre deux features**. Elles ne sont pas seulement conventionnelles : `npm run verifier:dependances` les contrôle et échoue en cas d'écart — pendant frontend de `AssetFlowCore.ArchitectureTests`. Chaque zone porte un `README.md` rappelant ses règles et son propriétaire.
+
+**Nommage des fichiers** : guide de style **2025** du CLI, retenu à la création. Les composants n'ont pas de suffixe (`app.ts` → classe `App`) ; les autres artefacts portent leur rôle (`*.service.ts`, `*.routes.ts`, `*.interceptor.ts`, `*.model.ts`). Les gabarits du skill `/scaffold-feature` proposent `*.component.ts` : la convention du workspace prime, comme le skill le prévoit.
+
+**Identifiants et langue** : commentaires, libellés d'interface et messages destinés à l'utilisateur en **français** ; les identifiants de code restent en anglais, les types du contrat reprenant les noms du C#.
 
 ### 2.3 Conventions imposées
 
@@ -221,7 +244,7 @@ Règles de dépendances : `features/` → `shared/` + `core/` ; `shared/` sans d
 - **`inject()`** pour toute dépendance, y compris services, guards et interceptors ; guards et interceptors **fonctionnels**.
 - **Control Flow natif** : `@if`, `@for` (toujours avec `track`), `@switch`, `@defer`.
 - **API de composant à base de signaux** : `input()`, `input.required()`, `output()`, `model()`, `viewChild()`.
-- **`ChangeDetectionStrategy.OnPush`** partout ; mode *zoneless* à évaluer.
+- **`ChangeDetectionStrategy.OnPush`** partout ; mode **zoneless retenu** (2026-08-05) : `zone.js` est absent des dépendances et aucun polyfill ne le charge, ce qui est le défaut d'Angular 22 et ne demande aucun provider. Conséquence : un état modifié hors d'un signal ne déclenche aucun rendu.
 - État : `signal()`, `computed()`, `linkedSignal()` ; `effect()` réservé aux effets de bord réels (jamais pour dériver de l'état).
 - Données : `httpResource()` / `resource()` / `rxResource()` ; à défaut, abonnement fermé par `takeUntilDestroyed()`.
 - **Formulaires typés** : `NonNullableFormBuilder`, `FormControl<T>`, aucun `any`.
@@ -248,20 +271,34 @@ Les **noms de propriétés** sont en `camelCase`, les **valeurs d'enums** resten
 - `provideHttpClient()` **puis** `provideHttpClientTesting()`.
 - Entrées signaux pilotées par `fixture.componentRef.setInput(...)`.
 - Couverture attendue : validation de formulaire, dérivations, gestion d'erreur, guards, interceptors.
-- ❓ **Runner à décider** : Vitest (voie moderne du CLI) ou Jasmine/Karma (voie historique).
+- **Runner : Vitest** (décision 0.11, 2026-08-05), environnement jsdom. Les primitives sont globales (`vitest/globals` dans `tsconfig.spec.json`) ; `vi` est importé explicitement là où un espion est nécessaire.
+- En mode zoneless, un rendu asynchrone s'attend par `await fixture.whenStable()`. Pour laisser partir la requête d'une ressource (`rxResource`) **avant** de la satisfaire, utiliser `TestBed.tick()` : `whenStable()` attendrait une requête HTTP encore en vol.
+- État au 2026-08-05 : **129 tests** répartis sur 21 fichiers (services d'API, intercepteurs, client temps réel, shell, écran de diagnostic, thème, et les 18 composants du design system).
+- Deux limites de l'environnement de test à connaître, toutes deux contournées explicitement dans les tests concernés : `window.localStorage` n'existe pas (origine opaque) et jsdom **ne calcule aucune géométrie**, ce qui fait considérer tout élément comme non focusable par le CDK.
+- Vérifications hors suite de tests : `npm run verifier:dependances` (règles de zones) et `npm run verifier:contrastes` (38 paires de couleurs dans les deux thèmes).
 
-### 2.6 Décisions ouvertes ❓
+### 2.6 Décisions
+
+| Sujet | Décision | Date |
+|---|---|---|
+| Framework CSS | **Tailwind 4 + `@angular/cdk`** — utilitaires pour le style, CDK pour l'accessibilité ; aucune bibliothèque de composants | 2026-08-05 |
+| Jetons et thèmes | Jetons `--color-*` déclarés **une seule fois** avec `light-dark()` ; `color-scheme: light dark` suit le système, `data-theme` l'emporte dans les deux sens | 2026-08-05 |
+| Composants de formulaire | **Approche A** : le `FormControl` est reçu en entrée (typage complet, `disable()` opérant, aucun contrat implicite de `ControlValueAccessor`) | 2026-08-05 |
+| Feuille de styles racine | En **CSS** et non en SCSS : Tailwind 4 ne prend pas en charge le passage par un préprocesseur. Les composants n'ont aucune feuille de styles | 2026-08-05 |
+| Nom du dossier du workspace | **`AssetFlowCore.WebUI/`**, projet npm `assetflow-webui` (un nom de paquet npm n'admet ni majuscule ni point) | 2026-08-05 |
+| Rendu serveur (SSR) | **sans SSR**, application cliente seule | 2026-08-05 |
+| Runner de tests | **Vitest** | 2026-08-05 |
+| Détection de changement | **zoneless** (défaut d'Angular 22) | 2026-08-05 |
+| Gestion d'état | **Signals natifs** ; `@ngrx/signals` non installé, sa ligne 22 n'existant qu'en préversion | 2026-08-05 |
+| Formatage | **Prettier**, `npm run format:verify` comme futur gate de CI — pendant de `dotnet format` | 2026-08-05 |
+
+**Décisions encore ouvertes ❓**
 
 | Sujet | Options | Enjeu |
 |---|---|---|
-| Nom du dossier du workspace | `AssetFlowCore.WebUI` (nomenclature du dépôt) ou `frontend/` | cohérence, scripts CI |
-| Framework de style | Tailwind · Angular Material · DaisyUI+Tailwind · SCSS maison | vitesse de production, contrôle du rendu, accessibilité fournie |
-| Rendu serveur (SSR) | avec ou sans | complexité de déploiement contre temps d'affichage initial |
-| Gestion d'état | Signals natifs (défaut) ou SignalStore en préversion | dépendance non stable |
-| Runner de tests | Vitest ou Karma | outillage, vitesse |
-| Internationalisation | français seul ou multilingue | les valeurs d'API sont en anglais et doivent être traduites dans tous les cas |
-| Déploiement du frontend | conteneur dédié · servi par l'API · hébergement statique + reverse proxy | contrainte CORS (voir §3) |
-| Intégration à la CI | ajout de jobs `build`/`test` frontend au workflow existant | portail qualité, artefacts |
+| Internationalisation | français seul ou multilingue | les valeurs d'API sont en anglais et doivent être traduites dans tous les cas — c'est fait (`shared/i18n/`), mais sans mécanisme multilingue |
+| Déploiement du frontend (0.13) | conteneur dédié · servi par l'API · hébergement statique + reverse proxy | contrainte CORS (voir §3) |
+| Intégration à la CI (8.1) | ajout de jobs `build`/`test`/`format` frontend au workflow existant | portail qualité, artefacts |
 
 ---
 
@@ -270,10 +307,11 @@ Les **noms de propriétés** sont en `camelCase`, les **valeurs d'enums** resten
 | Sujet | Décision technique |
 |---|---|
 | URL de base | `environment.apiBaseUrl` ; jamais d'URL en dur |
-| Développement | **`proxy.conf.json`** du serveur Angular vers `https://localhost:7138` — évite CORS et le certificat de développement |
+| Développement | **`proxy.conf.json`** du serveur Angular vers `https://localhost:7138` (`/api` et `/ticketHub`, `secure: false`, `ws: true`) — évite CORS et le refus du certificat de développement. Vérifié le 2026-08-05 contre l'API réelle, hub compris |
 | Production | **même origine derrière un reverse proxy** : hors Development, l'API n'applique **aucune** politique CORS, un appel navigateur d'une autre origine échoue |
 | Types | générés depuis le C# (`/sync-api-dtos`), regroupés dans `shared/models/` |
-| Erreurs | intercepteur unique traduisant `ProblemDetails` ; le dictionnaire `errors` est reporté sur les champs de formulaire ; le `detail` d'une 500 n'est **jamais** affiché |
+| Erreurs | intercepteur unique traduisant `ProblemDetails` en `ApiError` (`validation` · `business` · `notFound` · `conflict` · `server` · `network`) ; les clés du dictionnaire `errors` sont converties de `PascalCase` en `camelCase` pour correspondre aux contrôles de formulaire ; le `detail` d'une 5xx n'est **jamais** affiché, seul le `traceId` l'est |
+| Authentification (préparée) | `authTokenInterceptor` + `AuthTokenService` en place mais **sans source de jeton** : le Lot 7 n'aura qu'à alimenter le service. Le jeton n'est joint qu'aux URL de l'API |
 | Codes de statut | ressource absente → **404** ; règle métier refusée → 400 ; création → 201 avec en-tête `Location` ; mise à jour d'équipe → 200 |
 | Listes | seul `GET /api/tickets` est paginé (enveloppe `{ items, page, pageSize, totalCount, totalPages }`) ; l'inventaire et les équipes se filtrent côté client |
 | Temps réel | `@microsoft/signalr` sur `/ticketHub` ; `JoinTeamGroup(nomEquipe)` puis écoute de `ReceiveNewTicket` |
@@ -307,7 +345,9 @@ Constats vérifiés, classés par gravité. Le détail comportemental est dans [
 | **Moyen** | décorateurs d'équipe réécrivant le cache **avant** `SaveChangesAsync` | un échec de persistance laisse une valeur non persistée en cache |
 | **Moyen** | dépôts d'équipe à double chemin selon le fournisseur | production non couverte par les tests |
 | **Mineur** | `TicketStatus.Resolved` jamais atteint · `IDbContextFactory` et `DatabaseOptions` non consommés · `Team.IsActive` exposé mais non pilotable par l'API · motif de transfert concaténé à la description | code mort ou inachevé ; dépend des décisions 0.3, 0.5 et 0.6 |
-| **Mineur** | dérive documentaire (`README.md`, `Benchmarks.md`) | information obsolète |
+| **Mineur** | erreurs renvoyées avec `Content-Type: application/json` alors que [API-Specification.md](API-Specification.md) §3 annonce `application/problem+json` — `WriteAsJsonAsync` écrase le type posé par le middleware (constaté le 2026-08-05 sur l'API réelle) | un client qui filtrerait sur le type de contenu ne reconnaîtrait pas le format ; le frontend ne s'y fie pas |
+| **Mineur** | dérive documentaire (`README.md`, `Benchmarks.md`) — le `README.md` ignore encore le workspace frontend | information obsolète |
+| **Mineur** | contrats d'API recopiés dans `.claude/agents/*.md` et `.claude/skills/sync-api-dtos/SKILL.md`, figés au 2026-08-04 donc antérieurs au Lot 2 | un agent qui s'y fierait régénérerait des types faux ; le code `.cs` reste la source de vérité |
 | **Mineur** | dépendance implicite au SDK de l'exécuteur CI pour `.slnx` | build fragile |
 
 ### 5.1 Dette résorbée par le Lot 2 (2026-08-05)

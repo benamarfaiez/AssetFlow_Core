@@ -1,0 +1,24 @@
+<div class="flex flex-col gap-1.5">
+  <div class="flex items-start gap-2">
+    <input
+      [id]="id"
+      type="checkbox"
+      class="mt-0.5 size-5 shrink-0 rounded border-bordure-controle text-primaire disabled:cursor-not-allowed disabled:opacity-60"
+      [formControl]="controle()"
+      [attr.aria-invalid]="afficherErreur() ? 'true' : null"
+      [attr.aria-describedby]="decritPar()"
+    />
+
+    <label [for]="id" class="flex min-h-(--cible-tactile) items-center text-sm text-texte">
+      {{ label() }}
+    </label>
+  </div>
+
+  @if (aide(); as texte) {
+    <p [id]="idAide" class="text-sm text-texte-discret">{{ texte }}</p>
+  }
+
+  @if (messageErreur(); as message) {
+    <p [id]="idErreur" class="text-sm font-medium text-danger-contenu">{{ message }}</p>
+  }
+</div>

@@ -83,7 +83,9 @@ Documentation de référence de l'API HTTP exposée par `AssetFlowCore.WebApi`, 
 
 ## 3. Gestion des erreurs
 
-Toutes les erreurs sont produites par un middleware unique (`ExceptionHandlingMiddleware`) au format **ProblemDetails (RFC 7807)**, avec `Content-Type: application/problem+json`.
+Toutes les erreurs sont produites par un middleware unique (`ExceptionHandlingMiddleware`) au format **ProblemDetails (RFC 7807)**.
+
+> ⚠️ **Écart constaté le 2026-08-05** sur l'API en exécution : les réponses d'erreur portent `Content-Type: application/json`, et non `application/problem+json`. Le middleware pose bien ce dernier, mais `WriteAsJsonAsync` le réécrit ensuite. Un client ne doit donc **pas** filtrer sur le type de contenu pour reconnaître le format. À corriger côté code (positionner le type après l'écriture, ou écrire la réponse autrement) ou à acter ici.
 
 | Exception levée | Code | `title` |
 |---|---|---|

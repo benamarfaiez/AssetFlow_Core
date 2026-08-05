@@ -1,0 +1,27 @@
+<nav [attr.aria-label]="ariaLabel()">
+  <ol class="flex flex-wrap items-center gap-1 text-sm">
+    @for (etape of etapes(); track etape.libelle; let index = $index) {
+      <li class="flex items-center gap-1">
+        @if (index > 0) {
+          <span class="text-texte-discret" aria-hidden="true">/</span>
+        }
+
+        @if (etape.lien && index !== derniereEtape()) {
+          <a
+            [routerLink]="etape.lien"
+            class="rounded px-1 py-0.5 text-primaire underline underline-offset-2 hover:bg-surface-creuse"
+          >
+            {{ etape.libelle }}
+          </a>
+        } @else {
+          <span
+            class="px-1 py-0.5 font-medium text-texte"
+            [attr.aria-current]="index === derniereEtape() ? 'page' : null"
+          >
+            {{ etape.libelle }}
+          </span>
+        }
+      </li>
+    }
+  </ol>
+</nav>

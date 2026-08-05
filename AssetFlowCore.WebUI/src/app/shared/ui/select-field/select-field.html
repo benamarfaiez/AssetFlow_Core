@@ -1,0 +1,35 @@
+<div class="flex flex-col gap-1.5">
+  <label [for]="id" class="text-sm font-medium text-texte">
+    {{ label() }}
+    @if (requis()) {
+      <span class="text-danger-contenu" aria-hidden="true">*</span>
+      <span class="sr-only">(obligatoire)</span>
+    }
+  </label>
+
+  <select
+    [id]="id"
+    [class]="classesChamp()"
+    [formControl]="controle()"
+    [required]="requis()"
+    [attr.aria-invalid]="afficherErreur() ? 'true' : null"
+    [attr.aria-describedby]="decritPar()"
+  >
+    @if (libelleVide(); as vide) {
+      <option value="">{{ vide }}</option>
+    }
+    @for (option of options(); track option.valeur) {
+      <option [value]="option.valeur" [disabled]="option.desactivee ?? false">
+        {{ option.libelle }}
+      </option>
+    }
+  </select>
+
+  @if (aide(); as texte) {
+    <p [id]="idAide" class="text-sm text-texte-discret">{{ texte }}</p>
+  }
+
+  @if (messageErreur(); as message) {
+    <p [id]="idErreur" class="text-sm font-medium text-danger-contenu">{{ message }}</p>
+  }
+</div>

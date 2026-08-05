@@ -1,0 +1,52 @@
+import { AssetStatus, AssetType } from '../models/asset.model';
+import { TicketCriticality, TicketStatus } from '../models/ticket.model';
+
+/*
+ * Traduction des valeurs d'énumérations de l'API.
+ *
+ * L'API transporte ces valeurs **en anglais** (`InService`, `NetworkDevice`, `High`) : aucune
+ * ne doit s'afficher telle quelle (exigence `ENF-22`). Les tables sont typées
+ * `Record<Union, string>` et donc **exhaustives par construction** : si le contrat gagne une
+ * valeur d'énumération, la compilation échoue ici tant qu'elle n'est pas traduite — c'est
+ * exactement le rappel que l'on veut, plutôt qu'un libellé manquant découvert à l'écran.
+ */
+
+/** Libellés des types d'actifs. */
+export const LIBELLES_ASSET_TYPE: Readonly<Record<AssetType, string>> = {
+  Server: 'Serveur',
+  Laptop: 'Ordinateur portable',
+  NetworkDevice: 'Équipement réseau',
+};
+
+/** Libellés des états d'un actif. */
+export const LIBELLES_ASSET_STATUS: Readonly<Record<AssetStatus, string>> = {
+  InService: 'En service',
+  Down: 'En panne',
+  InMaintenance: 'En maintenance',
+  Decommissioned: 'Mis au rebut',
+};
+
+/** Libellés des états d'un incident. */
+export const LIBELLES_TICKET_STATUS: Readonly<Record<TicketStatus, string>> = {
+  Opened: 'Ouvert',
+  InProgress: 'En cours',
+  Resolved: 'Résolu',
+  Closed: 'Clôturé',
+};
+
+/** Libellés des niveaux de criticité d'un incident. */
+export const LIBELLES_TICKET_CRITICALITY: Readonly<Record<TicketCriticality, string>> = {
+  Low: 'Faible',
+  Medium: 'Moyenne',
+  High: 'Haute',
+};
+
+/**
+ * Traduit une valeur, en se rabattant sur la valeur brute si la table ne la connaît pas.
+ *
+ * Le repli ne devrait jamais servir — les tables sont exhaustives — mais il évite qu'un
+ * `undefined` s'affiche si l'API renvoyait une valeur inconnue du contrat compilé.
+ */
+export function traduire<T extends string>(table: Readonly<Record<T, string>>, valeur: T): string {
+  return table[valeur] ?? valeur;
+}

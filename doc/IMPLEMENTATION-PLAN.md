@@ -17,7 +17,7 @@ Documents de référence : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) (e
 | Backend | ✅ fonctionnel : 15 endpoints, 216 tests unitaires verts, tests d'architecture et d'intégration, benchmarks, CI/CD complète, déploiement conteneurisé ; **Lots 1 et 2 appliqués** |
 | Contrat d'API | ✅ complété : listes d'incidents (paginée) et d'équipes, fiche d'actif, DTOs enrichis, 404 pour les ressources absentes, `Location` sur les créations |
 | Sécurité | ⛔ aucune authentification ni autorisation |
-| Frontend | ⛔ inexistant (aucun `angular.json`) |
+| Frontend | ✅ socle **et** design system en place : workspace Angular 22 `AssetFlowCore.WebUI` (standalone, Signals, zoneless, Vitest, Tailwind 4), types du contrat, 3 services d'API, intercepteurs, client SignalR, 18 composants partagés, thème clair/sombre, 129 tests verts ; **Lots 3 et 4 appliqués**. Aucun écran produit (`E-01`→`E-09` au Lot 5) |
 | Assistance IA | 🟡 mécanisme complet mais corpus vectoriel vide et état non exposé |
 | Documentation | ✅ produit, fonctionnel, technique, architecture, contrat d'API |
 | Outillage Claude Code | ✅ 6 agents, 3 skills |
@@ -41,9 +41,9 @@ Documents de référence : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) (e
 ```mermaid
 flowchart LR
     L0["Lot 0<br/>Décisions ❓"] --> L1["Lot 1 ✅<br/>Corrections backend"]
-    L0 --> L3["Lot 3<br/>Fondation frontend"]
+    L0 --> L3["Lot 3 ✅<br/>Fondation frontend"]
     L1 --> L2["Lot 2 ✅<br/>Complétion du contrat"]
-    L3 --> L4["Lot 4<br/>Design system"]
+    L3 --> L4["Lot 4 ✅<br/>Design system"]
     L2 --> L5["Lot 5<br/>Fonctionnalités"]
     L4 --> L5
     L5 --> L6["Lot 6<br/>Temps réel et IA"]
@@ -69,10 +69,10 @@ flowchart LR
 | 0.5 | Historisation séparée du motif de transfert | `RM-21`, contrat des incidents | S |
 | 0.6 | Désactivation d'équipe en remplacement de la suppression | `EF-28` | S |
 | 0.7 | Indexation des incidents clôturés dans la base vectorielle | Lot 6, valeur de l'IA | M |
-| 0.8 | Nom du dossier du workspace frontend (`AssetFlowCore.WebUI` proposé) | Lot 3 | S |
-| 0.9 | Framework CSS (Tailwind · Material · DaisyUI+Tailwind · SCSS) | Lot 4 | M |
-| 0.10 | Rendu serveur (SSR) ou application cliente seule | Lot 3, Lot 8 | M |
-| 0.11 | Runner de tests frontend (Vitest ou Karma) | Lot 3 | S |
+| ~~0.8~~ | ~~Nom du dossier du workspace frontend~~ — **tranchée le 2026-08-05** : dossier `AssetFlowCore.WebUI/`, projet npm `assetflow-webui` (les majuscules et le point sont interdits dans un nom de paquet npm, d'où la dissociation) | Lot 3 | S |
+| ~~0.9~~ | ~~Framework CSS~~ — **tranchée le 2026-08-05** : **Tailwind 4 + `@angular/cdk`** (utilitaires pour le style, CDK pour l'accessibilité). Motif : contrôle total du rendu et jetons en variables CSS, là où Material imposerait son apparence et une thématisation par mixins ; les composants réellement demandés (table basculant en cartes, badges métier, message vide) n'existent de toute façon dans aucune bibliothèque | Lot 4 | M |
+| ~~0.10~~ | ~~Rendu serveur (SSR) ou application cliente seule~~ — **tranchée le 2026-08-05** : **application cliente seule**, pas de SSR (back-office interne destiné à passer derrière authentification, aucun enjeu de référencement ni de premier affichage public ; déploiement statique aligné sur la contrainte de même origine) | Lot 3, Lot 8 | M |
+| ~~0.11~~ | ~~Runner de tests frontend~~ — **tranchée le 2026-08-05** : **Vitest** (voie moderne du CLI, aucun navigateur à piloter en CI, couverture lcov directement exploitable par SonarCloud) | Lot 3 | S |
 | 0.12 | Stratégie d'état (Signals natifs — défaut — ou SignalStore en préversion) | Lot 5 | S |
 | 0.13 | Mode de déploiement du frontend (conteneur dédié, servi par l'API, statique + reverse proxy) | Lot 8, contrainte CORS | M |
 | ~~0.14~~ | ~~Périmètre de la pagination et du filtrage serveur des listes~~ — **tranchée le 2026-08-05** : enveloppe JSON paginée sur `GET /api/tickets` (filtres état, criticité, équipe, actif ; tri ; taille de page ≤ 100) ; inventaire et équipes servis en intégralité | Lot 2 | M |
@@ -141,74 +141,105 @@ flowchart LR
 | 2.9 ⛔ | Décisions 0.3, 0.5, 0.6 appliquées si retenues (statut `Resolved`, motif de transfert isolé, désactivation d'équipe) | `EF-17`, `EF-28` | M |
 | 2.10 ✅ | **Relecture** | session principale (aucun agent sollicité) | S |
 | 2.11 ✅ | **Mise à jour du contrat documenté** — [API-Specification.md](API-Specification.md) intégralement | S |
-| 2.12 ⛔ | **Resynchronisation des types frontend** | skill **`/sync-api-dtos`** sur chaque controller modifié | S |
+| 2.12 ✅ | **Resynchronisation des types frontend** — réalisée au Lot 3, étape 3.6, une fois le workspace créé | conventions du skill **`/sync-api-dtos`** appliquées aux 3 controllers | S |
 
 **Critères d'acceptation du lot**
 
 - ✅ Chaque nouvel endpoint est couvert par un test d'intégration (cas nominal + cas d'erreur) et documenté dans [API-Specification.md](API-Specification.md).
 - ✅ La pagination expose le nombre total d'éléments (`totalCount`), indépendant de la page reçue.
 - ✅ Les ressources introuvables renvoient 404 sur **tous** les endpoints à identifiant, sans exception résiduelle.
-- ⛔ Le skill `/sync-api-dtos` ne peut pas s'exécuter : il s'arrête de lui-même en l'absence d'`angular.json` (Lot 3 non démarré).
+- ✅ Les types frontend du contrat sont générés (Lot 3, étape 3.6) : `shared/models/` couvre les 3 ressources, l'enveloppe de pagination et `ProblemDetails`.
 - ✅ Les écrans `E-05`, `E-06`, `E-07` sont déclarés réalisables dans [PRODUCT-SPECIFICATIONS.md](PRODUCT-SPECIFICATIONS.md) §7 ; `E-08` reste dégradé, la fin d'analyse IA n'étant pas notifiée (Lot 6, étape 6.4).
 
 **Écarts assumés du lot**
 
 - **2.9 reportée** : les décisions 0.3, 0.5 et 0.6 n'étant pas tranchées, le statut `Resolved` reste inatteignable, le motif de transfert reste concaténé à la description et aucune équipe ne peut être désactivée par l'API. Le filtre `onlyActive` et le champ `isActive` sont néanmoins en place pour accueillir la décision 0.6.
-- **2.12 impossible** : aucun workspace Angular n'existe encore. À exécuter au Lot 3, étape 3.6.
+- **2.12 reportée puis levée** : aucun workspace Angular n'existait à la clôture du Lot 2 ; la synchronisation a été réalisée au Lot 3, étape 3.6.
 - Pagination livrée sur `GET /api/tickets` uniquement ; l'inventaire et les équipes restent des collections complètes, leur volume ne le justifiant pas.
 
 ---
 
-## 6. Lot 3 — Fondation frontend 🎯 (parallélisable avec les lots 1 et 2)
+## 6. Lot 3 — Fondation frontend ✅ (2026-08-05)
 
 **Objectif** : un workspace Angular 22 qui compile, se teste et appelle l'API en développement.
 
+**Décisions appliquées** : 0.8 → dossier `AssetFlowCore.WebUI/` (projet npm `assetflow-webui`) · 0.10 → application cliente seule · 0.11 → Vitest · mode **zoneless** retenu (défaut d'Angular 22, `zone.js` absent des dépendances), ce qui lève le « à évaluer » de [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md) §2.3.
+
 | # | Étape | Réalisation | Vérification | Charge |
 |---|---|---|---|---|
-| 3.1 | Créer le workspace (`npx ng new`, nom retenu en 0.8, SSR selon 0.10, runner selon 0.11) | agent **`angular-architect`** | `npx ng build` et `npx ng test --watch=false` verts | M |
-| 3.2 | Mettre en place l'arborescence `core/` · `shared/` · `features/` et les règles de dépendances | agent **`angular-architect`** | arborescence conforme à [ARCHITECTURE.md](ARCHITECTURE.md) §3.1 | S |
-| 3.3 | Configurer `app.config.ts` : `provideRouter`, `provideHttpClient(withFetch(), withInterceptors([...]))`, options de détection de changement | agent **`angular-architect`** | démarrage sans erreur de console | S |
-| 3.4 | Environnements (`environment.ts`, `environment.development.ts`) avec `apiBaseUrl` | agent **`angular-architect`** | valeur consommée, aucune URL en dur | S |
-| 3.5 | `proxy.conf.json` vers `https://localhost:7138` et script npm de démarrage associé | agent **`angular-architect`** | appel réel à `GET /api/assets` depuis l'application, sans erreur CORS ni certificat | S |
-| 3.6 | Générer les modèles de contrat et les services d'API des 3 ressources | skill **`/sync-api-dtos`** par controller | types conformes, service documenté par JSDoc | M |
-| 3.7 | Intercepteur d'erreurs `ProblemDetails` (400 avec `errors`, 409, 500) et modèle d'erreur partagé | agent **`dotnet-api-bridge`** | tests avec `provideHttpClientTesting()` sur les trois cas | M |
-| 3.8 | Squelette d'interceptor de jeton (inactif jusqu'au Lot 7) | agent **`dotnet-api-bridge`** | présent, testé, sans effet en l'absence de jeton | S |
-| 3.9 | Client temps réel typé (`@microsoft/signalr`) sur `/ticketHub` | agent **`dotnet-api-bridge`** | connexion établie, événement `ReceiveNewTicket` reçu | M |
-| 3.10 | **Relecture** | agent **`angular-code-reviewer`** | verdict « mergeable » | S |
+| 3.1 ✅ | Créer le workspace (Angular 22.1.0, CLI 22.1.3, standalone, sans SSR, Vitest, zoneless, SCSS) | session principale | `npx ng build` et `npx ng test --watch=false` verts | M |
+| 3.2 ✅ | Arborescence `core/` · `shared/` · `features/` et règles de dépendances | session principale | conforme à [ARCHITECTURE.md](ARCHITECTURE.md) §3.1 · règles **vérifiées mécaniquement** par `npm run verifier:dependances` | S |
+| 3.3 ✅ | `app.config.ts` : `provideRouter` (+ `withComponentInputBinding`), `provideHttpClient(withFetch(), withInterceptors([...]))`, détection de changement zoneless | session principale | application servie et interrogée sans erreur ; console navigateur **non relevée** (voir écarts) | S |
+| 3.4 ✅ | Environnements `environment.ts` / `environment.development.ts` (+ `environment.model.ts` qui interdit la divergence des clés), `fileReplacements` dans `angular.json` | session principale | `apiBaseUrl` consommé par les 3 services et le client SignalR, aucune URL en dur | S |
+| 3.5 ✅ | `proxy.conf.json` vers `https://localhost:7138` (`/api` et `/ticketHub`, `secure: false`, `ws: true`), branché sur la cible `serve` | session principale | appel réel traversant le proxy jusqu'à la **vraie API** : 400 de validation et 500 authentiques, sans erreur CORS ni refus de certificat. Succès sur données réelles **non vérifié** (voir écarts) | S |
+| 3.6 ✅ | Modèles de contrat et services d'API des 3 ressources | conventions du skill **`/sync-api-dtos`**, contrat relu dans le C# (post-Lot 2) | types conformes, JSDoc par méthode (verbe, route, code de succès réel, erreurs, fichier C# d'origine) | M |
+| 3.7 ✅ | Intercepteur d'erreurs `ProblemDetails` et modèle d'erreur partagé `ApiError` (`validation`, `business`, `notFound`, `conflict`, `server`, `network`) | session principale | 9 tests avec `provideHttpClientTesting()` : 400 avec `errors`, 400 métier, 404, 409, 500, absence de réponse, corps non JSON | M |
+| 3.8 ✅ | Squelette d'intercepteur de jeton + `AuthTokenService` sans source | session principale | 4 tests : sans effet sans jeton, en-tête posé dès qu'un jeton existe, jamais hors de l'API | S |
+| 3.9 ✅ | Client temps réel typé (`@microsoft/signalr` 10.0.11) sur `/ticketHub`, état en signal, restauration des groupes après reconnexion | session principale | 9 tests sur double de connexion · connexion réelle établie à travers le proxy et `JoinTeamGroup` accepté par le hub | M |
+| 3.10 ✅ | **Relecture** | session principale (aucun agent sollicité) | `prettier --check` sans écart · 47 tests verts · règles de dépendances vérifiées | S |
 
 **Critères d'acceptation du lot**
 
-- `npx ng build` et `npx ng test --watch=false` verts, sortie de commande fournie.
-- Aucun `NgModule`, aucune injection par constructeur, aucun `any` dans le code produit.
-- Un appel réel à l'API aboutit depuis l'application en développement.
-- Une erreur 400 de l'API produit un objet d'erreur exploitable par un formulaire (dictionnaire `errors` accessible).
-- `shared/models/` contient les types dérivés du C#, avec en-tête indiquant la source.
+- ✅ `npx ng build` et `npx ng test --watch=false` verts (8 fichiers, **47 tests**), sortie de commande fournie.
+- ✅ Aucun `NgModule`, aucune injection par constructeur, aucun `any`, aucun `*ngIf`/`*ngFor` ; `OnPush` sur chaque composant.
+- 🟡 Un appel réel à l'API aboutit depuis l'application : la chaîne complète (serveur de développement → proxy → API réelle → intercepteur) est vérifiée, mais **aucune réponse 200 sur données réelles** n'a pu l'être, faute de base de données sur le poste (voir écarts).
+- ✅ Une erreur 400 produit un objet exploitable par un formulaire : `ApiError.fieldErrors` convertit les clés `PascalCase` du backend en `camelCase`, vérifié sur une réponse **réelle** (`PageSize`, `Status`, `SortBy`).
+- ✅ `shared/models/` contient les types dérivés du C#, chaque fichier portant ses sources et sa commande de resynchronisation.
+
+**Écarts assumés du lot**
+
+- **Aucune réponse 200 sur données réelles.** Le poste n'a ni Docker (donc pas d'orchestration Aspire) ni instance SQL Server exploitable : LocalDB est installé mais son processus SQL refuse de démarrer. L'API a donc été lancée avec une base injoignable. Sont vérifiés sur la **vraie API** à travers le proxy : `/alive` (200), `GET /api/assets` (500 authentique, `traceId` inclus), `GET /api/tickets` avec paramètres invalides (400 avec dictionnaire `errors` réel), négociation et connexion `/ticketHub` avec `JoinTeamGroup` accepté. Reste à confirmer sur une base amorcée (étape 8.6).
+- **Console du navigateur non relevée** (vérification annoncée en 3.3) : aucun outil de pilotage de navigateur n'était disponible dans la session. Le rendu et les quatre états sont couverts par les tests de composant (jsdom), et l'application a été servie et interrogée sans erreur côté serveur de développement.
+- **Un écran hors périmètre produit** : `features/diagnostic/` existe pour prouver la chaîne complète, exigence du critère d'acceptation. Ce n'est aucun des écrans `E-01`→`E-09` ; il doit être supprimé et sa route racine réaffectée à l'inventaire au Lot 5.
+- **Aucun agent sollicité** : le lot a été réalisé en session principale, les définitions d'agents servant de référentiel de conventions. Les contrats d'API qu'elles contiennent sont **antérieurs au Lot 2** et ont été ignorés au profit du code C# ; ils gagneraient à être mis à jour (voir §13).
+- **Écart de format d'erreur relevé sur l'API** : les réponses d'erreur sortent avec `Content-Type: application/json`, non `application/problem+json` comme l'annonce [API-Specification.md](API-Specification.md) §3 — `WriteAsJsonAsync` écrase le type posé par le middleware. Sans effet sur le frontend (l'intercepteur ne filtre pas sur le type de contenu), mais à corriger côté code ou côté documentation.
+- **Framework CSS non installé** (décision 0.9 en attente) : le workspace est en SCSS nu, sans jeton de design ni habillage. C'est le périmètre du Lot 4 ; l'écran de diagnostic est donc sans style.
 
 ---
 
-## 7. Lot 4 — Design system 🎯 (dépend de 0.9, parallélisable avec le Lot 2)
+## 7. Lot 4 — Design system ✅ (2026-08-05)
 
 **Objectif** : les briques visuelles nécessaires aux écrans, accessibles et cohérentes.
 
-| # | Étape | Réalisation | Charge |
-|---|---|---|---|
-| 4.1 | Installer et configurer le framework CSS retenu (0.9), après vérification des peer dependencies avec Angular 22 | agent **`ui-ux-designer`** | M |
-| 4.2 | Définir les **jetons de design** (couleurs, typographie, espacements, rayons, durées) et le fichier de styles racine | agent **`ui-ux-designer`** | M |
-| 4.3 | Mettre en place le **thème clair/sombre** : `prefers-color-scheme` **plus** bascule explicite prioritaire dans les deux sens | agent **`ui-ux-designer`** | M |
-| 4.4 | Composants de base : bouton, champ de saisie, sélecteur, zone de texte, case à cocher | skill **`/scaffold-ui`** puis agent **`ui-ux-designer`** | L |
-| 4.5 | Composants de structure : carte, table responsive (bascule en cartes sous seuil), modale avec piège et restitution du focus, fil d'ariane | skill **`/scaffold-ui`** puis agent **`ui-ux-designer`** | L |
-| 4.6 | Composants d'état : badge d'état et de criticité (couleur **plus** libellé), indicateur de chargement, message vide, message d'erreur, notification | skill **`/scaffold-ui`** puis agent **`ui-ux-designer`** | M |
-| 4.7 | Traduction française des valeurs d'énumérations de l'API (pipe ou table de correspondance dans `shared/`) | agent **`ui-ux-designer`** | S |
-| 4.8 | **Relecture** | agent **`angular-code-reviewer`** | S |
+**Décision appliquée** : 0.9 → **Tailwind 4.3.3 + `@angular/cdk` 22.1.1**. Compatibilités vérifiées avant installation (`@angular/material` 22.1.1 aurait aussi convenu ; DaisyUI 5 écarté, il n'apporte que du style et suit les majeures de Tailwind).
+
+| # | Étape | Réalisation | Vérification | Charge |
+|---|---|---|---|---|
+| 4.1 ✅ | Tailwind 4 + `@angular/cdk` installés et configurés (`.postcssrc.json`, feuille racine en **CSS** — Tailwind 4 ne passe pas par un préprocesseur) | session principale | `ng build` vert ; CSS émis inspecté (jetons, bascule de thème et durées arbitraires bien présents) | M |
+| 4.2 ✅ | Jetons de design : 23 jetons de couleur sémantiques, durées, cible tactile. Déclarés **une seule fois** avec leurs deux valeurs via `light-dark()` — aucun bloc de thème sombre à maintenir en parallèle | session principale | `npm run verifier:contrastes` : **38 paires** calculées dans les deux thèmes | M |
+| 4.3 ✅ | Thème clair/sombre : `color-scheme: light dark` suit le système, `data-theme` l'emporte **dans les deux sens** ; `ThemeService` (`core/theme`) + `app-theme-toggle` présentationnel, jonction dans le shell | session principale | 8 tests, dont le forçage dans les deux sens et le stockage refusé (navigation privée) | M |
+| 4.4 ✅ | Bouton, champ de saisie, sélecteur, zone de texte, case à cocher — **approche A** (`FormControl` en entrée) | conventions du skill **`/scaffold-ui`** | 28 tests : libellé associé, erreur seulement après interaction, `aria-invalid` + `aria-describedby`, état désactivé, compteur de caractères | L |
+| 4.5 ✅ | Carte, table responsive (table ≥ `md`, cartes en dessous, bascule par CSS donc suivant aussi le zoom), modale (piège et **restitution** du focus par `cdkTrapFocus`, Échap, verrou de défilement), fil d'Ariane | session principale | 24 tests, dont le focus rendu au déclencheur et l'absence de double annonce | L |
+| 4.6 ✅ | Badge générique + badges d'état d'actif, d'état d'incident et de criticité (couleur **et** libellé), indicateur de chargement, message vide, message d'erreur, région de notifications `aria-live` | session principale | 17 tests, dont la couverture de **toutes** les valeurs d'énumérations du contrat | M |
+| 4.7 ✅ | Libellés français des 4 énumérations (`Record<Union, string>`, exhaustif par construction) + 4 pipes purs + messages de validation par défaut | session principale | 6 tests, dont l'absence de valeur laissée en anglais | S |
+| 4.8 ✅ | **Relecture**, liste de contrôle d'accessibilité, documentation | session principale (aucun agent sollicité) | `ng build` · **129 tests** · `prettier --check` · règles de dépendances · contrastes | S |
 
 **Critères d'acceptation du lot**
 
-- Chaque composant passe la **liste de contrôle en 5 points** du skill `/scaffold-ui` : utilisable au clavier seul, nom accessible sur chaque contrôle, focus visible et prévisible, information non portée par la seule couleur, aucune dépendance à `core/` ou `features/`.
-- Contraste vérifié **dans les deux thèmes** (≥ 4,5:1 texte, ≥ 3:1 éléments d'interface).
-- Rendu correct de **320 px** de large et à **200 % de zoom**, sans débordement horizontal.
-- Composants de formulaire compatibles `ReactiveFormsModule` : approche A (contrôle en entrée) ou B (`ControlValueAccessor` complet, `setDisabledState` inclus).
-- Aucune couleur, taille ou durée codée en dur hors jetons ; aucun `!important`, aucun `::ng-deep` non justifié.
-- API publique de chaque composant documentée (entrées, sorties, valeurs par défaut).
+- ✅ Liste de contrôle en 5 points passée composant par composant (voir §7.1).
+- ✅ Contraste vérifié **par calcul** dans les deux thèmes : 38 paires, marge la plus faible à 4,55:1 pour un seuil de 3:1. Reproductible par `npm run verifier:contrastes`, qui lit les jetons dans `styles.css` — une couleur modifiée sans repasser la vérification fait échouer la commande.
+- 🟡 Rendu à **320 px** et à **200 % de zoom** : construit pour (styles mobile-first, `clamp` inutile car typographie relative, table basculant en cartes, cibles ≥ 44 px) mais **non observé** — aucun navigateur pilotable dans la session. La page `/design-system` existe pour que cette vérification se fasse en un coup d'œil.
+- ✅ Formulaires compatibles `ReactiveFormsModule` par **approche A** (contrôle en entrée), retenue pour son typage complet et l'absence de contrat implicite.
+- ✅ Aucune couleur, taille ni durée codée en dur hors jetons ; aucun `!important` hors la neutralisation d'animations sous `prefers-reduced-motion` ; aucun `::ng-deep`.
+- ✅ API publique documentée composant par composant dans [src/app/shared/README.md](../AssetFlowCore.WebUI/src/app/shared/README.md).
+
+### 7.1 Liste de contrôle d'accessibilité — résultat
+
+| Point | Constat |
+|---|---|
+| Utilisable au clavier seul | Tous les contrôles sont **natifs** (`button`, `input`, `select`, `textarea`, `input[type=radio]`, `a`) : navigation, activation et navigation par flèches sont celles du navigateur. Aucun `tabindex` positif. La zone de défilement de la table est focusable (`tabindex="0"`). |
+| Nom accessible sur chaque contrôle | `for`/`id` sur les cinq champs ; `aria-label` sur les boutons sans libellé visible (fermeture de modale, rejet de notification) ; `legend` sur le groupe de thème ; `caption` sur la table. |
+| Focus visible et prévisible | Anneau `:focus-visible` global sur jeton dédié, jamais supprimé. Modale : focus déplacé sur le panneau à l'ouverture, piégé, **rendu au déclencheur** à la fermeture (test à l'appui). |
+| Information non portée par la couleur | Chaque badge impose un libellé (`libelle` obligatoire) ; les champs en erreur portent `aria-invalid` **et** un message ; l'indicateur de chargement porte un libellé lu. |
+| Aucune dépendance à `core/` ni `features/` | Vérifié par commande. Un seul écart, assumé et documenté : `RouterLink` dans le fil d'Ariane, indispensable à de vraies ancres. |
+
+**Écarts assumés du lot**
+
+- **Rendu visuel non observé** (320 px, 200 % de zoom, contraste perçu, ordre de tabulation réel) : aucun outil de pilotage de navigateur n'était disponible. Ces points sont construits et calculés, non vus. La page `/design-system` rassemble tous les composants pour cette revue.
+- **Une page hors périmètre produit** : `features/design-system/` sert la revue visuelle exigée par les critères. Comme `features/diagnostic/`, elle doit être retirée au Lot 5.
+- **Défaut corrigé dans l'outillage du Lot 3** : `verifier-dependances.mjs` signalait `@angular/core/testing` comme une violation (le motif `/core/` capturait le nom du paquet). Le contrôle ne porte désormais que sur les imports relatifs, et son pouvoir de détection a été revérifié sur une violation délibérée.
+- **Télémétrie du CLI désactivée** : `ng new` avait inscrit un identifiant `analytics` dans `angular.json`, committé au Lot 3 sans être remarqué. Remis à `false` ; `ng analytics enable` la réactive.
+- **Aucun agent sollicité** : lot réalisé en session principale, les définitions d'agents et de skills servant de référentiel de conventions.
 
 ---
 
@@ -418,6 +449,7 @@ flowchart TB
 4. **Une décision structurante ne se prend pas dans un agent** : `angular-architect` et `ui-ux-designer` présentent les options (0.9 à 0.13) mais n'installent rien sans validation.
 5. **Toute évolution de contrat déclenche `/sync-api-dtos`** avant la reprise du code d'écran, sinon la dérive se propage silencieusement.
 6. **Redémarrage requis** après ajout ou modification d'un agent ou d'un skill : les définitions sont chargées au démarrage de la session.
+7. **Le code C# prime sur les contrats recopiés dans les définitions.** `angular-architect`, `dotnet-api-bridge` et le skill `/sync-api-dtos` embarquent un relevé du contrat daté du 2026-08-04, donc **antérieur au Lot 2** : il ignore `GET /api/tickets`, `GET /api/teams`, `GET /api/assets/{id}`, les champs ajoutés aux DTOs, le 200 de `PUT /api/teams/{id}` et la sémantique 404. Ces relevés sont à rafraîchir ; en attendant, toute génération part des fichiers `.cs`, comme les définitions le prescrivent elles-mêmes.
 
 ---
 
