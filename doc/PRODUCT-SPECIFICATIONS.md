@@ -58,12 +58,12 @@ stateDiagram-v2
     Down --> InService : clôture du dernier incident actif
     InMaintenance --> InService : clôture du dernier incident actif
     InService --> Decommissioned : mise au rebut
-    Decommissioned --> [*] : état terminal
+    Decommissioned --> InService : remise en service 🎯 (administrateur, motif obligatoire)
 ```
 
-- L'état de l'actif n'est **jamais** saisi : il résulte des opérations sur ses incidents.
+- L'état de l'actif n'est **jamais** saisi : il résulte des opérations sur ses incidents. Seule exception à venir : la remise en service, qui est un geste délibéré d'administrateur.
 - Un actif portant plusieurs incidents reste en panne ou en maintenance tant que le **dernier** incident actif n'est pas clos.
-- `Decommissioned` est terminal : aucun retour en service n'est possible.
+- `Decommissioned` est terminal **dans le code actuel**. Décision produit n°1 du 2026-08-05 : il **cesse de l'être** — une remise en service devient possible, réservée à un rôle d'administrateur, avec motif obligatoire et opération tracée. Motif : le numéro de série d'un actif au rebut reste réservé dans tout le parc, donc un rebut par erreur interdit sinon définitivement de réenregistrer la machine.
 - La mise au rebut est refusée tant qu'un incident est ouvert ou en cours.
 
 ## 3. Cycle de vie d'un incident ✅
@@ -78,9 +78,10 @@ stateDiagram-v2
     Closed --> [*] : état terminal
 ```
 
-- Le transfert **ne modifie pas** l'état de l'incident, seulement son équipe affectée.
+- Le transfert **ne modifie pas** l'état de l'incident, seulement son équipe affectée. Il produira une **entrée d'historique** (équipe d'origine, équipe cible, motif, date) au lieu d'allonger la description (décision produit n°4).
 - Aucune réouverture n'est possible après clôture.
-- Le statut `Resolved` existe dans le modèle mais **n'est jamais atteint** — voir décision ouverte n°3 du [PRD](PRODUCT-REQUIREMENTS.md#8-décisions-produit-attendues-).
+- Le statut `Resolved` existe dans le modèle mais n'est jamais atteint : il est **supprimé** (décision produit n°3 du 2026-08-05, [PRD](PRODUCT-REQUIREMENTS.md) §8). Le cycle à trois états ci-dessus est donc le cycle définitif ; une étape de validation avant clôture exigerait un acteur validateur, que le produit n'a pas.
+- La clôture d'un incident déclenchera son **indexation dans la base vectorielle** (décision produit n°7), condition pour que l'assistance au diagnostic des incidents suivants s'appuie sur des cas comparables.
 
 ## 4. Règles métier
 
@@ -97,6 +98,8 @@ Chaque règle indique le message **exact** produit aujourd'hui, ce qui permet à
 | RM-05 | Le type doit appartenir à la liste des types connus | message technique de conversion | 🟡 message non maîtrisé |
 | RM-06 | Un actif portant des incidents actifs ne peut pas être mis au rebut | `Action interdite : l'actif fait l'objet de N incident(s) en cours de traitement.` | ✅ |
 | RM-07 | La mise au rebut d'un actif inexistant est refusée | `L'actif {id} est introuvable.` | ✅ |
+| RM-28 | Un actif au rebut peut être **remis en service** par un administrateur, avec un motif obligatoire ; l'opération est tracée | à définir | 🎯 décision produit n°1 (2026-08-05) |
+| RM-29 | Le numéro de série d'un actif au rebut **reste réservé** : il ne peut pas être réutilisé par un nouvel enregistrement | `Ce numéro de série constructeur est déjà enregistré dans le parc.` | ✅ comportement actuel, et raison d'être de `RM-28` |
 
 ### 4.2 Incidents
 
@@ -115,7 +118,7 @@ Chaque règle indique le message **exact** produit aujourd'hui, ce qui permet à
 | RM-18 | Un incident clôturé ne peut pas être transféré | `Impossible de transférer un ticket clôturé.` | ✅ |
 | RM-19 | Le transfert vers l'équipe déjà affectée est refusé | `Le ticket est déjà assigné à l'équipe '{nom}'.` | ✅ |
 | RM-20 | L'équipe cible d'un transfert doit exister et être active | `Équipe introuvable.` | ✅ |
-| RM-21 | Le motif de transfert est conservé | — | 🟡 concaténé à la description, non isolé |
+| RM-21 | Le motif de transfert est conservé **dans un historique dédié** : équipe d'origine, équipe cible, motif, date. La description de l'incident reste celle saisie à l'ouverture | — | 🟡 aujourd'hui concaténé à la description, donc destructeur du texte d'origine — historique retenu par la décision produit n°4 (2026-08-05) |
 | RM-22 | Une modification concurrente du même incident est détectée et signalée | `Cette ressource a été mise à jour par un autre utilisateur. Veuillez recharger les données.` | ✅ |
 
 ### 4.3 Équipes
@@ -127,6 +130,8 @@ Chaque règle indique le message **exact** produit aujourd'hui, ce qui permet à
 | RM-25 | Une équipe portant des incidents actifs ne peut pas être supprimée | `Impossible de supprimer le team : des tickets actifs lui sont assignes.` | ✅ |
 | RM-26 | Une équipe portant des incidents clôturés ne peut pas être supprimée non plus | — | 🟡 refus au niveau base, erreur technique (500) |
 | RM-27 | La modification d'une équipe est partielle : les champs non fournis sont conservés | — | ✅ |
+| RM-30 | Une équipe peut être **désactivée** sans être supprimée ; elle cesse alors de recevoir des incidents et disparaît des sélecteurs, sans perdre son historique. La suppression reste possible pour une équipe qu'aucun incident ne référence | à définir | 🎯 décision produit n°5 (2026-08-05) |
+| RM-31 | Désactiver la **dernière** équipe d'un couple (type d'actif, criticité) rend l'ouverture d'incidents impossible pour ce couple (`RM-12`) : l'interface avertit avant de confirmer | à définir | 🎯 conséquence de `RM-30` |
 
 ### 4.4 Routage automatique ✅
 
@@ -137,7 +142,9 @@ Chaque règle indique le message **exact** produit aujourd'hui, ce qui permet à
 | `NetworkDevice` | toutes | équipe active dont (type, criticité) = (`NetworkDevice`, criticité déclarée) |
 | `Server` | toutes | équipe active dont (type, criticité) = (`Server`, criticité déclarée) |
 
-Le référentiel doit donc contenir jusqu'à **9 équipes actives** pour couvrir toutes les combinaisons. L'absence d'une combinaison se traduit par un refus d'ouverture d'incident (RM-12), pas par un repli silencieux.
+Le référentiel doit donc contenir jusqu'à **9 équipes actives** pour couvrir toutes les combinaisons. L'absence d'une combinaison se traduit par un refus d'ouverture d'incident (RM-12), pas par un repli silencieux. Les 9 combinaisons sont amorcées par la migration `SeedReferenceTeams` (Lot 1).
+
+La résolution ne retient que les équipes **actives** : une équipe désactivée (`RM-30`) cesse immédiatement de couvrir sa combinaison, au même titre qu'une équipe absente.
 
 ## 5. Validation des saisies
 
@@ -199,24 +206,36 @@ Tous les champs sont contrôlés (présence, longueurs, appartenance aux listes)
 ### P-05 — Transférer un incident mal routé
 
 1. Depuis un incident non clôturé, le technicien déclenche « Transférer ».
-2. Il choisit l'équipe cible et saisit un motif.
-3. ⛔ **Aucune liste d'équipes n'existe** : le choix se ferait par saisie libre du nom exact, donc par tâtonnement. Parcours **dégradé** jusqu'à l'ajout de l'endpoint de liste.
+2. Il choisit l'équipe cible dans un **sélecteur alimenté par `GET /api/teams?onlyActive=true`** et saisit un motif.
+3. Le transfert est enregistré et **apparaît dans l'historique de routage** de l'incident (`RM-21`), sans altérer la description d'origine. 🟡 tant que la décision produit n°4 n'est pas réalisée, le motif reste ajouté à la description.
 
 ### P-06 — Mettre un équipement au rebut
 
 1. Depuis l'inventaire, le gestionnaire déclenche « Mettre au rebut ».
-2. L'interface **demande confirmation** : l'opération est irréversible.
-3. Si des incidents sont actifs, le refus indique leur nombre et propose de les consulter (⛔ consultation impossible aujourd'hui).
+2. L'interface **demande confirmation** : l'équipement sort du parc actif et son numéro de série reste réservé. La confirmation n'annonce pas une opération irréversible — un administrateur peut le remettre en service (`RM-28`).
+3. Si des incidents sont actifs, le refus indique leur nombre et propose de les consulter, depuis la fiche de l'actif (`GET /api/assets/{id}`, qui renvoie ses incidents).
+
+### P-06 bis — Remettre en service un équipement au rebut 🎯
+
+1. Depuis la fiche d'un actif au rebut, un **administrateur** déclenche « Remettre en service » — l'action est absente pour tout autre profil.
+2. Il saisit un **motif obligatoire** et confirme.
+3. L'actif redevient `InService` et peut de nouveau porter des incidents ; l'opération est tracée.
+
+Dépend de la décision produit n°1 pour l'endpoint et du Lot 7 pour l'habilitation.
 
 ### P-07 — Recevoir une notification d'incident
 
 1. À l'ouverture de l'application, le client temps réel se connecte et s'abonne au groupe de l'équipe de l'utilisateur.
-2. ⛔ **L'équipe de l'utilisateur est inconnue** : il n'y a ni utilisateur ni liste d'équipes. En l'état, l'abonnement suppose un nom d'équipe saisi ou configuré manuellement.
+2. ⛔ **L'équipe de l'utilisateur reste inconnue** : il n'y a pas de notion d'utilisateur. La liste des équipes existe désormais, mais rien ne rattache une personne à l'une d'elles — le rattachement vient du Lot 7. En l'état, l'abonnement suppose un nom d'équipe choisi manuellement dans la liste.
 3. À réception, l'interface affiche une notification non intrusive et met la vue à jour.
 
 ### P-08 — Administrer le référentiel d'équipes
 
-Créer, modifier, supprimer une équipe. ⛔ **Écran non réalisable** faute de liste : seule la création à l'aveugle est possible, sans vue d'ensemble ni contrôle de couverture des 9 combinaisons.
+1. L'administrateur consulte la liste des équipes (`GET /api/teams`, état actif inclus), avec le **contrôle de couverture des 9 combinaisons** (type × criticité).
+2. Il crée, modifie partiellement, **désactive ou réactive** une équipe (`RM-30`) ; la suppression reste proposée et refusée dès qu'un incident référence l'équipe.
+3. Toute désactivation qui retirerait la dernière équipe d'une combinaison est **signalée avant confirmation** (`RM-31`).
+
+✅ Écran réalisable, à l'exception de la bascule d'activation, qui attend la réalisation de la décision produit n°5.
 
 ## 7. Écrans proposés 🎯
 
@@ -226,11 +245,11 @@ Faisabilité réévaluée au 2026-08-05, après la complétion du contrat d'API 
 |---|---|---|---|---|
 | E-01 | **Inventaire des actifs** | libellé, numéro de série, type, état, date de création | enregistrer, mettre au rebut, filtrer localement | ✅ réalisable (liste complète, filtrage et tri **côté client** faute de pagination serveur sur l'inventaire) |
 | E-02 | **Formulaire d'actif** | libellé, numéro de série, type | enregistrer | ✅ réalisable |
-| E-03 | **Fiche d'un actif** | attributs + incidents liés | ouvrir un incident | ✅ réalisable — `GET /api/assets/{id}` renvoie l'actif et ses incidents |
+| E-03 | **Fiche d'un actif** | attributs + incidents liés | ouvrir un incident, **remettre en service** si au rebut (administrateur) | ✅ réalisable — `GET /api/assets/{id}` renvoie l'actif et ses incidents ; la remise en service attend la décision produit n°1 et l'habilitation du Lot 7 |
 | E-04 | **Formulaire d'incident** | actif sélectionné, titre, description, criticité | ouvrir | ✅ réalisable |
-| E-05 | **Fiche d'un incident** | titre, description, criticité, état, équipe, compte rendu | prendre en charge, clôturer, transférer | ✅ réalisable — le contrat expose description, compte rendu et date d'ouverture |
+| E-05 | **Fiche d'un incident** | titre, description, criticité, état, équipe, compte rendu, **historique de routage** | prendre en charge, clôturer, transférer | ✅ réalisable — le contrat expose description, compte rendu et date d'ouverture ; l'historique de transferts attend la décision produit n°4 |
 | E-06 | **File de travail des incidents** | liste filtrable par état, criticité, équipe, actif | ouvrir une fiche | ✅ réalisable — `GET /api/tickets` filtre, trie et pagine |
-| E-07 | **Administration des équipes** | nom, type d'actif, criticité, état actif | créer, modifier, supprimer | ✅ réalisable — `GET /api/teams` et le couple (type × criticité) dans le contrat de sortie ; la **désactivation** reste indisponible (décision 0.6) |
+| E-07 | **Administration des équipes** | nom, type d'actif, criticité, état actif, couverture des 9 combinaisons | créer, modifier, supprimer, **activer / désactiver** | ✅ réalisable — `GET /api/teams` et le couple (type × criticité) dans le contrat de sortie ; la **désactivation** est retenue (décision produit n°5) mais pas encore exposée par l'API |
 | E-08 | **Aide au diagnostic** | note d'assistance IA, incidents similaires | — | 🟡 dégradé : `assistanceNote` et `isAiProcessing` sont exposés, mais la fin d'analyse n'est pas notifiée — l'écran doit relire l'incident ; les incidents similaires restent hors contrat |
 | E-09 | **Notifications temps réel** | nouveaux incidents de l'équipe suivie | ouvrir la fiche | 🟡 dégradé : le groupe suivi doit être saisi manuellement, faute de notion d'utilisateur |
 
@@ -246,6 +265,10 @@ L'API renvoie des messages techniques ou orientés développeur. L'interface doi
 | Numéro de série trop court ou trop long | « Le numéro de série doit contenir entre 5 et 50 caractères. » |
 | Actif introuvable | « Cet équipement n'existe plus. Actualisez la liste. » |
 | Mise au rebut refusée (incidents actifs) | « Impossible : cet équipement a {n} incident(s) en cours. Clôturez-les d'abord. » |
+| Confirmation d'une mise au rebut | « Cet équipement sortira du parc actif et son numéro de série restera réservé. Un administrateur pourra le remettre en service. » |
+| Confirmation d'une remise en service | « Cet équipement redeviendra utilisable et pourra porter de nouveaux incidents. Indiquez le motif. » |
+| Désactivation retirant la dernière équipe d'une combinaison | « Plus aucune équipe ne couvrira {type} en criticité {criticité} : l'ouverture d'incidents deviendra impossible pour cette combinaison. » |
+| Suppression d'équipe refusée (incidents rattachés) | « Cette équipe a un historique d'incidents et ne peut pas être supprimée. Désactivez-la pour qu'elle cesse de recevoir des incidents. » |
 | Aucune équipe pour la combinaison | « La configuration des équipes ne couvre pas ce type d'équipement avec cette criticité. Contactez l'administrateur. » |
 | Incident déjà pris en charge | « Cet incident est déjà pris en charge. » |
 | Incident non pris en charge lors d'une clôture | « Prenez d'abord l'incident en charge avant de le clôturer. » |

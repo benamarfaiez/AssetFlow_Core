@@ -2,7 +2,7 @@
 
 **Objet** — Choix technologiques, structure des projets, conventions, schéma de données, configuration, tests, intégration continue et déploiement. La vue structurelle et les décisions d'architecture sont dans [ARCHITECTURE.md](ARCHITECTURE.md) ; le contrat HTTP dans [API-Specification.md](API-Specification.md).
 
-> **Provenance.** La partie backend est **relevée dans le code** le 2026-08-04 (fichiers projet, configurations EF, `Program.cs`, Dockerfile, workflow CI) : elle décrit l'état réel. La partie frontend est une **cible 🎯** — aucun workspace Angular n'existe encore — et comporte des **décisions ouvertes ❓**.
+> **Provenance.** La partie backend est **relevée dans le code** le 2026-08-04 (fichiers projet, configurations EF, `Program.cs`, Dockerfile, workflow CI) : elle décrit l'état réel. La partie frontend décrit elle aussi l'état réel depuis le 2026-08-05 : le workspace Angular existe, son socle et son design system sont livrés (lots 3 et 4). **Plus aucune décision technique n'est en attente** depuis la clôture du Lot 0, le 2026-08-05 ; les décisions arrêtées figurent en §2.6.
 
 ---
 
@@ -291,14 +291,11 @@ Les **noms de propriétés** sont en `camelCase`, les **valeurs d'enums** resten
 | Détection de changement | **zoneless** (défaut d'Angular 22) | 2026-08-05 |
 | Gestion d'état | **Signals natifs** ; `@ngrx/signals` non installé, sa ligne 22 n'existant qu'en préversion | 2026-08-05 |
 | Formatage | **Prettier**, `npm run format:verify` comme futur gate de CI — pendant de `dotnet format` | 2026-08-05 |
+| Internationalisation (0.16) | **Multilingue**, français en locale de référence. Mécanisme posé **avant le premier écran** (étape 5.0 du plan) : rétro-extraire les messages de neuf écrans coûte davantage, et les libellés d'accessibilité sont les premiers oubliés d'une extraction tardive. Les libellés du Lot 4 (`shared/i18n/`) servent de catalogue de départ. Règle : **aucun texte visible en dur** dans un gabarit, `aria-label` compris | 2026-08-05 |
+| Déploiement du frontend (0.13) | **Conteneur nginx dédié**, publié vers GHCR à côté de l'image API, derrière un reverse proxy frontal. Deux artefacts, cycles de livraison séparés, en-têtes de cache maîtrisés. Conséquence : la **même origine reste à reconstituer** par le proxy (étape 8.5), l'API n'appliquant aucune politique CORS hors Development | 2026-08-05 |
+| Versioning d'API (0.15) | **URL versionnées** : `/api/v1/...`. Reprise des 15 endpoints, de la documentation, des tests d'intégration, des 3 services de `core/api/` et du relevé du skill `/sync-api-dtos`, **avant** le premier écran (§5.1 du plan). `proxy.conf.json` intercepte `/api` par préfixe : inchangé | 2026-08-05 |
 
-**Décisions encore ouvertes ❓**
-
-| Sujet | Options | Enjeu |
-|---|---|---|
-| Internationalisation | français seul ou multilingue | les valeurs d'API sont en anglais et doivent être traduites dans tous les cas — c'est fait (`shared/i18n/`), mais sans mécanisme multilingue |
-| Déploiement du frontend (0.13) | conteneur dédié · servi par l'API · hébergement statique + reverse proxy | contrainte CORS (voir §3) |
-| Intégration à la CI (8.1) | ajout de jobs `build`/`test`/`format` frontend au workflow existant | portail qualité, artefacts |
+**Aucune décision technique n'est plus en attente.** L'intégration des jobs frontend à la CI (étape 8.1) n'est pas un arbitrage mais un reste à faire, planifié au Lot 8.
 
 ---
 
@@ -308,10 +305,11 @@ Les **noms de propriétés** sont en `camelCase`, les **valeurs d'enums** resten
 |---|---|
 | URL de base | `environment.apiBaseUrl` ; jamais d'URL en dur |
 | Développement | **`proxy.conf.json`** du serveur Angular vers `https://localhost:7138` (`/api` et `/ticketHub`, `secure: false`, `ws: true`) — évite CORS et le refus du certificat de développement. Vérifié le 2026-08-05 contre l'API réelle, hub compris |
-| Production | **même origine derrière un reverse proxy** : hors Development, l'API n'applique **aucune** politique CORS, un appel navigateur d'une autre origine échoue |
+| Production | **même origine derrière un reverse proxy** (décision 0.13) : le frontend est servi par une **image nginx dédiée**, l'API par la sienne, et un proxy frontal les réunit sous une seule origine — frontend en racine, API sous `/api/v1`, WebSockets passés vers `/ticketHub`. Hors Development, l'API n'applique **aucune** politique CORS : sans ce proxy, un appel navigateur d'une autre origine échoue |
+| Versioning | **`/api/v1/...`** (décision 0.15) — à appliquer avant la construction des écrans ; les URL non versionnées disparaissent, sans période de dépréciation, le seul client étant livré depuis ce dépôt |
 | Types | générés depuis le C# (`/sync-api-dtos`), regroupés dans `shared/models/` |
 | Erreurs | intercepteur unique traduisant `ProblemDetails` en `ApiError` (`validation` · `business` · `notFound` · `conflict` · `server` · `network`) ; les clés du dictionnaire `errors` sont converties de `PascalCase` en `camelCase` pour correspondre aux contrôles de formulaire ; le `detail` d'une 5xx n'est **jamais** affiché, seul le `traceId` l'est |
-| Authentification (préparée) | `authTokenInterceptor` + `AuthTokenService` en place mais **sans source de jeton** : le Lot 7 n'aura qu'à alimenter le service. Le jeton n'est joint qu'aux URL de l'API |
+| Authentification (préparée) | `authTokenInterceptor` + `AuthTokenService` en place mais **sans source de jeton**. Schéma retenu (décision 0.1) : **OIDC sur annuaire d'entreprise (Entra ID)**, autorisation avec code et PKCE côté navigateur, validation `JWT Bearer` côté API. Le Lot 7 alimente le service ; le jeton n'est joint qu'aux URL de l'API |
 | Codes de statut | ressource absente → **404** ; règle métier refusée → 400 ; création → 201 avec en-tête `Location` ; mise à jour d'équipe → 200 |
 | Listes | seul `GET /api/tickets` est paginé (enveloppe `{ items, page, pageSize, totalCount, totalPages }`) ; l'inventaire et les équipes se filtrent côté client |
 | Temps réel | `@microsoft/signalr` sur `/ticketHub` ; `JoinTeamGroup(nomEquipe)` puis écoute de `ReceiveNewTicket` |
@@ -336,15 +334,17 @@ Constats vérifiés, classés par gravité. Le détail comportemental est dans [
 
 | Gravité | Constat | Effet |
 |---|---|---|
-| **Critique** | aucune authentification ni autorisation | API totalement ouverte |
+| **Critique** | aucune authentification ni autorisation | API totalement ouverte ; schéma retenu (décision 0.1 : OIDC / Entra ID), réalisation au Lot 7 |
 | **Majeur** | file d'analyse IA en mémoire | demandes perdues au redémarrage |
-| **Majeur** | base vectorielle jamais alimentée en production | assistance IA sans corpus, valeur nulle |
+| **Majeur** | base vectorielle jamais alimentée en production | assistance IA sans corpus, valeur nulle ; **décision 0.7 tranchée** : indexation à la clôture et rétro-indexation, au Lot 6 |
 | **Majeur** | fin d'analyse IA non notifiée | l'état `isAiProcessing` est exposé mais son évolution n'est observable que par relecture |
 | **Moyen** | migrations non appliquées au démarrage | une base neuve reste inexploitable tant que `dotnet ef database update` n'a pas été lancé |
 | **Moyen** | clés de configuration divergentes (`assetflow-db`, `ConnectionString`, `DefaultConnection`) | exécution par composition Docker inopérante sans ajustement |
 | **Moyen** | décorateurs d'équipe réécrivant le cache **avant** `SaveChangesAsync` | un échec de persistance laisse une valeur non persistée en cache |
 | **Moyen** | dépôts d'équipe à double chemin selon le fournisseur | production non couverte par les tests |
-| **Mineur** | `TicketStatus.Resolved` jamais atteint · `IDbContextFactory` et `DatabaseOptions` non consommés · `Team.IsActive` exposé mais non pilotable par l'API · motif de transfert concaténé à la description | code mort ou inachevé ; dépend des décisions 0.3, 0.5 et 0.6 |
+| **Mineur** | `TicketStatus.Resolved` jamais atteint · `Team.IsActive` exposé mais non pilotable par l'API · motif de transfert concaténé à la description | code mort ou inachevé ; **décisions 0.3, 0.5 et 0.6 tranchées le 2026-08-05** — résorption planifiée en §5.1 du plan (suppression de `Resolved`, endpoints d'activation, historique de transferts) |
+| **Mineur** | `IDbContextFactory` et `DatabaseOptions` non consommés | code mort, aucune décision en attente |
+| **Mineur** | URL non versionnées | décision 0.15 : passage à `/api/v1/...` avant le Lot 5, sans période de dépréciation |
 | **Mineur** | erreurs renvoyées avec `Content-Type: application/json` alors que [API-Specification.md](API-Specification.md) §3 annonce `application/problem+json` — `WriteAsJsonAsync` écrase le type posé par le middleware (constaté le 2026-08-05 sur l'API réelle) | un client qui filtrerait sur le type de contenu ne reconnaîtrait pas le format ; le frontend ne s'y fie pas |
 | **Mineur** | dérive documentaire (`README.md`, `Benchmarks.md`) — le `README.md` ignore encore le workspace frontend | information obsolète |
 | **Mineur** | contrats d'API recopiés dans `.claude/agents/*.md` et `.claude/skills/sync-api-dtos/SKILL.md`, figés au 2026-08-04 donc antérieurs au Lot 2 | un agent qui s'y fierait régénérerait des types faux ; le code `.cs` reste la source de vérité |

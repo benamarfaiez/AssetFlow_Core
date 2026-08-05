@@ -184,7 +184,7 @@ Le `detail` est un message générique : le message d'exception est **journalis�
 | `TicketCriticality` | `Low` · `Medium` · `High` |
 | `TicketStatus` | `Opened` · `InProgress` · `Resolved` · `Closed` |
 
-> `TicketStatus.Resolved` existe dans le modèle mais **aucun endpoint ne l'attribue** : le cycle réel est `Opened → InProgress → Closed`.
+> `TicketStatus.Resolved` existe dans le modèle mais **aucun endpoint ne l'attribue** : le cycle réel est `Opened → InProgress → Closed`. La valeur est **supprimée** par la décision 0.3 du 2026-08-05 : un client ne doit pas la traiter, ni l'envoyer comme filtre.
 
 ### `AssetResponseDto`
 
@@ -640,7 +640,7 @@ curl "https://localhost:7138/api/teams?onlyActive=true"
 ]
 ```
 
-> Aucun endpoint ne permet aujourd'hui de désactiver une équipe : une équipe inactive ne peut provenir que d'une intervention en base (décision 0.6 du plan d'implémentation non tranchée).
+> Aucun endpoint ne permet **aujourd'hui** de désactiver une équipe : une équipe inactive ne peut provenir que d'une intervention en base. La décision 0.6 du plan d'implémentation, tranchée le 2026-08-05, ajoute cette opération sans retirer la suppression — voir « Évolutions de contrat décidées » au §9.
 
 ### 7.2 `GET /api/teams/{id}` — Consulter une équipe
 
@@ -761,8 +761,8 @@ Points relevés dans le code au 2026-08-05, après les lots de corrections backe
 
 | Manque | Conséquence pour un client |
 |---|---|
-| pas de modification d'un actif | nom, numéro de série et type sont figés à la création |
-| pas de remise en service d'un actif | `Decommissioned` est un état terminal |
+| pas de modification d'un actif | nom, numéro de série et type sont figés à la création — aucune décision prise, le besoin n'étant pas exprimé |
+| pas de remise en service d'un actif | `Decommissioned` est un état terminal, et le numéro de série reste réservé : un rebut par erreur interdit de réenregistrer la machine. **Décidé le 2026-08-05** (voir « Évolutions décidées » plus bas) |
 | pas de recherche plein texte | la liste d'incidents se filtre par état, criticité, équipe et actif, pas par mots du titre ou de la description |
 | pas de pagination sur l'inventaire ni sur les équipes | `GET /api/assets` et `GET /api/teams` renvoient l'intégralité de la collection |
 
@@ -772,7 +772,21 @@ Points relevés dans le code au 2026-08-05, après les lots de corrections backe
 - Aucun endpoint ne désactive une équipe, alors que `isActive` est exposé et exploité par le filtre `onlyActive`.
 - Le **motif de transfert** est concaténé à la description de l'incident plutôt qu'historisé à part : la description s'allonge à chaque transfert et son texte d'origine n'est plus isolable.
 
-> Ces trois points dépendent des décisions 0.3, 0.5 et 0.6 du plan d'implémentation, non tranchées à ce jour.
+> Ces trois points dépendaient des décisions 0.3, 0.5 et 0.6 du plan d'implémentation, **toutes tranchées le 2026-08-05** : `Resolved` est supprimé, le motif de transfert est historisé à part, la désactivation d'équipe est exposée. Voir « Évolutions de contrat décidées » plus bas.
+
+### Évolutions de contrat décidées, non encore implémentées (2026-08-05)
+
+Le Lot 0 du [plan d'implémentation](IMPLEMENTATION-PLAN.md) (§3, réalisation ordonnancée en §5.1) a arrêté cinq évolutions qui **modifient ce contrat**. Elles ne sont pas réalisées : tout ce qui est décrit dans les sections 5 à 8 reste le comportement réel de l'API à ce jour. Un client écrit maintenant doit s'attendre à ces ruptures, prévues **avant** la construction des écrans.
+
+| Évolution décidée | Effet sur le contrat | Nature |
+|---|---|---|
+| **URL versionnées** `/api/v1/...` | les 15 routes changent de préfixe ; les anciennes disparaissent, **sans période de dépréciation** | ⛔ rupture |
+| **Suppression de `TicketStatus.Resolved`** | l'énumération passe à trois valeurs ; `GET /api/tickets?status=Resolved` devient une valeur invalide (400) au lieu d'une liste vide | ⛔ rupture |
+| **Historique de transferts** | `POST /api/tickets/{id}/transfer` cesse d'ajouter le motif à `description` ; l'historique (équipe d'origine, équipe cible, motif, date) est exposé sur la fiche d'incident | ⛔ rupture de comportement pour un client qui lisait le motif dans la description |
+| **Activation / désactivation d'équipe** | nouvelle opération sur `Team` ; `isActive` devient pilotable, et `?onlyActive=true` reflète enfin un état modifiable | ➕ additif |
+| **Remise en service d'un actif** | nouvelle opération, motif obligatoire ; `Decommissioned` cesse d'être terminal. Réservée à un rôle d'administrateur une fois l'authentification en place | ➕ additif |
+
+Deux évolutions supplémentaires suivront au Lot 7, toutes deux **additives** : l'exigence d'un jeton `JWT Bearer` sur l'ensemble des routes (hors sondes), et l'exposition de l'identité de l'auteur d'une prise en charge ou d'une clôture.
 
 ### Fin d'analyse IA non notifiée
 
@@ -782,9 +796,13 @@ Points relevés dans le code au 2026-08-05, après les lots de corrections backe
 
 Aucun `[Authorize]`, aucun `AddAuthentication` / `AddJwtBearer`, aucun endpoint d'émission de jeton. `Program.cs` appelle `UseAuthorization()` **sans schéma d'authentification** : toutes les opérations, y compris les créations et la suppression d'équipes, sont **accessibles anonymement**.
 
+Schéma retenu le 2026-08-05 (décision 0.1) : **OIDC sur annuaire d'entreprise**, jetons `JWT Bearer` validés par l'API, rôles dérivés des groupes d'annuaire. L'API n'émettra donc **aucun** jeton et n'exposera pas d'endpoint de connexion : le client obtient son jeton de l'annuaire et le joint en en-tête `Authorization`. Réalisation au Lot 7.
+
 ### CORS
 
-La politique CORS (`Cors:AllowedOrigins`, `["*"]` par défaut) n'est appliquée **qu'en environnement Development**. Hors Development, aucune politique n'est active : un appel navigateur depuis une autre origine échoue. Prévoir une même origine derrière un reverse proxy, ou un proxy de développement côté client.
+La politique CORS (`Cors:AllowedOrigins`, `["*"]` par défaut) n'est appliquée **qu'en environnement Development**. Hors Development, aucune politique n'est active : un appel navigateur depuis une autre origine échoue.
+
+Décision 0.13 du 2026-08-05 : le frontend est déployé dans un **conteneur nginx dédié**, et un **reverse proxy frontal** réunit les deux images sous une seule origine (frontend en racine, API sous `/api/v1`, WebSockets vers `/ticketHub`). Ce proxy est donc obligatoire en production. En développement, le proxy du serveur Angular joue ce rôle.
 
 ### Annulation des requêtes
 
@@ -872,6 +890,8 @@ stateDiagram-v2
 
 Un actif reste en `Down` ou `InMaintenance` tant qu'au moins un ticket `Opened` ou `InProgress` lui est rattaché.
 
+> Décision 0.4 du 2026-08-05 : `Decommissioned` **cessera d'être terminal** — une remise en service, réservée à un administrateur et portant un motif, ramènera l'actif en `InService`. Non implémentée à ce jour.
+
 ### 12.2 Cycle de vie d'un ticket
 
 ```mermaid
@@ -884,7 +904,7 @@ stateDiagram-v2
     Closed --> [*] : état terminal
 ```
 
-Le transfert réaffecte l'équipe **sans changer le statut**, et est refusé sur un ticket `Closed`. Le statut `Resolved` n'est jamais atteint par l'API.
+Le transfert réaffecte l'équipe **sans changer le statut**, et est refusé sur un ticket `Closed`. Le statut `Resolved` n'est jamais atteint par l'API, et la décision 0.3 du 2026-08-05 le **supprime** : ce cycle à trois états est donc définitif.
 
 ### 12.3 Récapitulatif des opérations
 

@@ -16,7 +16,8 @@ Documents de référence : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) (e
 |---|---|
 | Backend | ✅ fonctionnel : 15 endpoints, 216 tests unitaires verts, tests d'architecture et d'intégration, benchmarks, CI/CD complète, déploiement conteneurisé ; **Lots 1 et 2 appliqués** |
 | Contrat d'API | ✅ complété : listes d'incidents (paginée) et d'équipes, fiche d'actif, DTOs enrichis, 404 pour les ressources absentes, `Location` sur les créations |
-| Sécurité | ⛔ aucune authentification ni autorisation |
+| Sécurité | ⛔ aucune authentification ni autorisation ; **schéma retenu** le 2026-08-05 : annuaire d'entreprise (Entra ID, OIDC) — décision 0.1, réalisation au Lot 7 |
+| Décisions | ✅ **Lot 0 clos le 2026-08-05** : 16 décisions écrites, aucun ❓ résiduel ; cinq d'entre elles créent un reliquat de contrat à livrer avant le Lot 5 (§5.1) |
 | Frontend | ✅ socle **et** design system en place : workspace Angular 22 `AssetFlowCore.WebUI` (standalone, Signals, zoneless, Vitest, Tailwind 4), types du contrat, 3 services d'API, intercepteurs, client SignalR, 18 composants partagés, thème clair/sombre, 129 tests verts ; **Lots 3 et 4 appliqués**. Aucun écran produit (`E-01`→`E-09` au Lot 5) |
 | Assistance IA | 🟡 mécanisme complet mais corpus vectoriel vide et état non exposé |
 | Documentation | ✅ produit, fonctionnel, technique, architecture, contrat d'API |
@@ -40,11 +41,12 @@ Documents de référence : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) (e
 
 ```mermaid
 flowchart LR
-    L0["Lot 0<br/>Décisions ❓"] --> L1["Lot 1 ✅<br/>Corrections backend"]
+    L0["Lot 0 ✅<br/>Décisions tranchées"] --> L1["Lot 1 ✅<br/>Corrections backend"]
     L0 --> L3["Lot 3 ✅<br/>Fondation frontend"]
     L1 --> L2["Lot 2 ✅<br/>Complétion du contrat"]
     L3 --> L4["Lot 4 ✅<br/>Design system"]
-    L2 --> L5["Lot 5<br/>Fonctionnalités"]
+    L2 --> L2B["Lot 2 bis 🎯<br/>Contrat débloqué par le Lot 0"]
+    L2B --> L5["Lot 5<br/>Fonctionnalités"]
     L4 --> L5
     L5 --> L6["Lot 6<br/>Temps réel et IA"]
     L0 --> L7["Lot 7<br/>Sécurité"]
@@ -56,38 +58,72 @@ flowchart LR
 
 ---
 
-## 3. Lot 0 — Décisions préalables ⛔
+## 3. Lot 0 — Décisions préalables ✅ (2026-08-05)
 
-**Objectif** : lever les sept questions produit et les huit questions techniques qui conditionnent les lots suivants. **Aucun code n'est écrit dans ce lot.**
+**Objectif** : lever les questions produit et techniques qui conditionnent les lots suivants. **Aucun code n'est écrit dans ce lot** — le livrable est un jeu de décisions écrites et la mise à jour des documents affectés.
 
-| # | Décision | Bloque | Charge |
+**16 décisions tranchées** : 0.8 à 0.11 et 0.14 l'étaient déjà avant les lots 3 et 4 ; 0.12 avait été appliquée au Lot 3 sans être reportée ici ; les neuf restantes, plus l'internationalisation (0.16, ❓ résiduel de [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md) §2.6), le sont ce jour.
+
+| # | Décision arrêtée le 2026-08-05 | Motif et conséquence | Bloquait |
 |---|---|---|---|
-| 0.1 | Niveau d'authentification visé (interne, annuaire d'entreprise, fournisseur d'identité externe) | Lot 7 entier | S |
-| 0.2 | Techniciens nominatifs ou prise en charge collective | forme de `EF-21`, contrat des incidents | S |
-| 0.3 | Sort du statut `Resolved` (étape réelle ou suppression) | Lot 2, cycle de vie | S |
-| 0.4 | Irréversibilité de la mise au rebut | `EF-09` | S |
-| 0.5 | Historisation séparée du motif de transfert | `RM-21`, contrat des incidents | S |
-| 0.6 | Désactivation d'équipe en remplacement de la suppression | `EF-28` | S |
-| 0.7 | Indexation des incidents clôturés dans la base vectorielle | Lot 6, valeur de l'IA | M |
-| ~~0.8~~ | ~~Nom du dossier du workspace frontend~~ — **tranchée le 2026-08-05** : dossier `AssetFlowCore.WebUI/`, projet npm `assetflow-webui` (les majuscules et le point sont interdits dans un nom de paquet npm, d'où la dissociation) | Lot 3 | S |
-| ~~0.9~~ | ~~Framework CSS~~ — **tranchée le 2026-08-05** : **Tailwind 4 + `@angular/cdk`** (utilitaires pour le style, CDK pour l'accessibilité). Motif : contrôle total du rendu et jetons en variables CSS, là où Material imposerait son apparence et une thématisation par mixins ; les composants réellement demandés (table basculant en cartes, badges métier, message vide) n'existent de toute façon dans aucune bibliothèque | Lot 4 | M |
-| ~~0.10~~ | ~~Rendu serveur (SSR) ou application cliente seule~~ — **tranchée le 2026-08-05** : **application cliente seule**, pas de SSR (back-office interne destiné à passer derrière authentification, aucun enjeu de référencement ni de premier affichage public ; déploiement statique aligné sur la contrainte de même origine) | Lot 3, Lot 8 | M |
-| ~~0.11~~ | ~~Runner de tests frontend~~ — **tranchée le 2026-08-05** : **Vitest** (voie moderne du CLI, aucun navigateur à piloter en CI, couverture lcov directement exploitable par SonarCloud) | Lot 3 | S |
-| 0.12 | Stratégie d'état (Signals natifs — défaut — ou SignalStore en préversion) | Lot 5 | S |
-| 0.13 | Mode de déploiement du frontend (conteneur dédié, servi par l'API, statique + reverse proxy) | Lot 8, contrainte CORS | M |
-| ~~0.14~~ | ~~Périmètre de la pagination et du filtrage serveur des listes~~ — **tranchée le 2026-08-05** : enveloppe JSON paginée sur `GET /api/tickets` (filtres état, criticité, équipe, actif ; tri ; taille de page ≤ 100) ; inventaire et équipes servis en intégralité | Lot 2 | M |
-| 0.15 | Politique de rupture de contrat (versioning d'API ou coordination directe) | Lot 2 | S |
+| 0.1 | **Annuaire d'entreprise (Microsoft Entra ID)** — OIDC, jetons `JWT Bearer`, rôles dérivés des groupes d'annuaire ; aucun mot de passe n'est géré par l'API | Les utilisateurs d'un back-office interne existent déjà dans l'annuaire, et l'`authTokenInterceptor` du Lot 3 n'a qu'à être alimenté. Prérequis d'exploitation : un tenant et un enregistrement d'application (client public + audience d'API) | Lot 7 entier |
+| 0.2 | **Prise en charge collective, auteur tracé** — l'affectation reste au niveau de l'équipe ; l'identité de qui prend en charge et de qui clôture est enregistrée pour l'audit | `EF-21` (affectation dirigée vers une personne, file « mes incidents ») reste **hors périmètre** : elle glisse vers la planification, explicitement exclue. Les champs d'auteur sont **additifs** au contrat des incidents et subordonnés au Lot 7, qui apporte l'identité | forme de `EF-21`, contrat des incidents |
+| 0.3 | **`TicketStatus.Resolved` supprimé** — le cycle reste `Opened → InProgress → Closed` | Une étape « résolu en attente de validation » exigerait un acteur validateur, que le produit n'a pas. Rupture de contrat assumée (union TypeScript, filtre `status`, projection de tri) **sans aucune donnée à migrer**, la valeur n'ayant jamais été produite | cycle de vie |
+| 0.4 | **Mise au rebut réversible, réservée à un rôle d'administrateur** — transition `Decommissioned → InService`, motif obligatoire, opération tracée | Ouvre `EF-09`. Motif déterminant : `AssetRepository.ExistsWithSerialNumberAsync` ne filtre **pas** sur l'état, donc le numéro de série d'un actif au rebut reste réservé — un rebut par erreur interdit définitivement de réenregistrer la machine. L'endpoint peut précéder le Lot 7, l'habilitation en dépend | `EF-09` |
+| 0.5 | **Historique de transferts dédié** — entité (incident, équipe d'origine, équipe cible, motif, date), exposée sur la fiche d'incident | `MaintenanceTicket.TransferToTeam` écrit aujourd'hui dans `Description` et **altère irréversiblement** le texte saisi par le technicien. L'historique de routage est par ailleurs la donnée qui révèle un référentiel mal configuré, cause première des refus d'ouverture (`RM-12`) | `RM-21`, contrat des incidents |
+| 0.6 | **Désactivation ajoutée, suppression conservée** | `Team.Activate()` / `Deactivate()` existent déjà dans le domaine et `isActive` / `onlyActive` sont déjà dans le contrat : il ne manque qu'un endpoint. La suppression, de fait impossible dès qu'un incident **même clôturé** référence l'équipe (`RM-26`), reste ouverte aux équipes créées par erreur — `EF-26` n'est donc pas retirée | `EF-28` |
+| 0.7 | **Indexation à la clôture, avec rétro-indexation** — `UpsertVectorAsync` appelé à la clôture (titre, description, compte rendu) et commande de reprise des incidents déjà clos | Sans corpus, la recherche de similarité ne renvoie jamais rien et `EF-33` est nul. Limite assumée : la base DuckDB est un **fichier local**, non partagé entre instances (`AD-10`) — à externaliser si l'API passe à plusieurs répliques | Lot 6, valeur de l'IA |
+| ~~0.8~~ | ~~Nom du dossier du workspace frontend~~ — **tranchée le 2026-08-05** : dossier `AssetFlowCore.WebUI/`, projet npm `assetflow-webui` (les majuscules et le point sont interdits dans un nom de paquet npm, d'où la dissociation) | appliquée au Lot 3 | Lot 3 |
+| ~~0.9~~ | ~~Framework CSS~~ — **tranchée le 2026-08-05** : **Tailwind 4 + `@angular/cdk`** (utilitaires pour le style, CDK pour l'accessibilité). Motif : contrôle total du rendu et jetons en variables CSS, là où Material imposerait son apparence et une thématisation par mixins ; les composants réellement demandés (table basculant en cartes, badges métier, message vide) n'existent de toute façon dans aucune bibliothèque | appliquée au Lot 4 | Lot 4 |
+| ~~0.10~~ | ~~Rendu serveur (SSR) ou application cliente seule~~ — **tranchée le 2026-08-05** : **application cliente seule**, pas de SSR (back-office interne destiné à passer derrière authentification, aucun enjeu de référencement ni de premier affichage public) | appliquée au Lot 3 | Lot 3, Lot 8 |
+| ~~0.11~~ | ~~Runner de tests frontend~~ — **tranchée le 2026-08-05** : **Vitest** (voie moderne du CLI, aucun navigateur à piloter en CI, couverture lcov directement exploitable par SonarCloud) | appliquée au Lot 3 | Lot 3 |
+| 0.12 | **Signals natifs** — `@ngrx/signals` n'est pas installé | Sa ligne 22 n'existe qu'en préversion : une dépendance instable au cœur de l'état est écartée. Décision **déjà appliquée** au Lot 3 et consignée dans [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md) §2.6 ; reportée ici pour clore le tableau | Lot 5 |
+| 0.13 | **Conteneur nginx dédié**, derrière un reverse proxy frontal | Deux images publiées (API et frontend), cycles de livraison séparés, cache HTTP maîtrisé. Conséquence directe : l'étape **8.5 reste obligatoire** — la même origine est reconstituée par le proxy frontal, faute de quoi l'appel navigateur échoue, l'API n'appliquant aucune politique CORS hors Development | Lot 8, contrainte CORS |
+| ~~0.14~~ | ~~Périmètre de la pagination et du filtrage serveur des listes~~ — **tranchée le 2026-08-05** : enveloppe JSON paginée sur `GET /api/tickets` (filtres état, criticité, équipe, actif ; tri ; taille de page ≤ 100) ; inventaire et équipes servis en intégralité | appliquée au Lot 2 | Lot 2 |
+| 0.15 | **Versioning des URL dès maintenant** — `/api/v1/...` | Révise `AD-13`. Coût immédiat : les 15 endpoints, la documentation, les tests d'intégration, les 3 services frontend et le relevé du skill `/sync-api-dtos`. Reprise planifiée en **§5.1**, obligatoirement **avant** le premier écran du Lot 5, sans quoi chaque écran serait à reprendre | Lot 2 |
+| 0.16 | **Multilingue dès le Lot 5** — extraction des messages et gestion des locales | ❓ résiduel de [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md) §2.6, hors liste initiale mais soumis à la porte de fusion « aucun ❓ résiduel ». Les libellés du Lot 4 sont déjà centralisés dans `shared/i18n/` et servent de point de départ ; les valeurs d'énumérations de l'API restent traduites à l'affichage dans tous les cas | Lot 5 |
 
-**Étapes**
+**Étapes réalisées**
 
-1. Faire relire [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) §8 et [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md) §2.6 par le responsable produit et le responsable technique.
-2. Consigner chaque arbitrage **dans le document concerné**, en remplaçant le marqueur ❓ par la décision et sa date.
-3. Pour les décisions techniques 0.9 à 0.13, mobiliser l'agent `angular-architect` (0.8, 0.10, 0.11, 0.13) et `ui-ux-designer` (0.9) afin qu'ils présentent les options avec leurs conséquences — ils ont pour consigne de ne rien installer sans validation.
+1. Relecture de [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) §8 et [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md) §2.6, options et conséquences présentées décision par décision, arbitrage rendu en session.
+2. Chaque arbitrage consigné **dans le document concerné**, marqueur ❓ remplacé par la décision et sa date : ce tableau, [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) §8, [PRODUCT-SPECIFICATIONS.md](PRODUCT-SPECIFICATIONS.md) §2 à §8, [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md) §2.6 / §3 / §5, [ARCHITECTURE.md](ARCHITECTURE.md) §4.2 / §5 / §6 / §7, [API-Specification.md](API-Specification.md) §9.
+3. Deux vérifications de code menées pour étayer les options, et déterminantes dans les arbitrages 0.4 et 0.5 : `AssetRepository.ExistsWithSerialNumberAsync` ne filtre pas sur l'état de l'actif, et `MaintenanceTicket.TransferToTeam` écrit dans `Description`.
+4. Le travail créé par les décisions est inscrit et ordonnancé : **§5.1** (contrat, avant le Lot 5), Lot 5, Lot 6, Lot 7 et Lot 8 mis à jour en conséquence.
 
 **Critères d'acceptation**
 
-- Les 15 décisions sont tranchées et écrites, aucun ❓ résiduel sur le périmètre des lots 1 à 5.
-- Les documents affectés sont mis à jour dans le même lot.
+- ✅ Les 16 décisions sont tranchées et écrites ; **aucun ❓ résiduel** dans les six documents de `doc/` (`PRODUCT-REQUIREMENTS` §8, `TECHNICAL-SPECIFICATION` §2.6 et les marqueurs `EF-09` / `EF-21` inclus).
+- ✅ Les documents affectés sont mis à jour dans le même lot.
+- ✅ Aucun code écrit : le travail induit est planifié, pas réalisé.
+
+**Écarts assumés du lot**
+
+- **Trois décisions s'écartent de la recommandation formulée** : 0.13 (conteneur dédié plutôt que statiques servis par l'API), 0.15 (versioning immédiat plutôt que coordination directe) et 0.16 (multilingue plutôt que français seul). Elles sont retenues telles quelles ; leur surcoût est inscrit là où il tombe — §5.1 pour 0.15, étapes 8.4 et 8.5 pour 0.13, Lot 5 pour 0.16 — et non lissé.
+- **0.2 et 0.4 sont partiellement subordonnées au Lot 7** : la traçabilité de l'auteur exige une identité, et l'habilitation d'administrateur exige des rôles. Les endpoints correspondants peuvent précéder, leur restriction non.
+- **Aucun agent sollicité** (`angular-architect`, `ui-ux-designer`) : les décisions restantes étaient à dominante produit, et les deux décisions techniques (0.13, 0.15) relevaient d'un arbitrage d'exploitation, non d'une comparaison d'options frontend.
+
+---
+
+## 3.1 Conséquences des décisions sur les lots suivants
+
+Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucune de ces lignes n'existait avant l'arbitrage.
+
+| Décision | Travail créé | Où il est inscrit |
+|---|---|---|
+| 0.15 | Versionner les URL en `/api/v1/...` | §5.1, étape 2b.1 — **prioritaire**, avant tout écran |
+| 0.3 | Supprimer `Resolved` du domaine, du filtre, du tri et du contrat | §5.1, étape 2b.2 |
+| 0.5 | Entité d'historique de transferts et exposition | §5.1, étape 2b.3 |
+| 0.6 | Endpoints d'activation / désactivation d'équipe | §5.1, étape 2b.4 |
+| 0.4 | Endpoint de remise en service, motif obligatoire | §5.1, étape 2b.5 |
+| 0.4 | Confirmation et action de remise en service côté interface | Lot 5, étape 5.A.7 |
+| 0.5 | Affichage de l'historique de routage sur la fiche d'incident | Lot 5, étape 5.B.9 |
+| 0.6 | Bascule d'activation dans l'écran d'administration | Lot 5, étape 5.C.4 (confirmée) |
+| 0.16 | Mise en place de l'internationalisation avant le premier écran | Lot 5, étape 5.0 |
+| 0.7 | Indexation à la clôture **et** commande de rétro-indexation | Lot 6, étapes 6.2 et 6.2 bis |
+| 0.1 | Schéma OIDC / Entra ID, enregistrement d'application, rôles par groupes | Lot 7, étapes 7.1 à 7.3 |
+| 0.2 | Identité de l'auteur de la prise en charge et de la clôture | Lot 7, étape 7.4 |
+| 0.4 | Restriction de la remise en service au rôle d'administrateur | Lot 7, étape 7.2 |
+| 0.13 | Image nginx dédiée, et reverse proxy pour la même origine | Lot 8, étapes 8.4 et 8.5 |
 
 ---
 
@@ -138,7 +174,7 @@ flowchart LR
 | 2.6 ✅ | Sémantique **404** pour les ressources introuvables — `NotFoundException` mappée ; une référence invalide du **corps** reste un 400 | cohérence REST, `E-01`→`E-09` | M |
 | 2.7 ✅ | Aligner `PUT /api/teams/{id}` sur **200** au lieu de 201 | cohérence REST | S |
 | 2.8 ✅ | Ajouter l'en-tête `Location` sur les réponses 201 | cohérence REST | S |
-| 2.9 ⛔ | Décisions 0.3, 0.5, 0.6 appliquées si retenues (statut `Resolved`, motif de transfert isolé, désactivation d'équipe) | `EF-17`, `EF-28` | M |
+| 2.9 🎯 | Décisions 0.3, 0.5, 0.6 appliquées — **toutes trois retenues le 2026-08-05**, avec 0.4 et 0.15 en supplément : reportée en **§5.1** | `EF-17`, `EF-28` | M |
 | 2.10 ✅ | **Relecture** | session principale (aucun agent sollicité) | S |
 | 2.11 ✅ | **Mise à jour du contrat documenté** — [API-Specification.md](API-Specification.md) intégralement | S |
 | 2.12 ✅ | **Resynchronisation des types frontend** — réalisée au Lot 3, étape 3.6, une fois le workspace créé | conventions du skill **`/sync-api-dtos`** appliquées aux 3 controllers | S |
@@ -153,9 +189,31 @@ flowchart LR
 
 **Écarts assumés du lot**
 
-- **2.9 reportée** : les décisions 0.3, 0.5 et 0.6 n'étant pas tranchées, le statut `Resolved` reste inatteignable, le motif de transfert reste concaténé à la description et aucune équipe ne peut être désactivée par l'API. Le filtre `onlyActive` et le champ `isActive` sont néanmoins en place pour accueillir la décision 0.6.
+- **2.9 reportée en §5.1** : les décisions 0.3, 0.5 et 0.6 n'étaient pas tranchées à la clôture du lot. Elles le sont depuis le 2026-08-05 et le travail correspondant est ordonnancé en §5.1. En l'état du code, le statut `Resolved` reste inatteignable, le motif de transfert reste concaténé à la description et aucune équipe ne peut être désactivée par l'API. Le filtre `onlyActive` et le champ `isActive` sont en place pour accueillir la décision 0.6.
 - **2.12 reportée puis levée** : aucun workspace Angular n'existait à la clôture du Lot 2 ; la synchronisation a été réalisée au Lot 3, étape 3.6.
 - Pagination livrée sur `GET /api/tickets` uniquement ; l'inventaire et les équipes restent des collections complètes, leur volume ne le justifiant pas.
+
+### 5.1 Lot 2 bis — Contrat débloqué par le Lot 0 🎯 (à livrer **avant** le Lot 5)
+
+**Objectif** : appliquer les cinq décisions du Lot 0 qui touchent le contrat d'API, avant qu'un écran ne le consomme (Principe 1). **Ce lot introduit des ruptures de contrat assumées** — c'est le dernier moment où elles sont bon marché, aucun écran produit n'existant encore.
+
+| # | Étape | Décision | Exigence | Charge |
+|---|---|---|---|---|
+| 2b.1 🎯 | **Versionner les URL en `/api/v1/...`** sur les 15 endpoints, puis répercuter sur [API-Specification.md](API-Specification.md), les tests d'intégration, les 3 services de `core/api/` et le relevé du skill `/sync-api-dtos`. `proxy.conf.json` intercepte `/api` par préfixe : aucun changement côté proxy de développement. À traiter **en premier**, l'étape touchant toutes les routes | 0.15 | `AD-13` révisée | M |
+| 2b.2 🎯 | **Supprimer `TicketStatus.Resolved`** : énumération du domaine, message et règle `IsEnumName` de `GetTicketsQueryValidator`, projection de rang de `MaintenanceTicketRepository.ApplySort`, union TypeScript et libellés de `shared/i18n/` | 0.3 | — | S |
+| 2b.3 🎯 | **Historiser le motif de transfert** : entité dédiée + migration, `TransferToTeam` cesse d'écrire dans `Description`, historique exposé sur la fiche d'incident. À vérifier au passage : `TransferToTeam` affecte `AssignedTeam` **sans** mettre à jour `AssignedTeamId`, ce que seule la correction de navigation d'EF rattrape aujourd'hui | 0.5 | `EF-17`, `RM-21` | M |
+| 2b.4 🎯 | **Activer / désactiver une équipe** : endpoint(s) dédiés, invalidation des **deux** clés de cache d'équipe (`Teams_List_Active` et `Teams_List_All`, centralisée par `CachedTeamRepository.InvalidateLists()`) | 0.6 | `EF-28` | S |
+| 2b.5 🎯 | **Remettre en service un actif au rebut** : transition de domaine, motif obligatoire, opération tracée. La restriction au rôle d'administrateur est posée au Lot 7, étape 7.2 — d'ici là l'endpoint est ouvert comme tous les autres | 0.4 | `EF-09` | M |
+| 2b.6 🎯 | **Relecture**, resynchronisation `/sync-api-dtos` et mise à jour du contrat documenté | — | — | S |
+
+**Critères d'acceptation du lot**
+
+- Chaque changement de contrat est couvert par un test d'intégration (cas nominal + cas d'erreur) et reporté dans [API-Specification.md](API-Specification.md).
+- Aucune route ne subsiste hors `/api/v1/` : les tests d'intégration et les 3 services frontend n'adressent plus l'ancienne forme.
+- `Resolved` n'apparaît plus **nulle part** — ni domaine, ni validateur, ni tri, ni types TypeScript, ni libellés.
+- Un incident transféré deux fois expose **deux** entrées d'historique, et sa description est exactement celle saisie à l'ouverture.
+- Une équipe désactivée disparaît de `?onlyActive=true` **et** cesse de recevoir des incidents, sans être supprimée.
+- Un actif remis en service redevient éligible à l'ouverture d'un incident, et son numéro de série reste unique.
 
 ---
 
@@ -243,9 +301,20 @@ flowchart LR
 
 ---
 
-## 8. Lot 5 — Fonctionnalités 🎯 (dépend des lots 2, 3 et 4)
+## 8. Lot 5 — Fonctionnalités 🎯 (dépend des lots 2, **2 bis**, 3 et 4)
 
 **Ordre imposé** : `assets` d'abord (les 2 écrans réalisables aujourd'hui, donc validation la plus rapide de la chaîne complète), puis `tickets` (cœur métier), puis `teams` (administration).
+
+⛔ **Prérequis** : §5.1 livrée. Un écran construit sur `/api/...` non versionné, ou affichant un état `Resolved`, serait à reprendre intégralement (Principe 1).
+
+### 5.0 Préalable — internationalisation (décision 0.16)
+
+| # | Étape | Réalisation | Exigences |
+|---|---|---|---|
+| 5.0.1 | Installer et configurer l'internationalisation (`@angular/localize`, locales servies, `angular.json`), en reprenant les libellés déjà centralisés dans `shared/i18n/` (Lot 4) comme catalogue de départ | agent **`angular-architect`** | `ENF-22` |
+| 5.0.2 | Fixer la règle d'écriture des écrans : **aucun texte visible en dur** dans un gabarit, y compris les messages d'erreur et les libellés d'accessibilité (`aria-label`) | agent **`angular-architect`** | `ENF-22` |
+
+**Motif de l'antériorité** : rétro-extraire les messages de neuf écrans coûte davantage que de poser le mécanisme d'abord, et les libellés d'accessibilité sont les premiers oubliés d'une extraction tardive.
 
 ### 5.A Feature `assets`
 
@@ -254,9 +323,10 @@ flowchart LR
 | 5.A.1 | Générer le squelette de la feature | skill **`/scaffold-feature assets`** | — |
 | 5.A.2 | Écran inventaire `E-01` : liste, filtrage et tri **côté client** (ou serveur si 0.14 le prévoit), états chargement/vide/erreur | agent **`angular-feature-dev`** | `EF-04` |
 | 5.A.3 | Formulaire d'actif `E-02` : validation locale alignée sur `RM-01`→`RM-05`, report des erreurs serveur sur les champs | agent **`angular-feature-dev`** | `EF-01`→`EF-03` |
-| 5.A.4 | Mise au rebut avec **confirmation explicite** et message de refus détaillant le nombre d'incidents actifs | agent **`angular-feature-dev`** | `EF-05`, `RM-06` |
+| 5.A.4 | Mise au rebut avec **confirmation explicite** et message de refus détaillant le nombre d'incidents actifs. La confirmation n'annonce plus une opération irréversible (décision 0.4) mais une sortie du parc **annulable par un administrateur** | agent **`angular-feature-dev`** | `EF-05`, `RM-06` |
 | 5.A.5 | Fiche d'actif `E-03` (après 2.5) | agent **`angular-feature-dev`** | `EF-06` |
-| 5.A.6 | **Relecture** | agent **`angular-code-reviewer`** | — |
+| 5.A.6 | **Remise en service** d'un actif au rebut (après 2b.5) : action présente uniquement pour un profil habilité, motif obligatoire, confirmation | agent **`angular-feature-dev`** | `EF-09`, décision 0.4 |
+| 5.A.7 | **Relecture** | agent **`angular-code-reviewer`** | — |
 
 **Critères d'acceptation** : les critères de `P-01` de [PRODUCT-SPECIFICATIONS.md](PRODUCT-SPECIFICATIONS.md) §9 sont tous vérifiés, dont **la liste mise à jour depuis le corps de la réponse `201`** et non par rechargement (jusqu'à correction 1.1, puis à conserver comme bonne pratique).
 
@@ -271,7 +341,8 @@ flowchart LR
 | 5.B.5 | Actions prise en charge et clôture, avec compte rendu obligatoire et annonce du retour en service de l'actif | agent **`angular-feature-dev`** | `EF-14`→`EF-16` |
 | 5.B.6 | Transfert avec **sélecteur d'équipe** (après 2.2) et motif | agent **`angular-feature-dev`** | `EF-17` |
 | 5.B.7 | Gestion du **conflit 409** : proposition de rechargement **sans perte de la saisie** | agent **`angular-feature-dev`** | `EF-22`, `RM-22` |
-| 5.B.8 | **Relecture** | agent **`angular-code-reviewer`** | — |
+| 5.B.8 | **Historique de routage** sur la fiche d'incident (après 2b.3) : équipe d'origine, équipe cible, motif et date de chaque transfert. La description affichée est celle saisie à l'ouverture, jamais un texte augmenté | agent **`angular-feature-dev`** | `RM-21`, décision 0.5 |
+| 5.B.9 | **Relecture** | agent **`angular-code-reviewer`** | — |
 
 **Critères d'acceptation** : critères de `P-02` et `P-04` vérifiés ; distinction visible entre erreur de saisie et **anomalie de configuration du référentiel** (`RM-12`) ; aucune branche de code conditionnée à un 404 avant la livraison de 2.6.
 
@@ -281,8 +352,8 @@ flowchart LR
 |---|---|---|---|
 | 5.C.1 | Générer le squelette | skill **`/scaffold-feature teams`** | — |
 | 5.C.2 | Écran d'administration `E-07` : liste, création, modification partielle, suppression avec confirmation | agent **`angular-feature-dev`** | `EF-23`→`EF-26` (après 2.2 et 2.4) |
-| 5.C.3 | **Contrôle de couverture des 9 combinaisons** (type × criticité) avec alerte sur les combinaisons non couvertes | agent **`angular-feature-dev`** | prérequis de `RM-12` |
-| 5.C.4 | Activation / désactivation si retenue en 0.6 | agent **`angular-feature-dev`** | `EF-28` |
+| 5.C.3 | **Contrôle de couverture des 9 combinaisons** (type × criticité) avec alerte sur les combinaisons non couvertes — une équipe **désactivée** ne compte pas comme couvrante | agent **`angular-feature-dev`** | prérequis de `RM-12` |
+| 5.C.4 | Activation / désactivation — **retenue en 0.6** (après 2b.4). La suppression est conservée en parallèle, avec son refus explicite dès qu'un incident référence l'équipe. **Avertir avant confirmation** lorsque la désactivation retire la dernière équipe d'un couple (type × criticité) : l'ouverture d'incidents devient alors impossible pour ce couple | agent **`angular-feature-dev`** | `EF-28`, `RM-12` |
 | 5.C.5 | **Relecture** | agent **`angular-code-reviewer`** | — |
 
 **Critères d'acceptation** : `P-08` réalisable de bout en bout ; l'écran signale explicitement toute combinaison non couverte, cause première des refus d'ouverture d'incident.
@@ -291,7 +362,8 @@ flowchart LR
 
 - Chaque écran gère et distingue **quatre états** : chargement, vide, erreur, contenu.
 - Aucune action destructive sans confirmation ; tout déclencheur d'action longue est désactivé pendant l'appel.
-- Parcours complet **au clavier seul**, libellés en français, valeurs d'énumérations traduites.
+- Parcours complet **au clavier seul**, libellés en français (locale de référence), valeurs d'énumérations traduites.
+- **Aucun texte visible en dur** dans un gabarit : tout message passe par le mécanisme d'internationalisation posé en 5.0, libellés d'accessibilité compris (décision 0.16).
 - Aucun `HttpClient` dans un composant ; aucun composant de présentation dupliqué (réutilisation de `shared/`).
 - `OnPush` partout, `track` sur chaque `@for`, aucun abonnement non fermé, aucune dérivation par `effect()`.
 - Tests : validation de formulaire, dérivations, gestion d'erreur, avec `provideHttpClientTesting()`.
@@ -303,7 +375,8 @@ flowchart LR
 | # | Étape | Réalisation | Exigences | Charge |
 |---|---|---|---|---|
 | 6.1 | Émettre des notifications sur les changements d'état (prise en charge, clôture, transfert), pas seulement à l'ouverture | session principale | `EF-31` | M |
-| 6.2 | Indexer les incidents à la clôture dans la base vectorielle (`UpsertVectorAsync` n'est appelé par aucun code de production) | session principale | `EF-33`, décision 0.7 | M |
+| 6.2 | Indexer les incidents à la clôture dans la base vectorielle (`UpsertVectorAsync` n'est appelé par aucun code de production) — **décision 0.7 retenue** : vecteur calculé sur titre, description et compte rendu | session principale | `EF-33`, décision 0.7 | M |
+| 6.2 bis | **Rétro-indexer les incidents déjà clôturés** par une commande d'amorçage rejouable, sans quoi le corpus ne prend de la valeur qu'après des mois d'exploitation. À exécuter dans le processus de déploiement (voisin de 8.6) | session principale | `EF-33`, décision 0.7 | M |
 | 6.3 | Rendre la file d'analyse IA persistante (table d'attente ou file externe) | session principale | `EF-36`, `ENF-15` | L |
 | 6.4 | Notifier la fin d'analyse IA d'un incident | session principale | `EF-35` | M |
 | 6.5 | Affichage de la note d'assistance `E-08`, avec état « analyse en cours » | agent **`angular-feature-dev`** | `EF-34` | M |
@@ -311,21 +384,24 @@ flowchart LR
 | 6.7 | Reconnexion et information de l'utilisateur en cas de coupure | agent **`angular-feature-dev`** | — | S |
 | 6.8 | **Relectures** | agents **`dotnet-code-reviewer`** et **`angular-code-reviewer`** | — | S |
 
-**Critères d'acceptation** : un incident clôturé est retrouvable par similarité pour un incident ultérieur comparable ; un redémarrage du service ne perd aucune demande d'analyse ; la note s'affiche sans rechargement manuel ; une coupure temps réel est visible pour l'utilisateur et suivie d'une reconnexion.
+**Critères d'acceptation** : un incident clôturé est retrouvable par similarité pour un incident ultérieur comparable ; **la rétro-indexation d'un parc existant est rejouable sans doublonner les vecteurs** ; un redémarrage du service ne perd aucune demande d'analyse ; la note s'affiche sans rechargement manuel ; une coupure temps réel est visible pour l'utilisateur et suivie d'une reconnexion.
+
+**Limite assumée du lot** (décision 0.7) : la base DuckDB reste un **fichier local** au processus (`AD-10`). Le corpus n'est ni partagé ni cohérent entre plusieurs répliques d'API — son externalisation n'est pas au périmètre de ce lot et devient un prérequis de toute mise à l'échelle horizontale.
 
 ---
 
 ## 10. Lot 7 — Sécurité ⛔ avant toute mise en service
 
-**Objectif** : `ENF-01` et `ENF-02`. Dépend entièrement de la décision 0.1.
+**Objectif** : `ENF-01` et `ENF-02`. **Décision 0.1 tranchée le 2026-08-05 : annuaire d'entreprise (Microsoft Entra ID), OIDC, jetons `JWT Bearer`, rôles dérivés des groupes d'annuaire.**
 
 | # | Étape | Réalisation | Charge |
 |---|---|---|---|
-| 7.1 | Mettre en place le schéma d'authentification retenu côté API (`AddAuthentication`, `AddJwtBearer` ou équivalent) et l'activer avant `UseAuthorization` | session principale | L |
-| 7.2 | Protéger les endpoints (`[Authorize]`), en distinguant lecture et écriture | session principale | M |
-| 7.3 | Définir les rôles et les habilitations par opération, en cohérence avec les personas du PRD | session principale | M |
-| 7.4 | Introduire la notion d'utilisateur et son rattachement à une équipe (prérequis de 6.6, lié à la décision 0.2) | session principale | L |
-| 7.5 | Activer l'interceptor de jeton (3.8), gérer l'expiration et la reconnexion temps réel authentifiée | agent **`dotnet-api-bridge`** | M |
+| 7.0 | **Prérequis d'exploitation, hors code** : enregistrement d'application dans le tenant (client public pour le frontend + audience d'API), attribution des groupes d'annuaire aux rôles définis en 7.3, publication des paramètres (`Authority`, `Audience`, `TenantId`) par la configuration — jamais dans le dépôt | responsable technique | S |
+| 7.1 | Mettre en place `AddAuthentication().AddJwtBearer(...)` sur l'autorité Entra ID (validation d'`issuer`, d'`audience`, de signature et de durée de vie) et l'activer **avant** `UseAuthorization` | session principale | L |
+| 7.2 | Protéger les endpoints (`[Authorize]`), en distinguant lecture et écriture, et **réserver la remise en service d'un actif au rôle d'administrateur** (décision 0.4, étape 2b.5) | session principale | M |
+| 7.3 | Définir les rôles et les habilitations par opération, en cohérence avec les personas du PRD, et leur correspondance avec les groupes d'annuaire (revendication `roles` du jeton) | session principale | M |
+| 7.4 | Introduire la notion d'utilisateur et son rattachement à une équipe (prérequis de 6.6), puis **enregistrer l'identité de l'auteur de la prise en charge et de la clôture** — ajouts **additifs** au contrat des incidents (décision 0.2). L'affectation dirigée vers une personne (`EF-21`) reste hors périmètre | session principale | L |
+| 7.5 | Alimenter `AuthTokenService` depuis le flux OIDC (autorisation avec code et PKCE côté navigateur), activer l'interceptor de jeton (3.8), gérer l'expiration, le renouvellement silencieux et la reconnexion temps réel authentifiée | agent **`dotnet-api-bridge`** | M |
 | 7.6 | Guards de route et masquage des actions non autorisées | agent **`angular-feature-dev`** | M |
 | 7.7 | **Revue de sécurité** dédiée | agent **`dotnet-code-reviewer`** (grille OWASP) puis `angular-code-reviewer` | M |
 
@@ -337,15 +413,16 @@ flowchart LR
 
 | # | Étape | Réalisation | Charge |
 |---|---|---|---|
-| 8.1 | Ajouter les jobs frontend à `.github/workflows/ci-cd.yml` : installation, `ng build`, `ng test`, vérification de format | session principale | M |
+| 8.1 | Ajouter les jobs frontend à `.github/workflows/ci-cd.yml` : installation, `ng build`, `ng test`, vérification de format, plus les deux vérifications hors suite (`verifier:dependances`, `verifier:contrastes`) | session principale | M |
 | 8.2 | Intégrer la couverture frontend au portail SonarCloud | session principale | M |
 | 8.3 | Rendre explicite la version de SDK requise par `.slnx` (`global.json`) | session principale | S |
-| 8.4 | Construire et publier l'artefact frontend selon la décision 0.13 (conteneur, servi par l'API ou hébergement statique) | session principale | M |
-| 8.5 | Reverse proxy et **même origine** en production (l'API n'applique aucune politique CORS hors Development) | session principale | M |
+| 8.4 | **Décision 0.13** : construire et publier une **image nginx dédiée** au frontend vers GHCR, à côté de l'image API — deux artefacts versionnés, cycles de livraison séparés, en-têtes de cache maîtrisés (fichiers d'empreinte immuables, `index.html` non caché) | session principale | M |
+| 8.5 | ⛔ **Obligatoire du fait de 0.13** : reverse proxy frontal reconstituant la **même origine** (frontend en racine, API sous `/api/v1`) et le passage des WebSockets vers `/ticketHub`. L'API n'applique **aucune** politique CORS hors Development : sans ce proxy, l'appel navigateur échoue | session principale | M |
 | 8.6 | Amorçage des données de référence dans le processus de déploiement (suite de 1.9) | session principale | S |
-| 8.7 | Vérifier les sondes de santé de bout en bout en conteneur (suite de 1.2) | session principale | S |
+| 8.7 | Vérifier les sondes de santé de bout en bout en conteneur (suite de 1.2), **image frontend comprise** | session principale | S |
+| 8.8 | Rétro-indexation du corpus vectoriel intégrée au déploiement (suite de 6.2 bis, décision 0.7) | session principale | S |
 
-**Critères d'acceptation** : un `push` sur `main` produit une image API **et** un artefact frontend cohérents ; le pipeline échoue si le frontend ne compile pas ou si ses tests échouent ; une base neuve devient exploitable sans intervention manuelle ; les conteneurs se déclarent `healthy`.
+**Critères d'acceptation** : un `push` sur `main` produit une image API **et** une image frontend cohérentes ; le pipeline échoue si le frontend ne compile pas ou si ses tests échouent ; une base neuve devient exploitable sans intervention manuelle ; les conteneurs se déclarent `healthy` ; **un appel navigateur depuis l'origine du proxy aboutit sans en-tête CORS**.
 
 ---
 
@@ -457,23 +534,29 @@ flowchart TB
 
 | Lot | Exigences couvertes |
 |---|---|
+| Lot 0 | aucune exigence livrée — 16 décisions arrêtées, qui **ouvrent** `EF-09`, `EF-17`, `EF-28`, `EF-33` et fixent la forme de `EF-21`, `ENF-01` et `ENF-22` |
 | Lot 1 | `ENF-04`, `ENF-09`, `ENF-13`, `ENF-16`, `RM-05`, `RM-13`, `RM-15`, `RM-23`, `RM-24`, prérequis de `RM-12` |
-| Lot 2 | `EF-06`, `EF-17`, `EF-19`, `EF-20`, `EF-27`, `EF-28`, `EF-34`, `EF-35` |
+| Lot 2 | `EF-06`, `EF-19`, `EF-20`, `EF-27`, `EF-34`, `EF-35` (exposition), amorces de `EF-17` et `EF-28` |
+| Lot 2 bis | `EF-09`, `EF-17` / `RM-21` (motif historisé), `EF-28`, cohérence de contrat (`AD-13` révisée) |
 | Lot 3 | `EF-37` (socle), `ENF-22` (socle) |
 | Lot 4 | `EF-41`, `EF-42`, `ENF-20`, `ENF-21`, `ENF-23` |
-| Lot 5 | `EF-01`→`EF-05`, `EF-10`→`EF-18`, `EF-22`→`EF-26`, `EF-37`→`EF-39` |
+| Lot 5 | `EF-01`→`EF-05`, `EF-09` (interface), `EF-10`→`EF-18`, `EF-22`→`EF-26`, `EF-28` (interface), `EF-37`→`EF-39`, `ENF-22` (mécanisme, étape 5.0) |
 | Lot 6 | `EF-30`→`EF-36`, `EF-40`, `ENF-15` |
-| Lot 7 | `ENF-01`, `ENF-02`, `EF-21` (selon 0.2) |
+| Lot 7 | `ENF-01`, `ENF-02` ; traçabilité de l'auteur (décision 0.2) |
 | Lot 8 | `ENF-13` (validation), `ENF-18` (frontend), prérequis de déploiement |
-| Non couvert | `EF-07` (recherche serveur), `EF-08` (modification d'actif), `EF-09` (remise en service) — dépendent des décisions 0.4 et 0.14 |
+| Non couvert, par décision | `EF-21` (affectation nominative) — écartée par 0.2 ; `EF-07` (recherche et pagination serveur de l'inventaire) — écartée par 0.14, le filtrage restant côté client |
+| Non couvert, sans décision | `EF-08` (modification du libellé d'un actif) — aucun besoin exprimé ; à trancher si une correction de saisie devient nécessaire |
 
 ## 15. Risques d'exécution
 
 | Risque | Effet sur le plan | Mesure |
 |---|---|---|
-| Lot 0 non tranché | les lots 2, 4, 5 et 7 démarrent sur des hypothèses et se reprennent | traiter le Lot 0 comme un jalon bloquant, avec un décideur nommé |
+| ~~Lot 0 non tranché~~ **levé le 2026-08-05** | — | les 16 décisions sont écrites ; le travail qu'elles créent est ordonnancé en §3.1 |
+| **§5.1 livrée après le Lot 5** — risque désormais principal | les 9 écrans adressent des routes non versionnées, affichent un état supprimé et un motif de transfert noyé dans la description : reprise du typage, des services et des tests | §5.1 est un prérequis déclaré du Lot 5 ; ne pas ouvrir 5.A.2 avant la clôture de 2b.1 |
 | Lot 2 livré après le Lot 5 | reprise du typage, des services et des tests d'écran | respecter le Principe 1 ; à défaut, geler les écrans concernés |
-| Ruptures de contrat non coordonnées | client cassé sans avertissement (aucun versioning d'API) | décision 0.15, et `/sync-api-dtos` en porte de fusion |
+| Ruptures de contrat non coordonnées | client cassé sans avertissement | décision 0.15 : URL versionnées (`/api/v1`) dès §5.1, et `/sync-api-dtos` en porte de fusion |
+| **Tenant Entra ID indisponible au moment du Lot 7** (étape 7.0) | le Lot 7 se bloque sur un prérequis d'exploitation, non sur du code | ouvrir l'enregistrement d'application dès maintenant ; à défaut, replier sur un fournisseur OIDC auto-hébergé, l'intégration côté API étant identique |
+| **Internationalisation posée après le premier écran** (0.16) | rétro-extraction des messages de neuf écrans, libellés d'accessibilité oubliés | étape 5.0 placée avant 5.A ; critère d'acceptation « aucun texte visible en dur » |
 | Framework CSS choisi tardivement | reprise du style de tous les composants du Lot 4 | trancher 0.9 avant l'étape 4.1, jamais après |
 | SignalStore introduit en préversion | dépendance instable au cœur de l'état | s'en tenir aux Signals natifs sauf décision explicite (0.12) |
 | Sécurité repoussée en fin de parcours | interface construite sans contexte utilisateur, reprise des guards et de l'abonnement temps réel | trancher 0.1 tôt, même si la réalisation du Lot 7 vient plus tard |
