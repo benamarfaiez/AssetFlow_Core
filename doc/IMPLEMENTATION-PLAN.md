@@ -21,7 +21,7 @@ Documents de référence : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) (e
 | Frontend | ✅ socle **et** design system en place : workspace Angular 22 `AssetFlowCore.WebUI` (standalone, Signals, zoneless, Vitest, Tailwind 4), types du contrat, 3 services d'API, intercepteurs, client SignalR, 18 composants partagés, thème clair/sombre, 129 tests verts ; **Lots 3 et 4 appliqués**. Aucun écran produit (`E-01`→`E-09` au Lot 5) |
 | Assistance IA | 🟡 mécanisme complet mais corpus vectoriel vide et état non exposé |
 | Documentation | ✅ produit, fonctionnel, technique, architecture, contrat d'API |
-| Outillage Claude Code | ✅ 6 agents, 3 skills |
+| Outillage Claude Code | ✅ **8 agents**, 3 skills — `angular-qa-mock` (tests, mocks MSW, E2E) et `angular-security-auth` (sécurité, authentification, état) ajoutés le 2026-08-05 |
 
 ## 2. Stratégie d'exécution
 
@@ -55,6 +55,8 @@ flowchart LR
 ```
 
 **Point d'attention sur les ressources** : il n'existe **aucun agent d'implémentation backend**. Les lots 1, 2, 6 et 7 sont réalisés en session principale ou par un développeur, avec `dotnet-code-reviewer` en relecture. Créer un agent `dotnet-dev` est une option si le volume backend augmente.
+
+**Deux angles frontend couverts depuis le 2026-08-05** : les tests et les mocks (`angular-qa-mock`) et la sécurité, l'authentification et l'état (`angular-security-auth`). Ils comblent deux manques que les lots 3 et 4 avaient absorbés en session principale — les 129 tests existants ont été écrits sans agent dédié, et le socle d'authentification du Lot 3 (étape 3.8) a été posé sans propriétaire déclaré. Ces deux agents portent chacun une part du Lot 7 (§10) et du Lot 5 (§8).
 
 ---
 
@@ -115,12 +117,12 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 | 0.5 | Entité d'historique de transferts et exposition | §5.1, étape 2b.3 |
 | 0.6 | Endpoints d'activation / désactivation d'équipe | §5.1, étape 2b.4 |
 | 0.4 | Endpoint de remise en service, motif obligatoire | §5.1, étape 2b.5 |
-| 0.4 | Confirmation et action de remise en service côté interface | Lot 5, étape 5.A.7 |
-| 0.5 | Affichage de l'historique de routage sur la fiche d'incident | Lot 5, étape 5.B.9 |
+| 0.4 | Confirmation et action de remise en service côté interface | Lot 5, étape 5.A.6 |
+| 0.5 | Affichage de l'historique de routage sur la fiche d'incident | Lot 5, étape 5.B.8 |
 | 0.6 | Bascule d'activation dans l'écran d'administration | Lot 5, étape 5.C.4 (confirmée) |
 | 0.16 | Mise en place de l'internationalisation avant le premier écran | Lot 5, étape 5.0 |
 | 0.7 | Indexation à la clôture **et** commande de rétro-indexation | Lot 6, étapes 6.2 et 6.2 bis |
-| 0.1 | Schéma OIDC / Entra ID, enregistrement d'application, rôles par groupes | Lot 7, étapes 7.1 à 7.3 |
+| 0.1 | Schéma OIDC / Entra ID, enregistrement d'application, rôles par groupes | Lot 7, étapes 7.0 à 7.3 (API et exploitation), puis 7.5 à 7.6 (frontend) |
 | 0.2 | Identité de l'auteur de la prise en charge et de la clôture | Lot 7, étape 7.4 |
 | 0.4 | Restriction de la remise en service au rôle d'administrateur | Lot 7, étape 7.2 |
 | 0.13 | Image nginx dédiée, et reverse proxy pour la même origine | Lot 8, étapes 8.4 et 8.5 |
@@ -307,14 +309,17 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 
 ⛔ **Prérequis** : §5.1 livrée. Un écran construit sur `/api/...` non versionné, ou affichant un état `Resolved`, serait à reprendre intégralement (Principe 1).
 
-### 5.0 Préalable — internationalisation (décision 0.16)
+### 5.0 Préalables — internationalisation (décision 0.16) et autonomie de développement
 
 | # | Étape | Réalisation | Exigences |
 |---|---|---|---|
 | 5.0.1 | Installer et configurer l'internationalisation (`@angular/localize`, locales servies, `angular.json`), en reprenant les libellés déjà centralisés dans `shared/i18n/` (Lot 4) comme catalogue de départ | agent **`angular-architect`** | `ENF-22` |
 | 5.0.2 | Fixer la règle d'écriture des écrans : **aucun texte visible en dur** dans un gabarit, y compris les messages d'erreur et les libellés d'accessibilité (`aria-label`) | agent **`angular-architect`** | `ENF-22` |
+| 5.0.3 | ❓ **Décision de dépendance** puis, si retenue, mocks MSW dérivés du contrat : handlers typés contre `shared/models/`, scénarios d'erreur par nature d'`ApiError`, ticket en deux phases (`isAiProcessing` puis note). Racine des routes en constante unique pour absorber `/api/v1` (2b.1) | agent **`angular-qa-mock`** | — |
 
-**Motif de l'antériorité** : rétro-extraire les messages de neuf écrans coûte davantage que de poser le mécanisme d'abord, et les libellés d'accessibilité sont les premiers oubliés d'une extraction tardive.
+**Motif de l'antériorité de 5.0.1 et 5.0.2** : rétro-extraire les messages de neuf écrans coûte davantage que de poser le mécanisme d'abord, et les libellés d'accessibilité sont les premiers oubliés d'une extraction tardive.
+
+**Motif de 5.0.3** : lancer l'API exige Docker, le secret du mot de passe SQL **et une base migrée** — sans la migration `SeedReferenceTeams`, toute création d'incident échoue. À défaut, l'API démarre mais **aucun endpoint de données ne répond 200**. Un jeu de mocks rend les neuf écrans développables et démontrables sans cette chaîne, et rend reproductibles les états dégradés (409, 5xx, hors ligne) qu'une API saine ne produit pas à la demande. Ce n'est **pas** une entorse au Principe 4 : les mocks servent le développement et les tests, jamais un écran livré sur un endpoint absent.
 
 ### 5.A Feature `assets`
 
@@ -326,7 +331,8 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 | 5.A.4 | Mise au rebut avec **confirmation explicite** et message de refus détaillant le nombre d'incidents actifs. La confirmation n'annonce plus une opération irréversible (décision 0.4) mais une sortie du parc **annulable par un administrateur** | agent **`angular-feature-dev`** | `EF-05`, `RM-06` |
 | 5.A.5 | Fiche d'actif `E-03` (après 2.5) | agent **`angular-feature-dev`** | `EF-06` |
 | 5.A.6 | **Remise en service** d'un actif au rebut (après 2b.5) : action présente uniquement pour un profil habilité, motif obligatoire, confirmation | agent **`angular-feature-dev`** | `EF-09`, décision 0.4 |
-| 5.A.7 | **Relecture** | agent **`angular-code-reviewer`** | — |
+| 5.A.7 | **Tests de la feature** : validation de `RM-01`→`RM-05`, report des erreurs serveur sur les champs, les quatre états d'écran, refus de mise au rebut avec incidents actifs | agent **`angular-qa-mock`** | — |
+| 5.A.8 | **Relecture** | agent **`angular-code-reviewer`** | — |
 
 **Critères d'acceptation** : les critères de `P-01` de [PRODUCT-SPECIFICATIONS.md](PRODUCT-SPECIFICATIONS.md) §9 sont tous vérifiés, dont **la liste mise à jour depuis le corps de la réponse `201`** et non par rechargement (jusqu'à correction 1.1, puis à conserver comme bonne pratique).
 
@@ -342,7 +348,8 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 | 5.B.6 | Transfert avec **sélecteur d'équipe** (après 2.2) et motif | agent **`angular-feature-dev`** | `EF-17` |
 | 5.B.7 | Gestion du **conflit 409** : proposition de rechargement **sans perte de la saisie** | agent **`angular-feature-dev`** | `EF-22`, `RM-22` |
 | 5.B.8 | **Historique de routage** sur la fiche d'incident (après 2b.3) : équipe d'origine, équipe cible, motif et date de chaque transfert. La description affichée est celle saisie à l'ouverture, jamais un texte augmenté | agent **`angular-feature-dev`** | `RM-21`, décision 0.5 |
-| 5.B.9 | **Relecture** | agent **`angular-code-reviewer`** | — |
+| 5.B.9 | **Tests de la feature** : construction des paramètres de filtrage et de pagination, **conflit 409 sans perte de saisie**, état « analyse IA en cours », distinction erreur de saisie / anomalie de référentiel (`RM-12`) | agent **`angular-qa-mock`** | — |
+| 5.B.10 | **Relecture** | agent **`angular-code-reviewer`** | — |
 
 **Critères d'acceptation** : critères de `P-02` et `P-04` vérifiés ; distinction visible entre erreur de saisie et **anomalie de configuration du référentiel** (`RM-12`) ; aucune branche de code conditionnée à un 404 avant la livraison de 2.6.
 
@@ -354,7 +361,8 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 | 5.C.2 | Écran d'administration `E-07` : liste, création, modification partielle, suppression avec confirmation | agent **`angular-feature-dev`** | `EF-23`→`EF-26` (après 2.2 et 2.4) |
 | 5.C.3 | **Contrôle de couverture des 9 combinaisons** (type × criticité) avec alerte sur les combinaisons non couvertes — une équipe **désactivée** ne compte pas comme couvrante | agent **`angular-feature-dev`** | prérequis de `RM-12` |
 | 5.C.4 | Activation / désactivation — **retenue en 0.6** (après 2b.4). La suppression est conservée en parallèle, avec son refus explicite dès qu'un incident référence l'équipe. **Avertir avant confirmation** lorsque la désactivation retire la dernière équipe d'un couple (type × criticité) : l'ouverture d'incidents devient alors impossible pour ce couple | agent **`angular-feature-dev`** | `EF-28`, `RM-12` |
-| 5.C.5 | **Relecture** | agent **`angular-code-reviewer`** | — |
+| 5.C.5 | **Tests de la feature** : contrôle de couverture des 9 combinaisons (une équipe désactivée ne couvre pas), avertissement avant retrait de la dernière équipe d'un couple, refus de suppression référencée | agent **`angular-qa-mock`** | — |
+| 5.C.6 | **Relecture** | agent **`angular-code-reviewer`** | — |
 
 **Critères d'acceptation** : `P-08` réalisable de bout en bout ; l'écran signale explicitement toute combinaison non couverte, cause première des refus d'ouverture d'incident.
 
@@ -366,7 +374,7 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 - **Aucun texte visible en dur** dans un gabarit : tout message passe par le mécanisme d'internationalisation posé en 5.0, libellés d'accessibilité compris (décision 0.16).
 - Aucun `HttpClient` dans un composant ; aucun composant de présentation dupliqué (réutilisation de `shared/`).
 - `OnPush` partout, `track` sur chaque `@for`, aucun abonnement non fermé, aucune dérivation par `effect()`.
-- Tests : validation de formulaire, dérivations, gestion d'erreur, avec `provideHttpClientTesting()`.
+- Tests : validation de formulaire, dérivations, gestion d'erreur, avec `provideHttpClientTesting()` — étapes 5.A.7, 5.B.9 et 5.C.5, portées par `angular-qa-mock`.
 
 ---
 
@@ -396,16 +404,19 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 
 | # | Étape | Réalisation | Charge |
 |---|---|---|---|
-| 7.0 | **Prérequis d'exploitation, hors code** : enregistrement d'application dans le tenant (client public pour le frontend + audience d'API), attribution des groupes d'annuaire aux rôles définis en 7.3, publication des paramètres (`Authority`, `Audience`, `TenantId`) par la configuration — jamais dans le dépôt | responsable technique | S |
-| 7.1 | Mettre en place `AddAuthentication().AddJwtBearer(...)` sur l'autorité Entra ID (validation d'`issuer`, d'`audience`, de signature et de durée de vie) et l'activer **avant** `UseAuthorization` | session principale | L |
+| 7.0 | **Prérequis d'exploitation, hors code** : enregistrement d'application dans le tenant (client public pour le frontend + audience d'API), déclaré en plateforme **« Single-page application »** — enregistré en « Web », l'échange de code contre jeton échoue en CORS ; attribution des groupes d'annuaire aux rôles définis en 7.3 ; publication des paramètres (`Authority`, `Audience`, `TenantId`) par la configuration — jamais dans le dépôt | responsable technique | S |
+| 7.1 | Mettre en place `AddAuthentication().AddJwtBearer(...)` sur l'autorité Entra ID (validation d'`issuer`, d'`audience`, de signature et de durée de vie) et l'activer **avant** `UseAuthorization`. `Program.cs` appelle aujourd'hui `UseAuthorization()` **sans aucun schéma enregistré** : un `[Authorize]` posé avant cette étape lèverait une exception au premier appel | session principale | L |
+| 7.1 bis | **Jeton du hub SignalR** : un WebSocket ne portant pas d'en-tête `Authorization`, le client place le jeton en chaîne de requête — `JwtBearerEvents.OnMessageReceived` doit le lire pour les chemins de `/ticketHub`. Arbitrer l'exposition : ce jeton atterrit dans les journaux d'accès du serveur et du proxy | session principale | M |
 | 7.2 | Protéger les endpoints (`[Authorize]`), en distinguant lecture et écriture, et **réserver la remise en service d'un actif au rôle d'administrateur** (décision 0.4, étape 2b.5) | session principale | M |
 | 7.3 | Définir les rôles et les habilitations par opération, en cohérence avec les personas du PRD, et leur correspondance avec les groupes d'annuaire (revendication `roles` du jeton) | session principale | M |
 | 7.4 | Introduire la notion d'utilisateur et son rattachement à une équipe (prérequis de 6.6), puis **enregistrer l'identité de l'auteur de la prise en charge et de la clôture** — ajouts **additifs** au contrat des incidents (décision 0.2). L'affectation dirigée vers une personne (`EF-21`) reste hors périmètre | session principale | L |
-| 7.5 | Alimenter `AuthTokenService` depuis le flux OIDC (autorisation avec code et PKCE côté navigateur), activer l'interceptor de jeton (3.8), gérer l'expiration, le renouvellement silencieux et la reconnexion temps réel authentifiée | agent **`dotnet-api-bridge`** | M |
-| 7.6 | Guards de route et masquage des actions non autorisées | agent **`angular-feature-dev`** | M |
-| 7.7 | **Revue de sécurité** dédiée | agent **`dotnet-code-reviewer`** (grille OWASP) puis `angular-code-reviewer` | M |
+| 7.5 | Alimenter `AuthTokenService` depuis le flux OIDC (autorisation avec code et PKCE côté navigateur), activer l'interceptor de jeton (3.8), gérer l'expiration, le renouvellement silencieux et la reconnexion temps réel authentifiée (`accessTokenFactory` retournant un jeton **frais** à chaque reconnexion). ❓ **Décision de dépendance à poser** : `@azure/msal-browser` ou flux écrit à la main — si MSAL est retenu, il possède le cycle de vie du jeton et son `MsalInterceptor` **ne doit pas coexister** avec `authTokenInterceptor` | agent **`angular-security-auth`** | M |
+| 7.5 bis | Étendre `ApiErrorKind` des natures `unauthorized` (401) et `forbidden` (403), aujourd'hui absorbées par la branche de repli en `kind: 'server'`. **Dans `error.interceptor.ts` seul** — aucun second intercepteur ne relit `ProblemDetails`. Un 401 est rejouable après renouvellement, un 403 ne l'est jamais | agent **`angular-security-auth`** | S |
+| 7.6 | Gardes de route (`CanMatchFn` plutôt que `CanActivateFn` : toutes les routes sont en `loadChildren`, un lot d'écran interdit n'a pas à être téléchargé), attente de l'initialisation de l'authentification pour ne pas rejeter l'utilisateur à chaque rechargement, et masquage des actions non autorisées | agent **`angular-security-auth`** | M |
+| 7.7 | **Tests** : interceptor de jeton avec et sans jeton, gardes sur les trois cas (authentifié, anonyme, initialisation en cours), rejeu unique après 401, absence de rejeu sur 403, persistance de session | agent **`angular-qa-mock`** | M |
+| 7.8 | **Revue de sécurité** dédiée | agent **`dotnet-code-reviewer`** (grille OWASP) puis `angular-code-reviewer` | M |
 
-**Critères d'acceptation** : aucun endpoint accessible anonymement hors sondes et documentation ; un jeton expiré produit un comportement défini côté interface ; une opération non autorisée renvoie 403 et l'action correspondante est absente de l'interface ; aucun secret dans le code ni dans la configuration versionnée.
+**Critères d'acceptation** : aucun endpoint accessible anonymement hors sondes et documentation ; un jeton expiré produit un comportement défini côté interface ; une opération non autorisée renvoie 403 et l'action correspondante est absente de l'interface ; **toute restriction est vérifiée par l'API indépendamment de l'interface** — une garde ou un masquage d'action relève de l'ergonomie, jamais de la protection, les rôles venant d'une revendication lisible côté client ; aucun jeton ni revendication journalisé, console de développement comprise ; aucun secret dans le code ni dans la configuration versionnée.
 
 ---
 
@@ -413,7 +424,7 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 
 | # | Étape | Réalisation | Charge |
 |---|---|---|---|
-| 8.1 | Ajouter les jobs frontend à `.github/workflows/ci-cd.yml` : installation, `ng build`, `ng test`, vérification de format, plus les deux vérifications hors suite (`verifier:dependances`, `verifier:contrastes`) | session principale | M |
+| 8.1 | Ajouter les jobs frontend à `.github/workflows/ci-cd.yml` : installation, `ng build`, `ng test`, vérification de format, plus les deux vérifications hors suite (`verifier:dependances`, `verifier:contrastes`). Si l'E2E est retenu (❓ décision de dépendance, cf. `angular-qa-mock`), un job dédié — il exige l'API **et une base migrée**, ce que le pipeline actuel ne monte pas ; à défaut, le faire tourner contre le worker MSW en assumant qu'il ne prouve rien du contrat réel | session principale | M |
 | 8.2 | Intégrer la couverture frontend au portail SonarCloud | session principale | M |
 | 8.3 | Rendre explicite la version de SDK requise par `.slnx` (`global.json`) | session principale | S |
 | 8.4 | **Décision 0.13** : construire et publier une **image nginx dédiée** au frontend vers GHCR, à côté de l'image API — deux artefacts versionnés, cycles de livraison séparés, en-têtes de cache maîtrisés (fichiers d'empreinte immuables, `index.html` non caché) | session principale | M |
@@ -457,6 +468,8 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 - Aucun appel `HttpClient` hors `core/api/` ; aucune URL d'API en dur.
 - Les types du contrat proviennent de `shared/models/`, jamais redéfinis localement.
 - Quatre états gérés par écran : chargement, vide, erreur, contenu.
+- Tests : aucun test tautologique ni de complaisance ; `HttpTestingController` toujours suivi de `verify()` ; entrées signaux pilotées par `fixture.componentRef.setInput(...)` — une affectation directe sur un `input()` rend le test **faussement vert**.
+- Aucun contournement de jsdom (absence de `localStorage`, géométrie non calculée) introduit dans le code de production : il reste dans le test qui en a besoin.
 
 ### 12.4 Spécifique interface et accessibilité
 
@@ -490,9 +503,16 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 | `angular.json`, `tsconfig*`, `app.config.ts`, routing racine, environnements | `angular-architect` | `angular-feature-dev`, `ui-ux-designer` |
 | `features/**` (écrans, logique, navigation) | `angular-feature-dev` | `ui-ux-designer` |
 | `shared/**` (design system, styles, thèmes) | `ui-ux-designer` | `angular-feature-dev` |
-| `shared/models/`, `core/api/`, `core/http/`, `core/realtime/` | `dotnet-api-bridge` | `angular-feature-dev` |
+| `shared/models/`, `core/api/`, `core/realtime/` | `dotnet-api-bridge` | `angular-feature-dev` |
+| `core/auth/`, `core/http/` (intercepteurs), `*.guard.ts`, store d'authentification | `angular-security-auth` | `angular-feature-dev`, `ui-ux-designer` |
+| `**/*.spec.ts`, `src/mocks/` (MSW), `e2e/` | `angular-qa-mock` | — (tout agent peut livrer ses propres tests, mais la suite est de son ressort) |
 | Revue backend | `dotnet-code-reviewer` (lecture seule) | — |
 | Revue frontend | `angular-code-reviewer` (lecture seule) | — |
+
+**Deux frontières à tenir explicitement**, l'ajout de ces deux agents ayant créé des recouvrements :
+
+- **`core/http/error.interceptor.ts`** est le seul interprète de `ProblemDetails` : il appartient à `angular-security-auth`, mais sa **table de correspondance statut → nature d'erreur suit le contrat**. L'y modifier (ajout des natures `unauthorized` / `forbidden` au Lot 7, étape 7.5 bis) est une évolution coordonnée avec `dotnet-api-bridge`, jamais un ajout unilatéral. Aucun second intercepteur ne relit `ProblemDetails`.
+- **Les stores d'état de feature restent dans `features/**`**, donc à `angular-feature-dev`. `angular-security-auth` en fixe les conventions (signaux natifs, portée au niveau de la route, aucune dérivation par `effect()`) et ne possède que le store d'authentification, réellement racine.
 
 ### 13.2 Quel skill pour quelle étape
 
@@ -512,21 +532,27 @@ flowchart TB
     B --> C["3. /scaffold-ui &lt;composant&gt;<br/>briques manquantes de shared/"]
     C --> D["4. agent ui-ux-designer<br/>finition visuelle et accessibilité"]
     D --> E["5. agent angular-feature-dev<br/>logique, formulaires, navigation"]
-    E --> F["6. agent angular-code-reviewer<br/>revue avant fusion"]
-    F --> G{"constats CRITIQUE ?"}
-    G -- oui --> E
-    G -- non --> H["7. fusion"]
+    E --> F["6. agent angular-qa-mock<br/>tests de la feature"]
+    F --> G["7. agent angular-code-reviewer<br/>revue avant fusion"]
+    G --> H{"constats CRITIQUE ?"}
+    H -- oui --> E
+    H -- non --> I["8. fusion"]
 ```
+
+`angular-qa-mock` intervient **avant** le relecteur, non après : une suite verte fait partie de ce que la revue examine, et un défaut trouvé par un test coûte moins cher qu'un constat de revue. Il peut aussi être appelé **en amont** de l'étape 5, pour monter les mocks MSW quand l'API n'est pas joignable localement (ni Docker, ni base migrée).
 
 ### 13.4 Règles d'usage
 
 1. **Un skill avant un agent** quand un squelette conforme existe : `/scaffold-feature` et `/scaffold-ui` produisent la structure, l'agent l'affine. Ne pas demander à un agent de repartir de zéro.
 2. **Ne jamais confier une modification backend à un agent frontend** : leurs définitions le leur interdisent, ils s'arrêteront et signaleront le besoin.
 3. **Les relecteurs ne corrigent pas** : ils rendent des constats classés `CRITIQUE` / `AVERTISSEMENT` / `SUGGESTION` avec un extrait de correction. L'application revient à l'implémenteur.
-4. **Une décision structurante ne se prend pas dans un agent** : `angular-architect` et `ui-ux-designer` présentent les options (0.9 à 0.13) mais n'installent rien sans validation.
+4. **Une décision structurante ne se prend pas dans un agent** : `angular-architect` et `ui-ux-designer` présentent les options (0.9 à 0.13) mais n'installent rien sans validation. La règle vaut aussi pour les **quatre dépendances qu'aucune décision ne couvre encore** : `msw` et `playwright` (`angular-qa-mock`), `@azure/msal-browser` et `@angular/localize` (`angular-security-auth` et étape 5.0). Ces agents les proposent avec leur arbitrage, ils ne les installent pas.
 5. **Toute évolution de contrat déclenche `/sync-api-dtos`** avant la reprise du code d'écran, sinon la dérive se propage silencieusement.
 6. **Redémarrage requis** après ajout ou modification d'un agent ou d'un skill : les définitions sont chargées au démarrage de la session.
-7. **Le code C# prime sur les contrats recopiés dans les définitions.** `angular-architect`, `dotnet-api-bridge` et le skill `/sync-api-dtos` embarquent un relevé du contrat daté du 2026-08-04, donc **antérieur au Lot 2** : il ignore `GET /api/tickets`, `GET /api/teams`, `GET /api/assets/{id}`, les champs ajoutés aux DTOs, le 200 de `PUT /api/teams/{id}` et la sémantique 404. Ces relevés sont à rafraîchir ; en attendant, toute génération part des fichiers `.cs`, comme les définitions le prescrivent elles-mêmes.
+7. **Le code C# prime sur les contrats recopiés dans les définitions.** `angular-architect`, `dotnet-api-bridge` et le skill `/sync-api-dtos` embarquent un relevé du contrat daté du 2026-08-04, donc **antérieur au Lot 2** : il ignore `GET /api/tickets`, `GET /api/teams`, `GET /api/assets/{id}`, les champs ajoutés aux DTOs, le 200 de `PUT /api/teams/{id}` et la sémantique 404. Ces relevés sont à rafraîchir ; en attendant, toute génération part des fichiers `.cs`, comme les définitions le prescrivent elles-mêmes. **`angular-qa-mock` et `angular-security-auth` échappent à cette réserve** : écrits le 2026-08-05 contre le code des lots 2, 3 et 4, ils ne recopient aucun contrat et renvoient aux fichiers sources.
+8. **`angular-qa-mock` ne corrige pas le code de production.** Un test rouge dont la cause est un défaut applicatif reste rouge et est rapporté comme tel : le corriger appartient à l'implémenteur. Un test ajusté pour accommoder un bug est une régression déguisée.
+9. **Ne pas confondre les deux faux backends.** `HttpTestingController` teste la **requête émise** (services de `core/api/`, intercepteurs) ; MSW sert aux tests de chaîne complète et surtout au **développement sans API joignable**. Les empiler dans un même test met deux backends en concurrence sur la même requête. Répartition détaillée dans la définition de `angular-qa-mock`.
+10. **Aucune mesure de sécurité côté client ne protège une donnée.** `angular-security-auth` distingue systématiquement ce qui empêche un accès (l'API) de ce qui améliore l'expérience (gardes, masquage d'actions). Tant que le Lot 7 n'a pas livré, tout code d'authentification frontend est **inerte** et doit être présenté comme tel.
 
 ---
 
@@ -559,5 +585,8 @@ flowchart TB
 | **Internationalisation posée après le premier écran** (0.16) | rétro-extraction des messages de neuf écrans, libellés d'accessibilité oubliés | étape 5.0 placée avant 5.A ; critère d'acceptation « aucun texte visible en dur » |
 | Framework CSS choisi tardivement | reprise du style de tous les composants du Lot 4 | trancher 0.9 avant l'étape 4.1, jamais après |
 | SignalStore introduit en préversion | dépendance instable au cœur de l'état | s'en tenir aux Signals natifs sauf décision explicite (0.12) |
+| **Aucun test de bout en bout** | les parcours `P-01`→`P-08` ne sont couverts que par des tests unitaires : une régression d'enchaînement d'écrans passe la CI | trancher la dépendance E2E en 5.0.3, la câbler en 8.1 ; d'ici là, `angular-qa-mock` couvre les parcours au niveau de la feature |
+| **Mocks MSW dérivant du contrat réel** | des écrans développés contre une fiction — la casse (`camelCase` des propriétés, `PascalCase` des énumérations et des clés `errors`) est l'écart le plus fréquent et le plus silencieux | handlers **typés contre `shared/models/`**, pour qu'une dérive casse `tsc` au lieu de mentir ; `/sync-api-dtos` reste en porte de fusion |
+| **Sécurité frontend prise pour une protection** | gardes et masquage d'actions livrés au Lot 7 alors que l'API ne refuse rien : sentiment de sûreté sans substance | 7.2 (`[Authorize]`) **avant** 7.6 (gardes) ; critère d'acceptation exigeant une vérification côté API indépendante de l'interface |
 | Sécurité repoussée en fin de parcours | interface construite sans contexte utilisateur, reprise des guards et de l'abonnement temps réel | trancher 0.1 tôt, même si la réalisation du Lot 7 vient plus tard |
 | Absence d'agent d'implémentation backend | les lots 1, 2, 6 et 7 reposent sur la session principale | créer un agent `dotnet-dev` si le volume le justifie |
