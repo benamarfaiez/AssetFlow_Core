@@ -8,6 +8,8 @@ API .NET 8 de gestion de parc informatique (assets, équipes, tickets de mainten
 
 Depuis le 2026-08-05, le dépôt contient aussi un **frontend Angular 22** dans `AssetFlowCore.WebUI/` : son socle est en place (types du contrat, services d'API, intercepteurs, client SignalR), **aucun écran produit** ne l'est encore. Voir la section « Frontend Angular » plus bas.
 
+**Évolutions de contrat décidées mais non implémentées** (Lot 0 clos le 2026-08-05 ; détail dans [doc/IMPLEMENTATION-PLAN.md](doc/IMPLEMENTATION-PLAN.md) §3 et §5.1) : passage des routes sous `/api/v1/...`, suppression de `TicketStatus.Resolved`, historisation du motif de transfert dans une entité dédiée (au lieu de la concaténation à `Description` par `MaintenanceTicket.TransferToTeam`), endpoints d'activation/désactivation d'équipe, remise en service d'un actif au rebut. Ces cinq changements sont à livrer **avant** les premiers écrans : ne pas construire de code d'écran sur la forme actuelle du contrat.
+
 ## Commandes
 
 Le fichier solution est au format **`.slnx`** : il faut un SDK ≥ 9.0.200 pour le résoudre, même si tous les projets ciblent `net8.0` (SDK installés localement : 9.0.315 et 10.0.302).

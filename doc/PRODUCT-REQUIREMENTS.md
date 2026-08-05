@@ -2,7 +2,7 @@
 
 **Objet** — Ce document énonce le *pourquoi* et le *quoi* du produit : besoins, utilisateurs, exigences fonctionnelles et non fonctionnelles. Il ne décrit ni les écrans (voir [PRODUCT-SPECIFICATIONS.md](PRODUCT-SPECIFICATIONS.md)), ni la technique (voir [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md) et [ARCHITECTURE.md](ARCHITECTURE.md)).
 
-> ⚠️ **Provenance et limites de ce document.** Le produit existe déjà sous forme d'une API .NET 8 fonctionnelle. Les exigences ci-dessous ont été **reconstruites par lecture du code source** le 2026-08-04 : elles décrivent fidèlement ce que le logiciel fait, mais elles n'ont **pas été validées par un responsable produit**. Les éléments marqués 🎯 et ❓ sont des propositions ou des questions ouvertes, pas des décisions actées. À faire relire avant tout engagement de planning.
+> ⚠️ **Provenance et limites de ce document.** Le produit existe déjà sous forme d'une API .NET 8 fonctionnelle. Les exigences ci-dessous ont été **reconstruites par lecture du code source** le 2026-08-04 : elles décrivent fidèlement ce que le logiciel fait. Les sept questions produit du §8 ont été **arbitrées le 2026-08-05** (Lot 0) ; il ne subsiste plus de ❓. Les éléments marqués 🎯 restent des cibles à construire, désormais adossées à une décision.
 
 **Légende des statuts**
 
@@ -12,7 +12,7 @@
 | 🟡 | partiellement implémenté |
 | ⛔ | non implémenté, alors que nécessaire |
 | 🎯 | cible proposée, à construire |
-| ❓ | décision produit attendue |
+| ❓ | décision produit attendue — **plus aucune depuis le 2026-08-05**, voir §8 |
 
 ---
 
@@ -39,9 +39,9 @@ Un quatrième axe est déjà amorcé : **l'assistance au diagnostic par IA**, qu
 - Génération d'une note d'assistance au diagnostic par un modèle de langage.
 - 🎯 Interface web (Angular) pour les techniciens et gestionnaires de parc.
 
-### Hors périmètre (état actuel, à confirmer)
+### Hors périmètre (confirmé le 2026-08-05)
 
-- Gestion des personnes : ni utilisateurs, ni techniciens nominatifs, ni affectation individuelle. « Prendre en charge » un ticket ne désigne personne.
+- **Affectation individuelle** des incidents : « prendre en charge » reste un geste d'équipe (décision produit n°2). Des **utilisateurs existeront** au Lot 7, apportés par l'authentification, et l'auteur d'une prise en charge ou d'une clôture sera enregistré — mais aucun incident ne sera attribué à une personne, ni aucune file personnelle constituée.
 - Contrats, garanties, coûts, amortissement, fournisseurs.
 - Emplacements physiques, sites, salles.
 - Planification d'interventions, calendriers d'astreinte, SLA horaires.
@@ -76,7 +76,7 @@ Référence de vérification pour chaque ligne : [API-Specification.md](API-Spec
 | EF-06 | Consulter le détail d'un actif et son historique d'incidents | ⛔ aucun endpoint unitaire ni historique |
 | EF-07 | Rechercher, filtrer et paginer l'inventaire | ⛔ non implémenté |
 | EF-08 | Modifier le libellé d'un actif | ⛔ non implémenté |
-| EF-09 | Remettre en service un actif mis au rebut | ⛔ état terminal — ❓ est-ce voulu ? |
+| EF-09 | Remettre en service un actif mis au rebut | 🎯 **retenue** (décision produit n°1, 2026-08-05) : réversible, réservée à un rôle d'administrateur, motif obligatoire et opération tracée. Aujourd'hui encore un état terminal |
 
 ### 4.2 Cycle de vie des incidents
 
@@ -89,11 +89,11 @@ Référence de vérification pour chaque ligne : [API-Specification.md](API-Spec
 | EF-14 | Prendre en charge un incident ouvert, ce qui place l'actif en maintenance | ✅ |
 | EF-15 | Clôturer un incident en cours avec un compte rendu de résolution obligatoire | ✅ |
 | EF-16 | Remettre l'actif en service à la clôture du **dernier** incident actif le concernant | ✅ |
-| EF-17 | Transférer un incident vers une autre équipe, avec motif conservé | 🟡 le motif est concaténé à la description, non stocké séparément |
+| EF-17 | Transférer un incident vers une autre équipe, avec motif conservé | 🟡 le motif est concaténé à la description, non stocké séparément — **historique dédié retenu** (décision produit n°4, 2026-08-05) |
 | EF-18 | Consulter un incident par son identifiant | ✅ |
 | EF-19 | Lister et filtrer les incidents (par équipe, état, criticité, actif) | ⛔ **bloquant pour toute interface** |
 | EF-20 | Relire la description et le compte rendu d'un incident | ⛔ absents du contrat de sortie |
-| EF-21 | Affecter un incident à une personne | ⛔ hors périmètre actuel — ❓ |
+| EF-21 | Affecter un incident à une personne | ⛔ **écartée** (décision produit n°2, 2026-08-05) : la prise en charge reste collective. Seule l'**identité de l'auteur** d'une prise en charge ou d'une clôture sera enregistrée, pour l'audit (Lot 7) |
 | EF-22 | Protéger l'incident contre les modifications concurrentes | ✅ concurrence optimiste |
 
 ### 4.3 Équipes et routage
@@ -105,7 +105,7 @@ Référence de vérification pour chaque ligne : [API-Specification.md](API-Spec
 | EF-25 | Modifier partiellement une équipe | ✅ |
 | EF-26 | Supprimer une équipe, opération refusée si des incidents actifs lui sont affectés | ✅ |
 | EF-27 | Lister les équipes | ⛔ **bloquant pour toute interface** |
-| EF-28 | Activer / désactiver une équipe sans la supprimer | ⛔ l'état existe en base mais aucune opération ne l'expose |
+| EF-28 | Activer / désactiver une équipe sans la supprimer | ⛔ l'état existe en base mais aucune opération ne l'expose — **retenue en complément de la suppression** (décision produit n°5, 2026-08-05) |
 | EF-29 | Étendre les règles de routage sans modifier le code existant | ✅ par ajout d'une stratégie + données de référence |
 
 ### 4.4 Temps réel et assistance IA
@@ -115,7 +115,7 @@ Référence de vérification pour chaque ligne : [API-Specification.md](API-Spec
 | EF-30 | Notifier en temps réel l'équipe destinataire d'un nouvel incident | ✅ |
 | EF-31 | Notifier les changements d'état ultérieurs (prise en charge, clôture, transfert) | ⛔ un seul événement émis |
 | EF-32 | Produire une note d'assistance au diagnostic à partir de la description de l'incident | ✅ en tâche de fond |
-| EF-33 | Enrichir cette note par des incidents similaires passés (recherche vectorielle) | 🟡 mécanisme présent mais **aucun incident n'est indexé** : la recherche ne retourne rien |
+| EF-33 | Enrichir cette note par des incidents similaires passés (recherche vectorielle) | 🟡 mécanisme présent mais **aucun incident n'est indexé** : la recherche ne retourne rien — **indexation à la clôture et rétro-indexation retenues** (décision produit n°7, 2026-08-05) |
 | EF-34 | Consulter la note d'assistance depuis l'interface | ⛔ absente du contrat de sortie |
 | EF-35 | Connaître l'avancement du traitement IA d'un incident | ⛔ l'indicateur existe en base mais n'est pas exposé |
 | EF-36 | Ne pas perdre les demandes d'analyse en cas de redémarrage | ⛔ file en mémoire, perdue au redémarrage |
@@ -137,7 +137,7 @@ Référence de vérification pour chaque ligne : [API-Specification.md](API-Spec
 
 | Id | Exigence | Statut |
 |---|---|---|
-| ENF-01 | **Authentifier les utilisateurs** avant toute opération | ⛔ **aucune authentification** : l'API est totalement ouverte |
+| ENF-01 | **Authentifier les utilisateurs** avant toute opération | ⛔ **aucune authentification** : l'API est totalement ouverte. Schéma retenu le 2026-08-05 (décision produit n°6) : **annuaire d'entreprise, OIDC / `JWT Bearer`** — réalisation au Lot 7 |
 | ENF-02 | Restreindre les opérations sensibles selon le rôle | ⛔ aucune autorisation |
 | ENF-03 | Ne jamais exposer de secret dans le code ou la configuration versionnée | ✅ secrets via User Secrets / variables d'environnement |
 | ENF-04 | Ne pas divulguer d'information technique en cas d'erreur | ⛔ le détail des erreurs 500 contient le message d'exception brut |
@@ -180,42 +180,50 @@ Référence de vérification pour chaque ligne : [API-Specification.md](API-Spec
 |---|---|---|
 | ENF-20 | Conformité WCAG 2.2 niveau AA de l'interface web | 🎯 |
 | ENF-21 | Utilisation complète au clavier seul | 🎯 |
-| ENF-22 | Interface en français ; les valeurs techniques de l'API sont en anglais et doivent être traduites à l'affichage | 🎯 |
+| ENF-22 | Interface **multilingue**, français en locale de référence ; les valeurs techniques de l'API sont en anglais et doivent être traduites à l'affichage | 🎯 décision technique du 2026-08-05 : mécanisme d'internationalisation posé **avant** le premier écran, aucun texte visible en dur dans un gabarit |
 | ENF-23 | Rendu correct de 320 px à 200 % de zoom | 🎯 |
 
 ### 5.6 Contraintes techniques
 
 - Backend .NET 8, base SQL Server, orchestration .NET Aspire en développement, déploiement conteneurisé.
 - Frontend Angular 22 en composants standalone et Signals.
-- L'API n'est **pas versionnée** : toute évolution de contrat est immédiatement visible par les consommateurs.
+- L'API n'est **pas encore versionnée**, mais le sera : décision technique du 2026-08-05, URL sous `/api/v1/...` avant la construction des écrans. D'ici là, toute évolution de contrat est immédiatement visible par les consommateurs.
 - Détail dans [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md).
 
 ## 6. Prérequis de données
 
-Le routage automatique repose entièrement sur des **données de référence** : il faut au moins une équipe active par couple (type d'actif, criticité) réellement utilisé, soit jusqu'à **9 combinaisons**. Sans elles, l'ouverture d'incident échoue. Aucune procédure d'amorçage n'existe aujourd'hui hors création manuelle via l'API — ⛔ à industrialiser.
+Le routage automatique repose entièrement sur des **données de référence** : il faut au moins une équipe active par couple (type d'actif, criticité) réellement utilisé, soit jusqu'à **9 combinaisons**. Sans elles, l'ouverture d'incident échoue. Les 9 combinaisons sont amorcées par la migration `SeedReferenceTeams` (Lot 1) ; l'application des migrations reste 🟡 **manuelle** au déploiement (étape 8.6).
+
+⚠️ Conséquence de la décision produit n°5 : une équipe **désactivée** ne couvre plus sa combinaison. Désactiver la dernière équipe d'un couple (type, criticité) suffit à bloquer l'ouverture d'incidents pour ce couple — l'écran d'administration doit donc signaler la perte de couverture avant confirmation.
 
 ## 7. Manques bloquants pour la construction de l'interface
 
-Ces manques ne sont pas des préférences : ils rendent certains écrans impossibles.
+État réévalué le 2026-08-05, après la complétion du contrat d'API (Lot 2). Les cinq manques de contrat relevés au 2026-08-04 sont **levés** ; un seul manque bloquant subsiste.
 
-| Manque | Écran empêché | Contournement possible |
+| Manque | Écran empêché | État |
 |---|---|---|
-| ⛔ pas de liste des incidents (EF-19) | file de travail du technicien, vue d'équipe | aucun — endpoint requis |
-| ⛔ pas de liste des équipes (EF-27) | administration des équipes, sélecteur d'équipe pour le transfert | saisie libre du nom d'équipe, source d'erreurs |
-| ⛔ description et compte rendu absents du contrat (EF-20) | consultation d'un incident | aucun — le texte saisi est invisible ensuite |
-| ⛔ note d'assistance IA non exposée (EF-34) | aide au diagnostic | aucun — la valeur ajoutée IA reste inaccessible |
-| ⛔ type d'actif et criticité absents du contrat des équipes | formulaire d'édition d'une équipe (préremplissage impossible) | ressaisie complète à chaque modification |
-| ⛔ pas d'authentification (ENF-01) | tout écran nécessitant un contexte utilisateur | aucun |
+| ⛔ pas d'authentification (`ENF-01`) | tout écran nécessitant un contexte utilisateur : abonnement temps réel au groupe de son équipe, masquage des actions non autorisées, remise en service réservée à un administrateur | **subsiste** — schéma retenu (décision n°6), réalisation au Lot 7 |
+| ~~pas de liste des incidents (`EF-19`)~~ | file de travail du technicien | ✅ levé — `GET /api/tickets`, filtré, trié, paginé |
+| ~~pas de liste des équipes (`EF-27`)~~ | administration des équipes, sélecteur de transfert | ✅ levé — `GET /api/teams`, avec `?onlyActive=true` |
+| ~~description et compte rendu absents du contrat (`EF-20`)~~ | consultation d'un incident | ✅ levé — `TicketResponseDto` enrichi |
+| ~~note d'assistance IA non exposée (`EF-34`)~~ | aide au diagnostic | 🟡 exposée (`assistanceNote`, `isAiProcessing`), mais la **fin d'analyse n'est pas notifiée** — Lot 6 |
+| ~~type d'actif et criticité absents du contrat des équipes~~ | formulaire d'édition d'une équipe | ✅ levé — `TeamResponseDto` enrichi |
 
-## 8. Décisions produit attendues ❓
+## 8. Décisions produit ✅ tranchées le 2026-08-05
 
-1. La mise au rebut doit-elle rester **irréversible** ?
-2. Faut-il introduire des **techniciens nominatifs**, ou « prise en charge » reste-t-il collectif au niveau de l'équipe ?
-3. Le statut `Resolved`, présent dans le modèle mais jamais atteint, doit-il devenir une étape réelle (validation avant clôture) ou être supprimé ?
-4. Le **motif de transfert** doit-il être historisé séparément plutôt que concaténé à la description ?
-5. La **désactivation** d'une équipe doit-elle remplacer la suppression ?
-6. Quel niveau d'authentification est visé : interne simple, annuaire d'entreprise, ou fournisseur d'identité externe ?
-7. L'indexation des incidents résolus dans la base vectorielle — condition pour que l'assistance IA ait une réelle valeur — est-elle au périmètre ?
+Les sept questions ouvertes ont été arbitrées (Lot 0 du [plan d'implémentation](IMPLEMENTATION-PLAN.md#3-lot-0--décisions-préalables--2026-08-05)). Aucune n'est réalisée à ce jour : chacune renvoie au lot qui la porte.
+
+| # | Question | Décision | Portée par |
+|---|---|---|---|
+| 1 | La mise au rebut doit-elle rester **irréversible** ? | **Non — réversible, réservé à un rôle d'administrateur**, avec motif obligatoire et opération tracée. Motif déterminant : le numéro de série d'un actif au rebut reste réservé dans tout le parc, donc un rebut par erreur interdit définitivement de réenregistrer la machine. Ouvre `EF-09` | Lot 2 bis (endpoint), Lot 5 (interface), Lot 7 (habilitation) |
+| 2 | Faut-il des **techniciens nominatifs** ? | **Non — la prise en charge reste collective**, au niveau de l'équipe. L'identité de qui prend en charge et de qui clôture est **enregistrée pour l'audit**, sans affectation dirigée ni file personnelle : `EF-21` reste hors périmètre, la planification l'étant déjà | Lot 7 (dépend de l'identité) |
+| 3 | Que devient le statut `Resolved` ? | **Supprimé** du modèle. Le cycle reste `Opened → InProgress → Closed`. Une étape « résolu en attente de validation » exigerait un acteur validateur, que le produit n'a pas | Lot 2 bis |
+| 4 | Le **motif de transfert** doit-il être historisé séparément ? | **Oui — historique de transferts dédié** (incident, équipe d'origine, équipe cible, motif, date). Aujourd'hui le motif est concaténé à la description, qui perd donc irréversiblement le texte saisi par le technicien | Lot 2 bis (contrat), Lot 5 (affichage) |
+| 5 | La **désactivation** d'équipe doit-elle remplacer la suppression ? | **Non — elle s'y ajoute.** La désactivation devient le geste courant ; la suppression, de fait impossible dès qu'un incident même clôturé référence l'équipe, reste ouverte aux équipes créées par erreur. `EF-26` est conservée | Lot 2 bis, Lot 5 |
+| 6 | Quel niveau d'authentification est visé ? | **Annuaire d'entreprise (Microsoft Entra ID)** — OIDC, jetons `JWT Bearer`, rôles dérivés des groupes d'annuaire. L'API ne gère aucun mot de passe. Prérequis d'exploitation : un tenant et un enregistrement d'application | Lot 7 |
+| 7 | L'indexation des incidents clôturés est-elle au périmètre ? | **Oui — indexation à la clôture, avec rétro-indexation** des incidents déjà clos par une commande rejouable. Sans corpus, `EF-33` est nul. Limite assumée : la base vectorielle est un fichier **local** au processus, non partagé entre instances | Lot 6 |
+
+**Décisions techniques associées** (mêmes date et lot, détail dans [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md#26-décisions)) : URL d'API **versionnées** (`/api/v1/...`), frontend déployé en **conteneur nginx dédié** derrière un reverse proxy, interface **multilingue** dès le premier écran, état géré par **Signals natifs**.
 
 ## 9. Risques
 

@@ -294,13 +294,14 @@ sequenceDiagram
 
 | Sujet | Contrainte architecturale |
 |---|---|
-| **CORS** | politique active **en Development uniquement** → en production, même origine derrière un reverse proxy ; en développement, proxy du serveur Angular |
+| **CORS** | politique active **en Development uniquement** → en production, même origine reconstituée par un reverse proxy devant deux images (`AD-23`) ; en développement, proxy du serveur Angular |
 | **Contrat de types** | dérivé du C# ; propriétés `camelCase`, **valeurs d'enums `PascalCase`** ; aucune génération automatisée en place hors skill `/sync-api-dtos` |
-| **Absence de versioning d'API** | toute évolution de contrat casse immédiatement le client : la synchronisation des types est une opération de maintenance récurrente, pas ponctuelle |
+| **Versioning d'API** | `AD-21` : URL sous `/api/v1/...`, à appliquer **avant** la construction des écrans. Sans période de dépréciation : une rupture reste coordonnée dans le même changement que la mise à jour du contrat documenté et des types frontend |
+| **Authentification** | `AD-22` : jeton `JWT Bearer` obtenu de l'annuaire d'entreprise. Le frontend ne détient aucun secret ; les rôles arrivent en revendication et pilotent aussi bien les guards de route que le masquage des actions |
 | **Codes de statut** | 404 pour une ressource absente de l'URI, 400 pour une référence invalide du corps : le client distingue les deux cas sans lire le message |
 | **Cohérence de lecture** | cache serveur de 5 minutes sur les **listes**, invalidé par les écritures : une relecture après écriture est fiable |
 | **Temps réel** | le groupe d'abonnement est un **nom d'équipe** ; sans notion d'utilisateur, l'appartenance à une équipe n'est pas déterminable côté client |
-| **Sécurité** | aucune authentification : le frontend ne peut porter aucun contexte utilisateur ni protéger une route de façon significative |
+| **Sécurité** | aucune authentification **en l'état du code** : le frontend ne peut porter aucun contexte utilisateur ni protéger une route de façon significative, jusqu'au Lot 7 |
 
 ## 5. Déploiement
 
@@ -315,12 +316,16 @@ flowchart TB
 
     subgraph prod["Production (conteneurs)"]
         GH["GitHub Actions"] -->|"push sur main"| GHCR[("GHCR<br/>assetflow-api")]
+        GH -->|"push sur main 🎯"| GHCRUI[("GHCR<br/>assetflow-webui")]
         GHCR --> APIPROD["Conteneur API<br/>Alpine, non root, port 8080"]
+        GHCRUI --> UIPROD["Conteneur nginx 🎯<br/>frontend compilé"]
         APIPROD --> SQLP[("SQL Server")]
-        RP["Reverse proxy 🎯"] --> APIPROD
-        RP --> STATIC["Frontend statique 🎯"]
+        RP["Reverse proxy 🎯<br/>une seule origine"] -->|"/api/v1, /ticketHub"| APIPROD
+        RP -->|"/"| UIPROD
     end
 ```
+
+**Décision 0.13 (`AD-23`)** : deux images sont publiées et réunies par un reverse proxy frontal, qui reconstitue la **même origine** — frontend en racine, API sous `/api/v1`, WebSockets passés vers `/ticketHub`. Ce proxy n'est pas une commodité : hors Development l'API n'applique aucune politique CORS, donc sans lui l'appel navigateur échoue.
 
 Le pipeline enchaîne compilation et vérification de format, tests d'architecture, tests unitaires et d'intégration, benchmarks, portail qualité SonarCloud, puis publication de l'image. Détail dans [TECHNICAL-SPECIFICATION.md](TECHNICAL-SPECIFICATION.md#19-intégration-continue).
 
@@ -346,8 +351,14 @@ Le pipeline enchaîne compilation et vérification de format, tests d'architectu
 | AD-18 | **Tailwind 4 sans bibliothèque de composants** ✅ (2026-08-05) | garder la main sur le rendu, les jetons et l'accessibilité ; les composants réellement demandés (table basculant en cartes, badges métier) n'existent dans aucune bibliothèque | contrôle total et lot livré léger ; en contrepartie, **chaque état** (survol, focus, désactivé, invalide) est à écrire, et l'accessibilité repose sur nous — `@angular/cdk` n'est pris que pour le piège de focus |
 | AD-19 | **Jetons de couleur déclarés une seule fois avec `light-dark()`** ✅ (2026-08-05) | un thème sombre maintenu dans un bloc parallèle dérive du thème clair sans que rien ne le signale | une seule déclaration par jeton, et `color-scheme` arbitre ; la bascule explicite l'emporte dans les deux sens. Contrepartie : dépend d'une fonction CSS récente (indisponible avant Safari 17.5), et les contrastes doivent être calculés — d'où `npm run verifier:contrastes` |
 | AD-20 | **Composants de formulaire recevant le `FormControl` en entrée** (approche A) ✅ (2026-08-05) | éviter le contrat implicite de `ControlValueAccessor`, dont un `setDisabledState` oublié casse silencieusement | API typée de bout en bout, `disable()` opérant sans code ; en contrepartie, les composants ne s'utilisent **pas** avec `formControlName` ni `ngModel` |
-| AD-13 | **Absence de versioning d'API** | contexte de projet unique | simplicité immédiate ; toute évolution de contrat est cassante pour le client |
-| AD-14 | **Aucune authentification** (état de fait, non décidé) | portée initiale d'exemple | API ouverte : incompatible avec une mise en service, et bloquant pour tout écran contextualisé |
+| ~~AD-13~~ | ~~**Absence de versioning d'API**~~ — **révisée le 2026-08-05 par AD-21** | contexte de projet unique | simplicité immédiate ; toute évolution de contrat était cassante pour le client |
+| ~~AD-14~~ | ~~**Aucune authentification** (état de fait, non décidé)~~ — **tranchée le 2026-08-05 par AD-22** | portée initiale d'exemple | API ouverte : incompatible avec une mise en service, et bloquant pour tout écran contextualisé. **Reste l'état du code** jusqu'au Lot 7 |
+| AD-21 | **URL d'API versionnées** ✅ (2026-08-05, décision 0.15) | une rupture de contrat non annoncée casse le client sans avertissement, et le Lot 2 en a produit plusieurs | les 15 endpoints passent sous `/api/v1/...` avant la construction des écrans. Coût immédiat : routes, documentation, tests d'intégration, 3 services frontend, relevé du skill `/sync-api-dtos`. Pas de période de dépréciation : le seul client est livré depuis ce dépôt. Révise `AD-13` |
+| AD-22 | **Authentification déléguée à l'annuaire d'entreprise** (2026-08-05, décision 0.1) | les utilisateurs d'un back-office interne existent déjà dans l'annuaire ; gérer des mots de passe dans l'API serait la surface d'attaque la plus large pour le moindre bénéfice | OIDC, jetons `JWT Bearer` validés côté API, rôles dérivés des groupes d'annuaire ; aucun secret d'utilisateur en base. En contrepartie, une dépendance d'exploitation forte : sans tenant ni enregistrement d'application, le Lot 7 ne démarre pas. Remplace `AD-14` |
+| AD-23 | **Frontend en conteneur nginx dédié** (2026-08-05, décision 0.13) | séparer les cycles de livraison du frontend et de l'API, et maîtriser les en-têtes de cache | deux images publiées vers GHCR. En contrepartie, la contrainte de **même origine n'est pas résolue par construction** : un reverse proxy frontal devient obligatoire (étape 8.5), l'API n'appliquant aucune politique CORS hors Development |
+| AD-24 | **Historique de transferts en entité dédiée** (2026-08-05, décision 0.5) | le motif était concaténé à `Description`, ce qui détruit le texte saisi par le technicien et rend le routage inauditable | une entité de plus et une migration ; en retour, la description redevient immuable et l'historique de routage devient exploitable — c'est la donnée qui révèle un référentiel mal configuré (`RM-12`) |
+| AD-25 | **Corpus vectoriel alimenté à la clôture** (2026-08-05, décision 0.7) | `UpsertVectorAsync` n'était appelé par aucun code de production : la recherche de similarité ne pouvait rien retourner | l'assistance au diagnostic s'appuie enfin sur des cas comparables, au prix d'un embedding supplémentaire par clôture et d'une commande de rétro-indexation. La limite d'`AD-10` demeure : le fichier DuckDB est local, donc ni partagé ni cohérent entre répliques |
+| AD-26 | **Actif au rebut réversible** (2026-08-05, décision 0.4) | l'unicité du numéro de série s'étend aux actifs au rebut : un rebut par erreur rendait l'équipement définitivement non réenregistrable | `Decommissioned` cesse d'être un état terminal — une transition de retour, réservée à un rôle et portant un motif, s'ajoute au cycle de vie de l'actif. En contrepartie, l'invariant « l'état de l'actif n'est jamais saisi » admet désormais une exception explicite |
 
 ## 7. Points de fragilité architecturale
 
@@ -356,14 +367,18 @@ Classés par cause racine, avec la conséquence observable et la piste de correc
 | Cause racine | Conséquence | Piste |
 |---|---|---|
 | **Fin de traitement asynchrone non notifiée** : `is_ai_processing` et `assistance_note` sont exposés, mais leur évolution n'est annoncée par aucun événement | l'interface doit relire l'incident pour découvrir la note | émettre une notification temps réel en fin d'analyse |
-| **Corpus vectoriel jamais alimenté** | recherche de similarité systématiquement vide | indexer les incidents à la clôture |
+| **Corpus vectoriel jamais alimenté** | recherche de similarité systématiquement vide | ✅ **décidé** (`AD-25`) : indexation à la clôture et rétro-indexation des incidents déjà clos — Lot 6 |
+| **Description d'incident utilisée comme journal** : `TransferToTeam` concatène le motif de transfert à `Description` | le texte saisi par le technicien est altéré définitivement, et le routage est inauditable | ✅ **décidé** (`AD-24`) : entité d'historique dédiée — §5.1 du plan |
+| **Numéro de série réservé par un actif au rebut**, alors que l'état est terminal | un rebut par erreur interdit définitivement de réenregistrer la machine | ✅ **décidé** (`AD-26`) : remise en service réservée à un administrateur — §5.1 du plan |
 | **Portée du processus unique** : API, hub et worker ensemble ; file et base vectorielle locales | mise à l'échelle horizontale impossible sans perte de fonctionnalité | file et vecteurs externalisés si la charge le justifie |
 | **Configuration à trois noms de clé pour une même chaîne de connexion** | exécution par composition Docker inopérante sans ajustement | une clé unique, documentée |
 | **Migrations non appliquées au démarrage** | une base neuve n'a ni schéma ni équipes de référence tant que `dotnet ef database update` n'a pas été lancé | intégrer l'application des migrations au processus de déploiement |
 | **Cache d'équipe mis à jour avant persistance** : les décorateurs réécrivent l'entrée de cache dans `AddAsync`/`UpdateAsync`, avant `SaveChangesAsync` | un échec de persistance laisse une valeur non persistée en cache jusqu'à 5 minutes | invalider plutôt que réécrire, ou déplacer la réécriture après la persistance |
 | **Tests empruntant un chemin distinct de la production** (dépôts d'équipe, fournisseur InMemory) | faux sentiment de couverture | tests d'intégration sur un vrai SQL Server (conteneur éphémère) |
 
-Aucune de ces fragilités n'est bloquante pour le fonctionnement nominal en développement ; la première est à traiter avant toute mise en service, en même temps que l'authentification (AD-14).
+Aucune de ces fragilités n'est bloquante pour le fonctionnement nominal en développement ; la première est à traiter avant toute mise en service, en même temps que l'authentification (`AD-22`).
+
+Les fragilités marquées ✅ **décidé** ont reçu leur arbitrage au Lot 0 le 2026-08-05 : la décision est écrite et ordonnancée, le code reste à écrire.
 
 ### Fragilités levées par le Lot 2 (2026-08-05)
 
