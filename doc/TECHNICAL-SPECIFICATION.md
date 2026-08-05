@@ -197,6 +197,8 @@ dotnet ef database update --project AssetFlowCore.Infrastructure --startup-proje
 | Client temps réel | `@microsoft/signalr` **10.0.11** (installé) |
 | Runner de tests | **Vitest 4.x** (jsdom) |
 | Formatage | Prettier 3.8 (`printWidth` 100, guillemets simples) |
+| Framework CSS | **Tailwind 4.3.3** (+ `@tailwindcss/postcss`) |
+| Accessibilité | **`@angular/cdk` 22.1.1** — piège de focus de la modale |
 
 > ⚠️ **NgRx SignalStore n'a pas de version stable compatible Angular 22.** L'état par défaut repose donc sur les **Signals natifs**. Recourir à SignalStore impose d'accepter une préversion, décision à acter explicitement.
 
@@ -220,10 +222,13 @@ AssetFlowCore.WebUI/                    projet npm « assetflow-webui »
         │   └── guards/                 🎯 Lot 7
         ├── shared/
         │   ├── models/                 asset · ticket · team · paged-result · problem-details · api-error
-        │   ├── ui/                     🎯 Lot 4
-        │   └── pipes/ · directives/    🎯 Lot 4
+        │   ├── ui/                     18 composants du design system (voir shared/README.md)
+        │   ├── i18n/                   libelles.ts · messages-validation.ts
+        │   ├── pipes/                  libelles.pipe.ts (4 pipes de traduction)
+        │   └── forms/                  etat-controle.ts
         └── features/
             ├── diagnostic/             ✅ preuve d'exécution du socle, à retirer au Lot 5
+            ├── design-system/          ✅ page de revue des composants, à retirer au Lot 5
             └── assets/ · tickets/ · teams/   🎯 Lot 5
 ```
 
@@ -268,12 +273,18 @@ Les **noms de propriétés** sont en `camelCase`, les **valeurs d'enums** resten
 - Couverture attendue : validation de formulaire, dérivations, gestion d'erreur, guards, interceptors.
 - **Runner : Vitest** (décision 0.11, 2026-08-05), environnement jsdom. Les primitives sont globales (`vitest/globals` dans `tsconfig.spec.json`) ; `vi` est importé explicitement là où un espion est nécessaire.
 - En mode zoneless, un rendu asynchrone s'attend par `await fixture.whenStable()`. Pour laisser partir la requête d'une ressource (`rxResource`) **avant** de la satisfaire, utiliser `TestBed.tick()` : `whenStable()` attendrait une requête HTTP encore en vol.
-- État au 2026-08-05 : **47 tests** répartis sur 8 fichiers (services d'API, intercepteurs, client temps réel, shell, écran de diagnostic).
+- État au 2026-08-05 : **129 tests** répartis sur 21 fichiers (services d'API, intercepteurs, client temps réel, shell, écran de diagnostic, thème, et les 18 composants du design system).
+- Deux limites de l'environnement de test à connaître, toutes deux contournées explicitement dans les tests concernés : `window.localStorage` n'existe pas (origine opaque) et jsdom **ne calcule aucune géométrie**, ce qui fait considérer tout élément comme non focusable par le CDK.
+- Vérifications hors suite de tests : `npm run verifier:dependances` (règles de zones) et `npm run verifier:contrastes` (38 paires de couleurs dans les deux thèmes).
 
 ### 2.6 Décisions
 
 | Sujet | Décision | Date |
 |---|---|---|
+| Framework CSS | **Tailwind 4 + `@angular/cdk`** — utilitaires pour le style, CDK pour l'accessibilité ; aucune bibliothèque de composants | 2026-08-05 |
+| Jetons et thèmes | Jetons `--color-*` déclarés **une seule fois** avec `light-dark()` ; `color-scheme: light dark` suit le système, `data-theme` l'emporte dans les deux sens | 2026-08-05 |
+| Composants de formulaire | **Approche A** : le `FormControl` est reçu en entrée (typage complet, `disable()` opérant, aucun contrat implicite de `ControlValueAccessor`) | 2026-08-05 |
+| Feuille de styles racine | En **CSS** et non en SCSS : Tailwind 4 ne prend pas en charge le passage par un préprocesseur. Les composants n'ont aucune feuille de styles | 2026-08-05 |
 | Nom du dossier du workspace | **`AssetFlowCore.WebUI/`**, projet npm `assetflow-webui` (un nom de paquet npm n'admet ni majuscule ni point) | 2026-08-05 |
 | Rendu serveur (SSR) | **sans SSR**, application cliente seule | 2026-08-05 |
 | Runner de tests | **Vitest** | 2026-08-05 |
@@ -285,8 +296,7 @@ Les **noms de propriétés** sont en `camelCase`, les **valeurs d'enums** resten
 
 | Sujet | Options | Enjeu |
 |---|---|---|
-| Framework de style (0.9) | Tailwind · Angular Material · DaisyUI+Tailwind · SCSS maison | bloque le Lot 4 ; le workspace est en SCSS nu, sans jeton de design |
-| Internationalisation | français seul ou multilingue | les valeurs d'API sont en anglais et doivent être traduites dans tous les cas |
+| Internationalisation | français seul ou multilingue | les valeurs d'API sont en anglais et doivent être traduites dans tous les cas — c'est fait (`shared/i18n/`), mais sans mécanisme multilingue |
 | Déploiement du frontend (0.13) | conteneur dédié · servi par l'API · hébergement statique + reverse proxy | contrainte CORS (voir §3) |
 | Intégration à la CI (8.1) | ajout de jobs `build`/`test`/`format` frontend au workflow existant | portail qualité, artefacts |
 

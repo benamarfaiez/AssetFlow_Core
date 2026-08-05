@@ -1,0 +1,35 @@
+<div class="flex flex-col gap-1.5">
+  <label [for]="id" class="text-sm font-medium text-texte">
+    {{ label() }}
+    @if (requis()) {
+      <span class="text-danger-contenu" aria-hidden="true">*</span>
+      <span class="sr-only">(obligatoire)</span>
+    }
+  </label>
+
+  <textarea
+    [id]="id"
+    [class]="classesChamp()"
+    [formControl]="controle()"
+    [rows]="lignes()"
+    [placeholder]="placeholder()"
+    [required]="requis()"
+    [attr.maxlength]="longueurMax()"
+    [attr.aria-invalid]="afficherErreur() ? 'true' : null"
+    [attr.aria-describedby]="decritPar()"
+  ></textarea>
+
+  @if (aide(); as texte) {
+    <p [id]="idAide" class="text-sm text-texte-discret">{{ texte }}</p>
+  }
+
+  @if (compteurCaracteres() && longueurMax() !== null) {
+    <p class="text-right text-xs text-texte-discret" aria-hidden="true">
+      {{ nombreCaracteres() }} / {{ longueurMax() }}
+    </p>
+  }
+
+  @if (messageErreur(); as message) {
+    <p [id]="idErreur" class="text-sm font-medium text-danger-contenu">{{ message }}</p>
+  }
+</div>

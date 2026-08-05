@@ -62,6 +62,7 @@ npm run build                    # ng build (configuration production par défau
 npm run test:ci                  # ng test --watch=false (Vitest, 47 tests)
 npm run format:verify            # Prettier — pendant de `dotnet format`, futur gate de CI
 npm run verifier:dependances     # règles core/ shared/ features/ — pendant des ArchitectureTests
+npm run verifier:contrastes      # contrastes WCAG des jetons, dans les deux thèmes
 ```
 
 `ng` n'est **pas** dans le `PATH` : passer par les scripts npm ou `npx ng ...`.
@@ -131,7 +132,11 @@ Flux : `CreateMaintenanceTicketHandler` met le `ticketId` dans `AIAssistanceQueu
 - **Erreurs** : `errorInterceptor` est le seul point qui interprète `ProblemDetails`. Il lève une `ApiError` porteuse d'une nature (`validation`, `business`, `notFound`, `conflict`, `server`, `network`) et d'un `fieldErrors` **converti en `camelCase`** pour correspondre aux contrôles d'un formulaire. Les écrans ne voient jamais de `HttpErrorResponse`. Le `detail` d'une 5xx n'est jamais affiché, seul le `traceId` l'est.
 - **Temps réel** : `TicketHubService` ne se connecte pas au démarrage ; l'appelant décide. Les groupes rejoints sont mémorisés et **restaurés après reconnexion**, le serveur ne les conservant pas. Le hub ne diffuse qu'à l'ouverture d'un incident (Lot 6 pour le reste).
 - **Jeton** : `authTokenInterceptor` et `AuthTokenService` sont en place mais **sans source** — l'API n'a aucune authentification. Le Lot 7 n'aura qu'à alimenter le service.
-- `features/diagnostic/` n'est pas un écran produit : c'est la preuve d'exécution du socle, à retirer quand l'inventaire (`E-01`) prendra la route racine.
+- **Design system (Lot 4)** : Tailwind 4, jetons dans `src/styles.css`. Les composants n'ont **aucune feuille de styles** — que des utilitaires — et aucune couleur, taille ou durée n'y est écrite en dur. Les jetons sont déclarés une seule fois via `light-dark()` : ne **jamais** ajouter un bloc de thème sombre parallèle, et repasser `npm run verifier:contrastes` après toute retouche de couleur. La feuille racine est en `.css` et non `.scss` : Tailwind 4 ne passe pas par un préprocesseur.
+- **Champs de formulaire** : approche A — le composant reçoit le `FormControl` en entrée, donc pas d'usage avec `formControlName`. `FormControl` n'étant pas réactif au sens des signaux, les champs passent par `suivreEtatControle()` (`shared/forms/`) : sans lui, un `markAsTouched()` de soumission n'afficherait aucun message en mode zoneless. Charge de la feature : déplacer le focus sur le premier champ invalide à la soumission.
+- **API des composants partagés** : documentée dans [AssetFlowCore.WebUI/src/app/shared/README.md](AssetFlowCore.WebUI/src/app/shared/README.md). Les badges du domaine encapsulent traduction **et** tonalité — ne pas refaire ces correspondances dans un écran.
+- `features/diagnostic/` et `features/design-system/` ne sont pas des écrans produits : ce sont les preuves d'exécution du socle et la page de revue du design system, à retirer quand les écrans du Lot 5 prendront leur place.
+- **Limites de l'environnement de test** : `window.localStorage` n'existe pas (origine opaque) et jsdom ne calcule aucune géométrie — le CDK considère alors tout élément comme non focusable. Les deux se contournent dans les tests concernés (`theme.service.spec.ts`, `modal.spec.ts`), jamais dans le code de production.
 
 ## Tests
 

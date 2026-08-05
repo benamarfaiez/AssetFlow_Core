@@ -3,12 +3,13 @@
 Un dossier autonome par domaine fonctionnel, avec ses routes, son état et ses composants.
 Propriétaire : `angular-feature-dev` (§13.1 du plan d'implémentation).
 
-| Feature       | Écrans                                                                    | Statut                                                                   |
-| ------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `diagnostic/` | —                                                                         | ✅ Lot 3 : preuve d'exécution du socle, **à remplacer** par l'inventaire |
-| `assets/`     | `E-01` inventaire · `E-02` formulaire · `E-03` fiche                      | 🎯 Lot 5.A                                                               |
-| `tickets/`    | `E-04` ouverture · `E-05` fiche · `E-06` file de travail · `E-08` note IA | 🎯 Lot 5.B / Lot 6                                                       |
-| `teams/`      | `E-07` administration                                                     | 🎯 Lot 5.C                                                               |
+| Feature          | Écrans                                                                    | Statut                                                                   |
+| ---------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `diagnostic/`    | —                                                                         | ✅ Lot 3 : preuve d'exécution du socle, **à retirer** au Lot 5           |
+| `design-system/` | —                                                                         | ✅ Lot 4 : page de revue des composants partagés, **à retirer** au Lot 5 |
+| `assets/`        | `E-01` inventaire · `E-02` formulaire · `E-03` fiche                      | 🎯 Lot 5.A                                                               |
+| `tickets/`       | `E-04` ouverture · `E-05` fiche · `E-06` file de travail · `E-08` note IA | 🎯 Lot 5.B / Lot 6                                                       |
+| `teams/`         | `E-07` administration                                                     | 🎯 Lot 5.C                                                               |
 
 Générer le squelette d'une feature avec le skill **`/scaffold-feature <nom>`**, jamais à la main.
 

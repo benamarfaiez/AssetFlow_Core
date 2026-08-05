@@ -1,0 +1,154 @@
+/*
+ * Feuille de styles racine — jetons de design et styles d'éléments de base.
+ *
+ * Elle est en **CSS** et non en SCSS : Tailwind 4 ne prend pas en charge le passage par un
+ * préprocesseur (`@import "tailwindcss"` n'est pas un fichier que Sass sait résoudre).
+ * Les composants n'ont donc pas de feuille de styles : ils s'habillent d'utilitaires.
+ *
+ * Aucun style global au-delà de ce fichier : import du framework, jetons, remise à zéro,
+ * éléments de base. Tout le reste appartient à un composant.
+ */
+
+@import 'tailwindcss';
+
+/*
+ * ── Jetons de design ────────────────────────────────────────────────────────────────────
+ *
+ * Chaque jeton est déclaré **une seule fois**, avec ses deux valeurs, grâce à `light-dark()`.
+ * C'est `color-scheme` (voir plus bas) qui choisit la branche : il n'y a donc pas de bloc de
+ * thème sombre à maintenir en parallèle, et aucun risque qu'un jeton dérive d'un thème à l'autre.
+ *
+ * Les noms sont imposés par Tailwind : le préfixe `--color-*` est ce qui génère les utilitaires
+ * `bg-*`, `text-*`, `border-*`. Le suffixe est sémantique — jamais le nom d'une couleur.
+ *
+ * Contrastes calculés selon la formule WCAG 2.x (et non mesurés par un outil), pour les deux
+ * thèmes. Les paires texte/fond visées sont ≥ 4,5:1, les bordures de contrôle ≥ 3:1.
+ */
+@theme {
+  /* Fonds. `page` porte l'arrière-plan général, `surface` les cartes et panneaux. */
+  --color-page: light-dark(#f8fafc, #0b1220);
+  --color-surface: light-dark(#ffffff, #16203a);
+  /* Fond des zones en retrait : en-tête de tableau, ligne survolée, champ désactivé. */
+  --color-surface-creuse: light-dark(#f1f5f9, #1e293b);
+
+  /* Textes. `texte` sur `surface` : 17,8:1 en clair, 13,1:1 en sombre. */
+  --color-texte: light-dark(#0f172a, #e2e8f0);
+  /* Texte secondaire : 7,5:1 en clair, 6,3:1 en sombre — reste conforme au texte courant. */
+  --color-texte-discret: light-dark(#475569, #94a3b8);
+  /* Texte porté par une surface colorée (bouton primaire, bouton danger). */
+  --color-texte-inverse: #ffffff;
+
+  /* Bordures. `bordure` est décorative ; `bordure-controle` délimite un champ : ≥ 3:1. */
+  --color-bordure: light-dark(#e2e8f0, #1e293b);
+  --color-bordure-controle: light-dark(#64748b, #94a3b8);
+
+  /* Action principale. Texte blanc : 6,7:1 en clair, 5,1:1 en sombre. */
+  --color-primaire: light-dark(#1d4ed8, #2563eb);
+  --color-primaire-survol: light-dark(#1a3fb0, #1d4ed8);
+
+  /* Action destructrice. Texte blanc : 6,5:1 en clair, 4,8:1 en sombre. */
+  --color-danger: light-dark(#b91c1c, #dc2626);
+  --color-danger-survol: light-dark(#991b1b, #b91c1c);
+
+  /*
+   * Tonalités d'état — fond teinté et contenu fortement contrasté (≥ 8:1 dans les deux thèmes).
+   * Le fond seul ne porte jamais l'information : les composants y ajoutent toujours un libellé.
+   */
+  --color-neutre-fond: light-dark(#f1f5f9, #1e293b);
+  --color-neutre-contenu: light-dark(#334155, #cbd5e1);
+  --color-info-fond: light-dark(#dbeafe, #172554);
+  --color-info-contenu: light-dark(#1e3a8a, #93c5fd);
+  --color-succes-fond: light-dark(#dcfce7, #052e16);
+  --color-succes-contenu: light-dark(#14532d, #86efac);
+  --color-alerte-fond: light-dark(#fef3c7, #451a03);
+  --color-alerte-contenu: light-dark(#78350f, #fcd34d);
+  --color-danger-fond: light-dark(#fee2e2, #450a0a);
+  --color-danger-contenu: light-dark(#7f1d1d, #fca5a5);
+
+  /* Anneau de focus : ≥ 3:1 contre le fond dans les deux thèmes (6,7:1 et 10,4:1). */
+  --color-focus: light-dark(#1d4ed8, #93c5fd);
+}
+
+/*
+ * Jetons hors espaces de noms Tailwind : ils se consomment par la syntaxe de valeur
+ * arbitraire, par exemple `duration-(--duree-normale)` ou `min-h-(--cible-tactile)`.
+ */
+:root {
+  /* Durées d'animation. Aucune valeur de durée n'est écrite dans un composant. */
+  --duree-rapide: 120ms;
+  --duree-normale: 200ms;
+
+  /* Taille minimale d'une cible interactive (WCAG 2.2, critère 2.5.8 : 24 px ; 44 px visé). */
+  --cible-tactile: 2.75rem;
+}
+
+/*
+ * ── Thème clair / sombre ────────────────────────────────────────────────────────────────
+ *
+ * `color-scheme: light dark` fait suivre `prefers-color-scheme` par défaut. La bascule
+ * explicite `data-theme` sur l'élément racine l'emporte **dans les deux sens** : forcer le
+ * clair sous un système sombre fonctionne autant que l'inverse. C'est aussi `color-scheme`
+ * qui adapte les éléments natifs (barres de défilement, sélecteurs, saisie automatique).
+ */
+:root {
+  color-scheme: light dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* ── Éléments de base ─────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  html {
+    /* Le zoom du navigateur reste maître de la taille de base : pas de taille absolue ici. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-page);
+    color: var(--color-texte);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+
+  /*
+   * Anneau de focus visible et homogène, jamais supprimé. `:focus-visible` évite de le
+   * montrer au clic tout en le garantissant au clavier.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* Cibles interactives : au moins 44 px de haut, sauf lien en ligne dans un paragraphe. */
+  button,
+  [role='button'],
+  select {
+    min-height: var(--cible-tactile);
+  }
+
+  /* Respect de `prefers-reduced-motion` : aucune animation résiduelle. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/*
+ * Pour du contenu réservé aux technologies d'assistance, utiliser les utilitaires fournis par
+ * Tailwind : `sr-only` (visuellement absent, mais lu) et `not-sr-only` pour le révéler — par
+ * exemple `sr-only focus-visible:not-sr-only` sur un lien d'évitement. Ne pas employer `hidden`,
+ * qui retirerait le contenu de l'arbre d'accessibilité.
+ */

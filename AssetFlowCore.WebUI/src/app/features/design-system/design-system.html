@@ -1,0 +1,188 @@
+<ng-template #gabaritStatut let-actif>
+  <app-asset-status-badge [statut]="actif.statut" />
+</ng-template>
+
+<div class="flex flex-col gap-8">
+  <header class="flex flex-col gap-2">
+    <app-breadcrumb [etapes]="etapes" />
+    <h1 class="text-2xl font-semibold tracking-tight">Design system</h1>
+    <p class="max-w-prose text-sm text-texte-discret">
+      Page de revue : elle rassemble les composants partagés pour vérifier à l'œil et au clavier ce
+      qu'aucune commande ne tranche — rendu à 320 px de large, zoom à 200 %, contraste dans les deux
+      thèmes, ordre de tabulation, restitution du focus. Aucun parcours produit n'en dépend.
+    </p>
+  </header>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="text-lg font-semibold">Boutons</h2>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <app-button>Enregistrer</app-button>
+      <app-button variante="secondaire">Annuler</app-button>
+      <app-button variante="discret">Filtrer</app-button>
+      <app-button variante="danger">Mettre au rebut</app-button>
+      <app-button [disabled]="true">Indisponible</app-button>
+      <app-button [enCours]="enCours()" (click)="simulerActionLongue()">
+        Lancer une action longue
+      </app-button>
+      <app-button taille="compact" variante="secondaire">Compact</app-button>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="text-lg font-semibold">Badges d'état</h2>
+
+    <div class="flex flex-wrap items-center gap-2">
+      @for (statut of etatsActif; track statut) {
+        <app-asset-status-badge [statut]="statut" />
+      }
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      @for (statut of etatsIncident; track statut) {
+        <app-ticket-status-badge [statut]="statut" />
+      }
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      @for (criticite of criticites; track criticite) {
+        <app-ticket-criticality-badge [criticite]="criticite" />
+      }
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <app-badge libelle="Neutre" tonalite="neutre" />
+      <app-badge libelle="Information" tonalite="info" />
+      <app-badge libelle="Succès" tonalite="succes" />
+      <app-badge libelle="Alerte" tonalite="alerte" />
+      <app-badge libelle="Danger" tonalite="danger" />
+      <app-badge libelle="Sans pastille" [avecPastille]="false" />
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="text-lg font-semibold">Formulaire</h2>
+
+    <app-card ariaLabel="Formulaire de démonstration">
+      <form class="flex flex-col gap-4" (ngSubmit)="soumettre()">
+        <app-text-field
+          [controle]="formulaire.controls.nom"
+          label="Libellé de l'actif"
+          [requis]="true"
+          [longueurMax]="150"
+          [compteurCaracteres]="true"
+          aide="Le nom sous lequel l'équipement est connu."
+        />
+
+        <app-text-field
+          [controle]="formulaire.controls.serie"
+          label="Numéro de série"
+          [requis]="true"
+          aide="De 5 à 50 caractères."
+          [messages]="{ serveur: 'Ce numéro de série est déjà enregistré dans le parc.' }"
+        />
+
+        <app-select-field
+          [controle]="formulaire.controls.type"
+          label="Type d'actif"
+          [options]="optionsType"
+          [requis]="true"
+        />
+
+        <app-textarea-field
+          [controle]="formulaire.controls.description"
+          label="Description de l'anomalie"
+          [requis]="true"
+          [longueurMax]="500"
+          [compteurCaracteres]="true"
+        />
+
+        <app-checkbox-field
+          [controle]="formulaire.controls.confirmation"
+          label="Je confirme l'exactitude des informations saisies"
+        />
+
+        <div class="flex flex-wrap gap-2">
+          <app-button type="submit">Soumettre pour voir les erreurs</app-button>
+        </div>
+      </form>
+    </app-card>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="text-lg font-semibold">Table responsive</h2>
+    <p class="text-sm text-texte-discret">
+      Réduisez la fenêtre sous 768 px, ou zoomez à 200 % : la table cède la place à des cartes.
+    </p>
+
+    <app-data-table
+      [lignes]="actifs()"
+      [colonnes]="colonnes()"
+      [cleLigne]="cleActif"
+      legende="Inventaire des actifs (exemple)"
+      messageVide="Aucun actif enregistré."
+    />
+
+    <div class="flex flex-wrap gap-2">
+      <app-button variante="secondaire" taille="compact" (click)="viderTable()">
+        Vider la table
+      </app-button>
+      <app-button variante="secondaire" taille="compact" (click)="retablirTable()">
+        Rétablir les lignes
+      </app-button>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="text-lg font-semibold">États</h2>
+
+    <app-spinner libelle="Chargement de l'inventaire" />
+
+    <app-empty-state
+      titre="Aucun incident en cours"
+      description="Les incidents clôturés restent consultables depuis la fiche de l'actif."
+    >
+      <app-button variante="secondaire" taille="compact">Ouvrir un incident</app-button>
+    </app-empty-state>
+
+    <app-error-message
+      titre="Chargement impossible"
+      message="Le service est momentanément indisponible. Réessayez dans quelques instants."
+      traceId="0HN7ABCDEF:00000003"
+      [reessayable]="true"
+    />
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="text-lg font-semibold">Modale et notifications</h2>
+
+    <div class="flex flex-wrap gap-2">
+      <app-button variante="danger" (click)="modaleOuverte.set(true)">
+        Ouvrir la modale de confirmation
+      </app-button>
+      <app-button variante="secondaire" (click)="ajouterNotification()">
+        Ajouter une notification
+      </app-button>
+    </div>
+
+    <app-modal
+      [ouverte]="modaleOuverte()"
+      titre="Mettre l'actif au rebut"
+      description="Cette action est irréversible : l'actif ne pourra pas être remis en service."
+      (fermeture)="modaleOuverte.set(false)"
+    >
+      <p class="text-sm text-texte">
+        Vérifiez qu'aucun incident n'est en cours sur cet équipement avant de confirmer.
+      </p>
+
+      <app-button slot="actions" variante="secondaire" (click)="modaleOuverte.set(false)">
+        Annuler
+      </app-button>
+      <app-button slot="actions" variante="danger" (click)="modaleOuverte.set(false)">
+        Confirmer la mise au rebut
+      </app-button>
+    </app-modal>
+  </section>
+</div>
+
+<app-notification-list [notifications]="notifications()" (rejet)="rejeterNotification($event)" />

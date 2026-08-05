@@ -17,7 +17,7 @@ Documents de référence : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) (e
 | Backend | ✅ fonctionnel : 15 endpoints, 216 tests unitaires verts, tests d'architecture et d'intégration, benchmarks, CI/CD complète, déploiement conteneurisé ; **Lots 1 et 2 appliqués** |
 | Contrat d'API | ✅ complété : listes d'incidents (paginée) et d'équipes, fiche d'actif, DTOs enrichis, 404 pour les ressources absentes, `Location` sur les créations |
 | Sécurité | ⛔ aucune authentification ni autorisation |
-| Frontend | ✅ socle en place : workspace Angular 22 `AssetFlowCore.WebUI` (standalone, Signals, zoneless, Vitest), types du contrat, 3 services d'API, intercepteurs d'erreurs et de jeton, client SignalR, 47 tests verts ; **Lot 3 appliqué**. Aucun écran produit (`E-01`→`E-09` au Lot 5) |
+| Frontend | ✅ socle **et** design system en place : workspace Angular 22 `AssetFlowCore.WebUI` (standalone, Signals, zoneless, Vitest, Tailwind 4), types du contrat, 3 services d'API, intercepteurs, client SignalR, 18 composants partagés, thème clair/sombre, 129 tests verts ; **Lots 3 et 4 appliqués**. Aucun écran produit (`E-01`→`E-09` au Lot 5) |
 | Assistance IA | 🟡 mécanisme complet mais corpus vectoriel vide et état non exposé |
 | Documentation | ✅ produit, fonctionnel, technique, architecture, contrat d'API |
 | Outillage Claude Code | ✅ 6 agents, 3 skills |
@@ -41,9 +41,9 @@ Documents de référence : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) (e
 ```mermaid
 flowchart LR
     L0["Lot 0<br/>Décisions ❓"] --> L1["Lot 1 ✅<br/>Corrections backend"]
-    L0 --> L3["Lot 3<br/>Fondation frontend"]
+    L0 --> L3["Lot 3 ✅<br/>Fondation frontend"]
     L1 --> L2["Lot 2 ✅<br/>Complétion du contrat"]
-    L3 --> L4["Lot 4<br/>Design system"]
+    L3 --> L4["Lot 4 ✅<br/>Design system"]
     L2 --> L5["Lot 5<br/>Fonctionnalités"]
     L4 --> L5
     L5 --> L6["Lot 6<br/>Temps réel et IA"]
@@ -70,7 +70,7 @@ flowchart LR
 | 0.6 | Désactivation d'équipe en remplacement de la suppression | `EF-28` | S |
 | 0.7 | Indexation des incidents clôturés dans la base vectorielle | Lot 6, valeur de l'IA | M |
 | ~~0.8~~ | ~~Nom du dossier du workspace frontend~~ — **tranchée le 2026-08-05** : dossier `AssetFlowCore.WebUI/`, projet npm `assetflow-webui` (les majuscules et le point sont interdits dans un nom de paquet npm, d'où la dissociation) | Lot 3 | S |
-| 0.9 | Framework CSS (Tailwind · Material · DaisyUI+Tailwind · SCSS) | Lot 4 | M |
+| ~~0.9~~ | ~~Framework CSS~~ — **tranchée le 2026-08-05** : **Tailwind 4 + `@angular/cdk`** (utilitaires pour le style, CDK pour l'accessibilité). Motif : contrôle total du rendu et jetons en variables CSS, là où Material imposerait son apparence et une thématisation par mixins ; les composants réellement demandés (table basculant en cartes, badges métier, message vide) n'existent de toute façon dans aucune bibliothèque | Lot 4 | M |
 | ~~0.10~~ | ~~Rendu serveur (SSR) ou application cliente seule~~ — **tranchée le 2026-08-05** : **application cliente seule**, pas de SSR (back-office interne destiné à passer derrière authentification, aucun enjeu de référencement ni de premier affichage public ; déploiement statique aligné sur la contrainte de même origine) | Lot 3, Lot 8 | M |
 | ~~0.11~~ | ~~Runner de tests frontend~~ — **tranchée le 2026-08-05** : **Vitest** (voie moderne du CLI, aucun navigateur à piloter en CI, couverture lcov directement exploitable par SonarCloud) | Lot 3 | S |
 | 0.12 | Stratégie d'état (Signals natifs — défaut — ou SignalStore en préversion) | Lot 5 | S |
@@ -197,29 +197,49 @@ flowchart LR
 
 ---
 
-## 7. Lot 4 — Design system 🎯 (dépend de 0.9, parallélisable avec le Lot 2)
+## 7. Lot 4 — Design system ✅ (2026-08-05)
 
 **Objectif** : les briques visuelles nécessaires aux écrans, accessibles et cohérentes.
 
-| # | Étape | Réalisation | Charge |
-|---|---|---|---|
-| 4.1 | Installer et configurer le framework CSS retenu (0.9), après vérification des peer dependencies avec Angular 22 | agent **`ui-ux-designer`** | M |
-| 4.2 | Définir les **jetons de design** (couleurs, typographie, espacements, rayons, durées) et le fichier de styles racine | agent **`ui-ux-designer`** | M |
-| 4.3 | Mettre en place le **thème clair/sombre** : `prefers-color-scheme` **plus** bascule explicite prioritaire dans les deux sens | agent **`ui-ux-designer`** | M |
-| 4.4 | Composants de base : bouton, champ de saisie, sélecteur, zone de texte, case à cocher | skill **`/scaffold-ui`** puis agent **`ui-ux-designer`** | L |
-| 4.5 | Composants de structure : carte, table responsive (bascule en cartes sous seuil), modale avec piège et restitution du focus, fil d'ariane | skill **`/scaffold-ui`** puis agent **`ui-ux-designer`** | L |
-| 4.6 | Composants d'état : badge d'état et de criticité (couleur **plus** libellé), indicateur de chargement, message vide, message d'erreur, notification | skill **`/scaffold-ui`** puis agent **`ui-ux-designer`** | M |
-| 4.7 | Traduction française des valeurs d'énumérations de l'API (pipe ou table de correspondance dans `shared/`) | agent **`ui-ux-designer`** | S |
-| 4.8 | **Relecture** | agent **`angular-code-reviewer`** | S |
+**Décision appliquée** : 0.9 → **Tailwind 4.3.3 + `@angular/cdk` 22.1.1**. Compatibilités vérifiées avant installation (`@angular/material` 22.1.1 aurait aussi convenu ; DaisyUI 5 écarté, il n'apporte que du style et suit les majeures de Tailwind).
+
+| # | Étape | Réalisation | Vérification | Charge |
+|---|---|---|---|---|
+| 4.1 ✅ | Tailwind 4 + `@angular/cdk` installés et configurés (`.postcssrc.json`, feuille racine en **CSS** — Tailwind 4 ne passe pas par un préprocesseur) | session principale | `ng build` vert ; CSS émis inspecté (jetons, bascule de thème et durées arbitraires bien présents) | M |
+| 4.2 ✅ | Jetons de design : 23 jetons de couleur sémantiques, durées, cible tactile. Déclarés **une seule fois** avec leurs deux valeurs via `light-dark()` — aucun bloc de thème sombre à maintenir en parallèle | session principale | `npm run verifier:contrastes` : **38 paires** calculées dans les deux thèmes | M |
+| 4.3 ✅ | Thème clair/sombre : `color-scheme: light dark` suit le système, `data-theme` l'emporte **dans les deux sens** ; `ThemeService` (`core/theme`) + `app-theme-toggle` présentationnel, jonction dans le shell | session principale | 8 tests, dont le forçage dans les deux sens et le stockage refusé (navigation privée) | M |
+| 4.4 ✅ | Bouton, champ de saisie, sélecteur, zone de texte, case à cocher — **approche A** (`FormControl` en entrée) | conventions du skill **`/scaffold-ui`** | 28 tests : libellé associé, erreur seulement après interaction, `aria-invalid` + `aria-describedby`, état désactivé, compteur de caractères | L |
+| 4.5 ✅ | Carte, table responsive (table ≥ `md`, cartes en dessous, bascule par CSS donc suivant aussi le zoom), modale (piège et **restitution** du focus par `cdkTrapFocus`, Échap, verrou de défilement), fil d'Ariane | session principale | 24 tests, dont le focus rendu au déclencheur et l'absence de double annonce | L |
+| 4.6 ✅ | Badge générique + badges d'état d'actif, d'état d'incident et de criticité (couleur **et** libellé), indicateur de chargement, message vide, message d'erreur, région de notifications `aria-live` | session principale | 17 tests, dont la couverture de **toutes** les valeurs d'énumérations du contrat | M |
+| 4.7 ✅ | Libellés français des 4 énumérations (`Record<Union, string>`, exhaustif par construction) + 4 pipes purs + messages de validation par défaut | session principale | 6 tests, dont l'absence de valeur laissée en anglais | S |
+| 4.8 ✅ | **Relecture**, liste de contrôle d'accessibilité, documentation | session principale (aucun agent sollicité) | `ng build` · **129 tests** · `prettier --check` · règles de dépendances · contrastes | S |
 
 **Critères d'acceptation du lot**
 
-- Chaque composant passe la **liste de contrôle en 5 points** du skill `/scaffold-ui` : utilisable au clavier seul, nom accessible sur chaque contrôle, focus visible et prévisible, information non portée par la seule couleur, aucune dépendance à `core/` ou `features/`.
-- Contraste vérifié **dans les deux thèmes** (≥ 4,5:1 texte, ≥ 3:1 éléments d'interface).
-- Rendu correct de **320 px** de large et à **200 % de zoom**, sans débordement horizontal.
-- Composants de formulaire compatibles `ReactiveFormsModule` : approche A (contrôle en entrée) ou B (`ControlValueAccessor` complet, `setDisabledState` inclus).
-- Aucune couleur, taille ou durée codée en dur hors jetons ; aucun `!important`, aucun `::ng-deep` non justifié.
-- API publique de chaque composant documentée (entrées, sorties, valeurs par défaut).
+- ✅ Liste de contrôle en 5 points passée composant par composant (voir §7.1).
+- ✅ Contraste vérifié **par calcul** dans les deux thèmes : 38 paires, marge la plus faible à 4,55:1 pour un seuil de 3:1. Reproductible par `npm run verifier:contrastes`, qui lit les jetons dans `styles.css` — une couleur modifiée sans repasser la vérification fait échouer la commande.
+- 🟡 Rendu à **320 px** et à **200 % de zoom** : construit pour (styles mobile-first, `clamp` inutile car typographie relative, table basculant en cartes, cibles ≥ 44 px) mais **non observé** — aucun navigateur pilotable dans la session. La page `/design-system` existe pour que cette vérification se fasse en un coup d'œil.
+- ✅ Formulaires compatibles `ReactiveFormsModule` par **approche A** (contrôle en entrée), retenue pour son typage complet et l'absence de contrat implicite.
+- ✅ Aucune couleur, taille ni durée codée en dur hors jetons ; aucun `!important` hors la neutralisation d'animations sous `prefers-reduced-motion` ; aucun `::ng-deep`.
+- ✅ API publique documentée composant par composant dans [src/app/shared/README.md](../AssetFlowCore.WebUI/src/app/shared/README.md).
+
+### 7.1 Liste de contrôle d'accessibilité — résultat
+
+| Point | Constat |
+|---|---|
+| Utilisable au clavier seul | Tous les contrôles sont **natifs** (`button`, `input`, `select`, `textarea`, `input[type=radio]`, `a`) : navigation, activation et navigation par flèches sont celles du navigateur. Aucun `tabindex` positif. La zone de défilement de la table est focusable (`tabindex="0"`). |
+| Nom accessible sur chaque contrôle | `for`/`id` sur les cinq champs ; `aria-label` sur les boutons sans libellé visible (fermeture de modale, rejet de notification) ; `legend` sur le groupe de thème ; `caption` sur la table. |
+| Focus visible et prévisible | Anneau `:focus-visible` global sur jeton dédié, jamais supprimé. Modale : focus déplacé sur le panneau à l'ouverture, piégé, **rendu au déclencheur** à la fermeture (test à l'appui). |
+| Information non portée par la couleur | Chaque badge impose un libellé (`libelle` obligatoire) ; les champs en erreur portent `aria-invalid` **et** un message ; l'indicateur de chargement porte un libellé lu. |
+| Aucune dépendance à `core/` ni `features/` | Vérifié par commande. Un seul écart, assumé et documenté : `RouterLink` dans le fil d'Ariane, indispensable à de vraies ancres. |
+
+**Écarts assumés du lot**
+
+- **Rendu visuel non observé** (320 px, 200 % de zoom, contraste perçu, ordre de tabulation réel) : aucun outil de pilotage de navigateur n'était disponible. Ces points sont construits et calculés, non vus. La page `/design-system` rassemble tous les composants pour cette revue.
+- **Une page hors périmètre produit** : `features/design-system/` sert la revue visuelle exigée par les critères. Comme `features/diagnostic/`, elle doit être retirée au Lot 5.
+- **Défaut corrigé dans l'outillage du Lot 3** : `verifier-dependances.mjs` signalait `@angular/core/testing` comme une violation (le motif `/core/` capturait le nom du paquet). Le contrôle ne porte désormais que sur les imports relatifs, et son pouvoir de détection a été revérifié sur une violation délibérée.
+- **Télémétrie du CLI désactivée** : `ng new` avait inscrit un identifiant `analytics` dans `angular.json`, committé au Lot 3 sans être remarqué. Remis à `false` ; `ng analytics enable` la réactive.
+- **Aucun agent sollicité** : lot réalisé en session principale, les définitions d'agents et de skills servant de référentiel de conventions.
 
 ---
 

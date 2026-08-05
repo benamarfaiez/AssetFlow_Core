@@ -1,0 +1,12 @@
+<button
+  [type]="type()"
+  [class]="classes()"
+  [disabled]="inactif()"
+  [attr.aria-busy]="enCours() ? 'true' : null"
+  [attr.aria-label]="ariaLabel()"
+>
+  @if (enCours()) {
+    <app-spinner taille="compact" libelle="Traitement en cours" [libelleVisible]="false" />
+  }
+  <ng-content />
+</button>

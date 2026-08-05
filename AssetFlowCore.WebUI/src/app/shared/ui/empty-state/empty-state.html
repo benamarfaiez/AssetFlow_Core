@@ -1,0 +1,11 @@
+<div
+  class="flex flex-col items-center gap-2 rounded-lg border border-dashed border-bordure px-4 py-8 text-center"
+>
+  <p class="font-medium text-texte">{{ titre() }}</p>
+
+  @if (description(); as texte) {
+    <p class="max-w-prose text-sm text-texte-discret">{{ texte }}</p>
+  }
+
+  <ng-content />
+</div>

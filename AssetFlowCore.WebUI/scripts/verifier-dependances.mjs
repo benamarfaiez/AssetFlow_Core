@@ -66,7 +66,10 @@ function importsDe(chemin) {
     specificateurs.push(found[1]);
   }
 
-  return specificateurs;
+  // Seuls les imports **relatifs** franchissent les zones de l'application. Écarter les paquets
+  // évite un faux positif que le contraire produisait : `@angular/core/testing` contient
+  // « /core/ » sans avoir le moindre rapport avec `src/app/core/`.
+  return specificateurs.filter((specificateur) => specificateur.startsWith('.'));
 }
 
 for (const fichier of fichiersTypeScript(RACINE)) {

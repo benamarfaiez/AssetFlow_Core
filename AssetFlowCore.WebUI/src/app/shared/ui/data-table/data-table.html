@@ -1,0 +1,81 @@
+<!-- Vue tabulaire — à partir de md. Masquée en dessous, donc absente de l'arbre d'accessibilité. -->
+<div
+  role="region"
+  tabindex="0"
+  [attr.aria-label]="legende()"
+  class="hidden overflow-x-auto rounded-lg border border-bordure md:block"
+>
+  <table class="w-full border-collapse text-left text-sm">
+    <caption class="sr-only">
+      {{
+        legende()
+      }}
+    </caption>
+
+    <thead class="bg-surface-creuse">
+      <tr>
+        @for (colonne of colonnes(); track colonne.cle) {
+          <th scope="col" class="px-3 py-2 font-semibold text-texte">{{ colonne.entete }}</th>
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @for (ligne of lignes(); track cleLigne()(ligne)) {
+        <tr class="border-t border-bordure align-middle hover:bg-surface-creuse">
+          @for (colonne of colonnes(); track colonne.cle) {
+            <td class="px-3 py-2 text-texte">
+              @if (colonne.gabarit; as gabarit) {
+                <ng-container
+                  [ngTemplateOutlet]="gabarit"
+                  [ngTemplateOutletContext]="{ $implicit: ligne }"
+                />
+              } @else {
+                {{ colonne.valeur(ligne) }}
+              }
+            </td>
+          }
+        </tr>
+      } @empty {
+        <tr class="border-t border-bordure">
+          <td [attr.colspan]="colonnes().length" class="px-3 py-6 text-center text-texte-discret">
+            {{ messageVide() }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- Vue en cartes — sous md. Une liste de définitions porte le couple intitulé / valeur. -->
+<ul class="flex flex-col gap-2 md:hidden">
+  @for (ligne of lignes(); track cleLigne()(ligne)) {
+    <li class="rounded-lg border border-bordure bg-surface p-3">
+      <dl class="flex flex-col gap-1.5">
+        @for (colonne of colonnesEnCarte(); track colonne.cle) {
+          <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+            <dt class="text-xs font-medium tracking-wide text-texte-discret uppercase">
+              {{ colonne.entete }}
+            </dt>
+            <dd class="text-sm text-texte">
+              @if (colonne.gabarit; as gabarit) {
+                <ng-container
+                  [ngTemplateOutlet]="gabarit"
+                  [ngTemplateOutletContext]="{ $implicit: ligne }"
+                />
+              } @else {
+                {{ colonne.valeur(ligne) }}
+              }
+            </dd>
+          </div>
+        }
+      </dl>
+    </li>
+  } @empty {
+    <li
+      class="rounded-lg border border-dashed border-bordure px-3 py-6 text-center text-texte-discret"
+    >
+      {{ messageVide() }}
+    </li>
+  }
+</ul>

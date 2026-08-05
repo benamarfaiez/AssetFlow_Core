@@ -1,0 +1,4 @@
+<span role="status" class="inline-flex items-center gap-2">
+  <span [class]="classesCercle()" aria-hidden="true"></span>
+  <span [class]="libelleVisible() ? 'text-sm text-texte-discret' : 'sr-only'">{{ libelle() }}</span>
+</span>

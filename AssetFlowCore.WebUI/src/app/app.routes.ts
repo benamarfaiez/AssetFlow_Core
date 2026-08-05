@@ -15,6 +15,11 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./features/diagnostic/diagnostic.routes').then((m) => m.DIAGNOSTIC_ROUTES),
   },
+  {
+    path: 'design-system',
+    loadChildren: () =>
+      import('./features/design-system/design-system.routes').then((m) => m.DESIGN_SYSTEM_ROUTES),
+  },
   // Repli provisoire : l'écran « page introuvable » relève du Lot 4 (composants d'état).
   { path: '**', redirectTo: '' },
 ];
