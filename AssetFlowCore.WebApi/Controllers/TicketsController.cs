@@ -7,12 +7,14 @@ using AssetFlowCore.Application.UseCases.Tickets.GetTickets;
 using AssetFlowCore.Application.UseCases.Tickets.TransferTicket;
 using AssetFlowCore.WebApi.Requests;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AssetFlowCore.WebApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class TicketsController(ISender mediator) : ControllerBase
 {
     /// <summary>

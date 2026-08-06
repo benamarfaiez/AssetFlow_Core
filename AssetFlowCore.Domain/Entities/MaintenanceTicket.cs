@@ -22,6 +22,12 @@ public class MaintenanceTicket
     public byte[] RowVersion { get; private set; } = [];
     public string? AssistanceNote { get; private set; }
     public bool IsAiProcessing { get; private set; }
+
+    /// <summary>Auteur de la prise en charge (décision 0.2) ; <c>null</c> tant que le ticket n'a jamais été pris en charge.</summary>
+    public Guid? AssignedByUserId { get; private set; }
+
+    /// <summary>Auteur de la clôture (décision 0.2) ; <c>null</c> tant que le ticket n'est pas clôturé.</summary>
+    public Guid? ClosedByUserId { get; private set; }
     private MaintenanceTicket()
     {
         Description = null!;
@@ -58,24 +64,30 @@ public class MaintenanceTicket
         Asset = null!;
     }
 
-    public void AssignToTechnician()
+    public void AssignToTechnician(Guid assignedByUserId)
     {
         if (Status != TicketStatus.Opened)
             throw new DomainException("Seul un ticket ouvert peut être pris en charge.");
+        if (assignedByUserId == Guid.Empty)
+            throw new ArgumentException("L'auteur de la prise en charge est obligatoire.", nameof(assignedByUserId));
 
         Status = TicketStatus.InProgress;
+        AssignedByUserId = assignedByUserId;
     }
 
-    public void Close(string resolutionComment)
+    public void Close(Guid closedByUserId, string resolutionComment)
     {
         if (Status != TicketStatus.InProgress)
             throw new DomainException("Seul un ticket en cours peut être clôturé.");
 
         if (string.IsNullOrWhiteSpace(resolutionComment))
             throw new ArgumentException("Un commentaire de résolution est obligatoire.");
+        if (closedByUserId == Guid.Empty)
+            throw new ArgumentException("L'auteur de la clôture est obligatoire.", nameof(closedByUserId));
 
         ResolutionComment = resolutionComment.Trim();
         Status = TicketStatus.Closed;
+        ClosedByUserId = closedByUserId;
     }
 
     public void TransferToTeam(Team team, string reason)

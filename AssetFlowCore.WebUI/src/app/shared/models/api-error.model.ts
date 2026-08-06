@@ -10,6 +10,13 @@ export type ApiErrorKind =
   | 'validation'
   /** 400 sans dictionnaire : règle métier refusée ou donnée d'entrée invalide. */
   | 'business'
+  /**
+   * 401 : jeton absent, expiré ou invalide. `sessionRenewalInterceptor` en tente un renouvellement
+   * silencieux et rejoue la requête une fois avant que cette nature n'atteigne l'appelant.
+   */
+  | 'unauthorized'
+  /** 403 : jeton valide, mais autorisation refusée. Ne se rejoue jamais. */
+  | 'forbidden'
   /** 404 : la ressource désignée par l'URI n'existe pas. */
   | 'notFound'
   /** 409 : la ressource a changé depuis sa lecture (`RowVersion`), la saisie doit être rejouée. */

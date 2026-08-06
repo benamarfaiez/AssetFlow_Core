@@ -19,11 +19,11 @@ public class MaintenanceTicketRepositoryTests : IntegrationTestBase
             var teamId = Guid.NewGuid();
             var t1 = new MaintenanceTicket(Guid.NewGuid(), assetId, "Ticket 1", "Desc", TicketCriticality.Low, teamId);
             var t2 = new MaintenanceTicket(Guid.NewGuid(), assetId, "Ticket 2", "Desc", TicketCriticality.Low, teamId);
-            t2.AssignToTechnician();
+            t2.AssignToTechnician(Guid.NewGuid());
 
             var t3 = new MaintenanceTicket(Guid.NewGuid(), assetId, "Ticket 3", "Desc", TicketCriticality.Low, teamId);
-            t3.AssignToTechnician();
-            t3.Close("Resolved");
+            t3.AssignToTechnician(Guid.NewGuid());
+            t3.Close(Guid.NewGuid(), "Resolved");
 
             await writeContext.Tickets.AddRangeAsync(t1, t2, t3);
             await writeContext.SaveChangesAsync();

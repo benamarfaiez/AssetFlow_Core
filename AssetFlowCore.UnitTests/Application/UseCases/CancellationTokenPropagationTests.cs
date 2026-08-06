@@ -49,15 +49,17 @@ public class CancellationTokenPropagationTests
         asset.MarkAsDown();
         asset.MarkInMaintenance();
         var ticket = new MaintenanceTicket(Guid.NewGuid(), asset.Id, "Titre", "Desc", TicketCriticality.Low, Guid.NewGuid());
-        ticket.AssignToTechnician();
+        ticket.AssignToTechnician(Guid.NewGuid());
 
         var ticketRepo = new Mock<IMaintenanceTicketRepository>();
         var assetRepo = new Mock<IAssetRepository>();
+        var currentUserService = new Mock<ICurrentUserService>();
         var uow = new Mock<IUnitOfWork>();
         ticketRepo.Setup(r => r.GetByIdAsync(ticket.Id, Token)).ReturnsAsync(ticket);
         assetRepo.Setup(r => r.GetByIdAsync(asset.Id, Token)).ReturnsAsync(asset);
+        currentUserService.Setup(s => s.GetOrCreateUserIdAsync(Token)).ReturnsAsync(Guid.NewGuid());
 
-        await new CloseTicketHandler(ticketRepo.Object, assetRepo.Object, uow.Object)
+        await new CloseTicketHandler(ticketRepo.Object, assetRepo.Object, currentUserService.Object, uow.Object)
             .Handle(new CloseTicketCommand(ticket.Id, "Réparé"), Token);
 
         ticketRepo.Verify(r => r.HasOtherActiveTicketsAsync(asset.Id, ticket.Id, Token), Times.Once);

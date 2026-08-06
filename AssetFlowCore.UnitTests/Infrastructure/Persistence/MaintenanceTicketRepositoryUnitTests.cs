@@ -29,10 +29,10 @@ namespace AssetFlowCore.UnitTests.Infrastructure.Persistence
                 var teamId = Guid.NewGuid();
                 var t1 = new MaintenanceTicket(Guid.NewGuid(), assetId, "T1", "d", TicketCriticality.Low, teamId);
                 var t2 = new MaintenanceTicket(Guid.NewGuid(), assetId, "T2", "d", TicketCriticality.Low, teamId);
-                t2.AssignToTechnician();
+                t2.AssignToTechnician(Guid.NewGuid());
                 var t3 = new MaintenanceTicket(Guid.NewGuid(), assetId, "T3", "d", TicketCriticality.Low, teamId);
-                t3.AssignToTechnician();
-                t3.Close("ok");
+                t3.AssignToTechnician(Guid.NewGuid());
+                t3.Close(Guid.NewGuid(), "ok");
 
                 await ctx.Tickets.AddRangeAsync(t1, t2, t3);
                 await ctx.SaveChangesAsync();
@@ -82,7 +82,7 @@ namespace AssetFlowCore.UnitTests.Infrastructure.Persistence
             {
                 var t1 = new MaintenanceTicket(Guid.NewGuid(), assetId, "A", "d", TicketCriticality.Low, teamId);
                 var t2 = new MaintenanceTicket(Guid.NewGuid(), assetId, "B", "d", TicketCriticality.Low, teamId);
-                t2.AssignToTechnician();
+                t2.AssignToTechnician(Guid.NewGuid());
                 await ctx.Tickets.AddRangeAsync(t1, t2);
                 await ctx.SaveChangesAsync();
             }

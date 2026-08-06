@@ -11,6 +11,8 @@ import { ProblemDetails } from '../../shared/models/problem-details.model';
 const MESSAGES = {
   validation: 'Certaines informations saisies sont invalides.',
   business: "L'opération a été refusée.",
+  unauthorized: 'Votre session a expiré ou est invalide. Reconnectez-vous pour continuer.',
+  forbidden: "Vous n'avez pas les droits nécessaires pour effectuer cette action.",
   notFound: "La ressource demandée n'existe pas ou plus.",
   conflict:
     'Ces données ont été modifiées entre-temps. Rechargez-les avant de valider vos modifications.',
@@ -27,6 +29,10 @@ const MESSAGES = {
  * Correspondances produites par `ExceptionHandlingMiddleware` :
  * - 400 avec dictionnaire `errors` → `validation` (messages reportables sur les champs) ;
  * - 400 sans dictionnaire → `business` (règle métier refusée, message affichable) ;
+ * - 401 → `unauthorized` (jeton absent, expiré ou invalide — `sessionRenewalInterceptor` en a
+ *   déjà tenté un renouvellement et un rejeu, en amont dans la chaîne, avant que cette nature
+ *   n'atteigne l'appelant) ;
+ * - 403 → `forbidden` (autorisation refusée, jamais rejouée) ;
  * - 404 → `notFound` ; 409 → `conflict` (concurrence sur `RowVersion`) ;
  * - 5xx → `server`, avec un message **générique** : le détail technique n'est jamais présenté ;
  * - absence de réponse (`status` 0) → `network`.
@@ -95,6 +101,28 @@ function toApiError(response: HttpErrorResponse): ApiError {
     });
   }
 
+  if (response.status === 401) {
+    return new ApiError({
+      kind: 'unauthorized',
+      status: 401,
+      title,
+      message: detail || MESSAGES.unauthorized,
+      traceId,
+      problemDetails,
+    });
+  }
+
+  if (response.status === 403) {
+    return new ApiError({
+      kind: 'forbidden',
+      status: 403,
+      title,
+      message: detail || MESSAGES.forbidden,
+      traceId,
+      problemDetails,
+    });
+  }
+
   if (response.status === 404) {
     return new ApiError({
       kind: 'notFound',
@@ -117,10 +145,9 @@ function toApiError(response: HttpErrorResponse): ApiError {
     });
   }
 
-  // Tout le reste — 5xx, mais aussi les codes qu'aucun endpoint ne produit encore (401, 403 :
-  // l'API n'a pas d'authentification, Lot 7) — est traité comme une défaillance de service.
-  // Le `detail` est délibérément ignoré : il peut provenir d'un intermédiaire (reverse proxy)
-  // et porter des informations d'implémentation.
+  // Tout le reste — 5xx — est traité comme une défaillance de service. Le `detail` est
+  // délibérément ignoré : il peut provenir d'un intermédiaire (reverse proxy) et porter des
+  // informations d'implémentation.
   return new ApiError({
     kind: 'server',
     status: response.status,

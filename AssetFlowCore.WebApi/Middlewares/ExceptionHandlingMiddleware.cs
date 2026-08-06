@@ -70,6 +70,17 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 problemDetails.Detail = "Cette ressource a été mise à jour par un autre utilisateur. Veuillez recharger les données.";
                 break;
 
+            // Après DbUpdateConcurrencyException, qui en dérive : l'ordre des cas fait foi.
+            // Couvre notamment la violation de l'index unique sur l'utilisateur provisionné
+            // « just-in-time » (Lot 7) en cas de requêtes concurrentes pour une même identité.
+            case DbUpdateException dbUpdateEx:
+                logger.LogWarning(dbUpdateEx, "Conflit d'écriture non lié à la concurrence optimiste. TraceId : {TraceId}", context.TraceIdentifier);
+                context.Response.StatusCode = StatusCodes.Status409Conflict;
+                problemDetails.Status = StatusCodes.Status409Conflict;
+                problemDetails.Title = "Conflit de persistance";
+                problemDetails.Detail = "Cette opération est entrée en conflit avec une écriture concurrente. Veuillez réessayer.";
+                break;
+
             default:
                 // Le message d'exception peut porter des détails d'implémentation (requête SQL,
                 // chemin de fichier, nom de serveur) : il est journalisé mais jamais renvoyé au client.

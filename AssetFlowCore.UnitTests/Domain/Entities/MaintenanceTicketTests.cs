@@ -34,30 +34,43 @@ public class MaintenanceTicketTests
     public void AssignToTechnician_WhenOpened_ShouldTransitionToInProgress()
     {
         var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, Guid.NewGuid());
-        ticket.AssignToTechnician();
+        var userId = Guid.NewGuid();
+        ticket.AssignToTechnician(userId);
         ticket.Status.Should().Be(TicketStatus.InProgress);
+        ticket.AssignedByUserId.Should().Be(userId);
     }
 
     [Fact]
     public void AssignToTechnician_WhenAlreadyProcessed_ShouldThrowDomainException()
     {
         var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, Guid.NewGuid());
-        ticket.AssignToTechnician(); // InProgress
+        ticket.AssignToTechnician(Guid.NewGuid()); // InProgress
 
-        Action act = () => ticket.AssignToTechnician();
+        Action act = () => ticket.AssignToTechnician(Guid.NewGuid());
         act.Should().Throw<DomainException>().WithMessage("*Seul un ticket ouvert peut être pris en charge*");
+    }
+
+    [Fact]
+    public void AssignToTechnician_WithEmptyUserId_ShouldThrowArgumentException()
+    {
+        var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, Guid.NewGuid());
+
+        Action act = () => ticket.AssignToTechnician(Guid.Empty);
+        act.Should().Throw<ArgumentException>().WithMessage("*L'auteur de la prise en charge est obligatoire*");
     }
 
     [Fact]
     public void Close_WithValidComment_ShouldTransitionToClosed()
     {
         var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, Guid.NewGuid());
-        ticket.AssignToTechnician();
+        ticket.AssignToTechnician(Guid.NewGuid());
+        var closedBy = Guid.NewGuid();
 
-        ticket.Close("Résolu avec succès");
+        ticket.Close(closedBy, "Résolu avec succès");
 
         ticket.Status.Should().Be(TicketStatus.Closed);
         ticket.ResolutionComment.Should().Be("Résolu avec succès");
+        ticket.ClosedByUserId.Should().Be(closedBy);
     }
 
     [Theory]
@@ -67,10 +80,20 @@ public class MaintenanceTicketTests
     public void Close_WithInvalidComment_ShouldThrowArgumentException(string? invalidComment)
     {
         var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, Guid.NewGuid());
-        ticket.AssignToTechnician();
+        ticket.AssignToTechnician(Guid.NewGuid());
 
-        Action act = () => ticket.Close(invalidComment!);
+        Action act = () => ticket.Close(Guid.NewGuid(), invalidComment!);
         act.Should().Throw<ArgumentException>().WithMessage("*Un commentaire de résolution est obligatoire*");
+    }
+
+    [Fact]
+    public void Close_WithEmptyUserId_ShouldThrowArgumentException()
+    {
+        var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, Guid.NewGuid());
+        ticket.AssignToTechnician(Guid.NewGuid());
+
+        Action act = () => ticket.Close(Guid.Empty, "Résolu");
+        act.Should().Throw<ArgumentException>().WithMessage("*L'auteur de la clôture est obligatoire*");
     }
 
     [Fact]
@@ -78,7 +101,7 @@ public class MaintenanceTicketTests
     {
         var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, Guid.NewGuid());
 
-        Action act = () => ticket.Close("Résolu");
+        Action act = () => ticket.Close(Guid.NewGuid(), "Résolu");
         act.Should().Throw<DomainException>().WithMessage("Seul un ticket en cours peut être clôturé.");
     }
 
@@ -86,8 +109,8 @@ public class MaintenanceTicketTests
     public void TransferToTeam_ShouldThrowDomainException()
     {
         var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Desc", TicketCriticality.Medium, Guid.NewGuid());
-        ticket.AssignToTechnician();
-        ticket.Close("Résolu");
+        ticket.AssignToTechnician(Guid.NewGuid());
+        ticket.Close(Guid.NewGuid(), "Résolu");
         var newTeam = new Team("name", "asset", "Low", "desc");
 
         Action act = () => ticket.TransferToTeam(newTeam, "Reason");

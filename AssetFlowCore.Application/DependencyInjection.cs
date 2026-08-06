@@ -35,6 +35,9 @@ public static class DependencyInjection
         services.AddScoped<IAssignmentStrategy, LaptopStandardStrategy>();
         services.AddScoped<ITicketAssignmentEngine, TicketAssignmentEngine>();
 
+        // Lot 7 : provisionnement « just-in-time » de l'utilisateur authentifié (décision 0.2)
+        services.AddScoped<ICurrentUserService, CurrentUserProvisioningService>();
+
         // Enregistrement explicite des Handlers de Cas d'Usages (Vertical Slices Applicatives)
         services.AddScoped<RegisterAssetHandler>();
         services.AddScoped<GetAllAssetsHandler>();

@@ -30,23 +30,23 @@ public class MaintenanceTicketStateMachineBenchmark
     public void AssignToTechnician()
     {
         var t = new MaintenanceTicket(Guid.NewGuid(), _assetId, "Titre-1", "Desc", TicketCriticality.Medium, Guid.NewGuid());
-        t.AssignToTechnician();
+        t.AssignToTechnician(Guid.NewGuid());
     }
 
     [Benchmark(Description = "Ticket.Close() — InProgress → Closed")]
     public void Close()
     {
         var t = new MaintenanceTicket(Guid.NewGuid(), _assetId, "Titre-2", "Desc", TicketCriticality.Low, Guid.NewGuid());
-        t.AssignToTechnician();
-        t.Close("Problème résolu.");
+        t.AssignToTechnician(Guid.NewGuid());
+        t.Close(Guid.NewGuid(), "Problème résolu.");
     }
 
     [Benchmark(Description = "Cycle complet : Construction → Assign → Close")]
     public MaintenanceTicket FullCycle()
     {
         var t = new MaintenanceTicket(Guid.NewGuid(), _assetId, "Incident complet", "Desc", TicketCriticality.High, Guid.NewGuid());
-        t.AssignToTechnician();
-        t.Close("Résolu après remplacement disque.");
+        t.AssignToTechnician(Guid.NewGuid());
+        t.Close(Guid.NewGuid(), "Résolu après remplacement disque.");
         return t;
     }
 

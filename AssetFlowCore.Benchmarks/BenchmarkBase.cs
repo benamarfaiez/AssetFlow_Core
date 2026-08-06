@@ -69,6 +69,9 @@ public abstract class BenchmarkBase
         // Notification no-op pour les benchmarks (évite SignalR)
         services.AddScoped<INotificationService, NoOpNotificationService>();
 
+        // Identité no-op pour les benchmarks (évite HttpContext/dépôt utilisateur, Lot 7)
+        services.AddScoped<ICurrentUserService, FakeCurrentUserService>();
+
         // Handlers applicatifs
         services.AddScoped<RegisterAssetHandler>();
         services.AddScoped<GetAllAssetsHandler>();

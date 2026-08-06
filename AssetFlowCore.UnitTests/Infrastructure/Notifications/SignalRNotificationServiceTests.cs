@@ -49,7 +49,9 @@ public class SignalRNotificationServiceTests
             ResolutionComment: null,
             CreatedAt: DateTime.UtcNow,
             AssistanceNote: null,
-            IsAiProcessing: true
+            IsAiProcessing: true,
+            AssignedByUserId: null,
+            ClosedByUserId: null
         );
 
         // Act

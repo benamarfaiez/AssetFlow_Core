@@ -205,7 +205,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
             await db.Teams.AddAsync(team);
 
             var ticket = new MaintenanceTicket(ticketId, asset.Id, "titre", "desc", TicketCriticality.Low, team.Id);
-            ticket.AssignToTechnician();
+            ticket.AssignToTechnician(Guid.NewGuid());
             await db.Tickets.AddAsync(ticket);
             await db.SaveChangesAsync();
         }
@@ -272,7 +272,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
             await db.Teams.AddAsync(team);
 
             var ticket = new MaintenanceTicket(ticketId, asset.Id, "titre", "desc", TicketCriticality.Low, team.Id);
-            ticket.AssignToTechnician();
+            ticket.AssignToTechnician(Guid.NewGuid());
             await db.Tickets.AddAsync(ticket);
             await db.SaveChangesAsync();
         }

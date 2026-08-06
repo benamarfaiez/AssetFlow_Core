@@ -41,7 +41,7 @@ Un quatrième axe est déjà amorcé : **l'assistance au diagnostic par IA**, qu
 
 ### Hors périmètre (confirmé le 2026-08-05)
 
-- **Affectation individuelle** des incidents : « prendre en charge » reste un geste d'équipe (décision produit n°2). Des **utilisateurs existeront** au Lot 7, apportés par l'authentification, et l'auteur d'une prise en charge ou d'une clôture sera enregistré — mais aucun incident ne sera attribué à une personne, ni aucune file personnelle constituée.
+- **Affectation individuelle** des incidents : « prendre en charge » reste un geste d'équipe (décision produit n°2). Les **utilisateurs existent depuis le Lot 7** (provisionnement « just-in-time » à l'authentification), et l'auteur d'une prise en charge ou d'une clôture est enregistré — mais aucun incident n'est attribué à une personne, ni aucune file personnelle constituée.
 - Contrats, garanties, coûts, amortissement, fournisseurs.
 - Emplacements physiques, sites, salles.
 - Planification d'interventions, calendriers d'astreinte, SLA horaires.
@@ -58,7 +58,7 @@ Un quatrième axe est déjà amorcé : **l'assistance au diagnostic par IA**, qu
 | **Responsable d'équipe d'astreinte** | être notifié des incidents affectés à son équipe, transférer un incident mal routé | 🟡 notification ✅, transfert ✅, mais aucune vue de la charge de l'équipe |
 | **Administrateur du référentiel** | créer et maintenir les équipes et les règles de routage | ✅ couvert fonctionnellement |
 
-> ⛔ **Aucun de ces rôles n'existe techniquement.** L'API n'a ni authentification ni autorisation : toute opération, y compris la suppression d'une équipe, est accessible anonymement. Les rôles ci-dessus sont des *personas* servant à structurer les besoins, pas des habilitations en vigueur. Voir [ENF-01](#51-sécurité).
+> ✅ **Ces quatre rôles existent désormais techniquement** (Lot 7, `Administrateur`/`Technicien`/`GestionnaireDeParc`/`ResponsableEquipe` — `AssetFlowCore.WebApi/Authorization/Roles.cs`), portés par la revendication `roles` d'un jeton JWT Bearer. Seule l'habilitation « Administrateur du référentiel » restreint réellement une opération à ce jour (écritures sur les équipes) ; les trois autres personas n'ont, faute de décision produit plus fine, qu'une exigence d'authentification (`ENF-01`), pas de restriction de rôle additionnelle. Tant que le tenant Entra ID réel n'est pas enregistré (étape 7.0, opérationnelle), ces rôles restent inertes en pratique. Voir [ENF-01/ENF-02](#51-sécurité).
 
 ## 4. Exigences fonctionnelles
 
@@ -93,7 +93,7 @@ Référence de vérification pour chaque ligne : [API-Specification.md](API-Spec
 | EF-18 | Consulter un incident par son identifiant | ✅ |
 | EF-19 | Lister et filtrer les incidents (par équipe, état, criticité, actif) | ⛔ **bloquant pour toute interface** |
 | EF-20 | Relire la description et le compte rendu d'un incident | ⛔ absents du contrat de sortie |
-| EF-21 | Affecter un incident à une personne | ⛔ **écartée** (décision produit n°2, 2026-08-05) : la prise en charge reste collective. Seule l'**identité de l'auteur** d'une prise en charge ou d'une clôture sera enregistrée, pour l'audit (Lot 7) |
+| EF-21 | Affecter un incident à une personne | ⛔ **écartée** (décision produit n°2, 2026-08-05) : la prise en charge reste collective. Seule l'**identité de l'auteur** d'une prise en charge ou d'une clôture est enregistrée, pour l'audit (✅ réalisé au Lot 7) |
 | EF-22 | Protéger l'incident contre les modifications concurrentes | ✅ concurrence optimiste |
 
 ### 4.3 Équipes et routage
@@ -137,8 +137,8 @@ Référence de vérification pour chaque ligne : [API-Specification.md](API-Spec
 
 | Id | Exigence | Statut |
 |---|---|---|
-| ENF-01 | **Authentifier les utilisateurs** avant toute opération | ⛔ **aucune authentification** : l'API est totalement ouverte. Schéma retenu le 2026-08-05 (décision produit n°6) : **annuaire d'entreprise, OIDC / `JWT Bearer`** — réalisation au Lot 7 |
-| ENF-02 | Restreindre les opérations sensibles selon le rôle | ⛔ aucune autorisation |
+| ENF-01 | **Authentifier les utilisateurs** avant toute opération | ✅ **réalisée (Lot 7)** : `[Authorize]` sur les trois contrôleurs et le hub SignalR, jetons `JWT Bearer` validés (annuaire d'entreprise, OIDC — décision produit n°6). 🟡 le tenant Entra ID réel n'est pas encore enregistré (étape 7.0, opérationnelle) : toute requête protégée échoue en pratique tant que ce prérequis n'est pas levé |
+| ENF-02 | Restreindre les opérations sensibles selon le rôle | 🟡 **partiellement réalisée** : rôle `Administrateur` posé et vérifié côté API sur la gestion des équipes ; aucune autre restriction de rôle décidée à ce jour |
 | ENF-03 | Ne jamais exposer de secret dans le code ou la configuration versionnée | ✅ secrets via User Secrets / variables d'environnement |
 | ENF-04 | Ne pas divulguer d'information technique en cas d'erreur | ⛔ le détail des erreurs 500 contient le message d'exception brut |
 | ENF-05 | Prévenir l'injection SQL | ✅ requêtes paramétrées, ORM |
@@ -202,7 +202,7 @@ Le routage automatique repose entièrement sur des **données de référence** :
 
 | Manque | Écran empêché | État |
 |---|---|---|
-| ⛔ pas d'authentification (`ENF-01`) | tout écran nécessitant un contexte utilisateur : abonnement temps réel au groupe de son équipe, masquage des actions non autorisées, remise en service réservée à un administrateur | **subsiste** — schéma retenu (décision n°6), réalisation au Lot 7 |
+| ~~pas d'authentification (`ENF-01`)~~ | tout écran nécessitant un contexte utilisateur : abonnement temps réel au groupe de son équipe, masquage des actions non autorisées, remise en service réservée à un administrateur | ✅ **levé côté API** (Lot 7, décision n°6) ; 🟡 le tenant Entra ID réel (étape 7.0, opérationnelle) reste à enregistrer pour que le frontend puisse s'authentifier en pratique |
 | ~~pas de liste des incidents (`EF-19`)~~ | file de travail du technicien | ✅ levé — `GET /api/tickets`, filtré, trié, paginé |
 | ~~pas de liste des équipes (`EF-27`)~~ | administration des équipes, sélecteur de transfert | ✅ levé — `GET /api/teams`, avec `?onlyActive=true` |
 | ~~description et compte rendu absents du contrat (`EF-20`)~~ | consultation d'un incident | ✅ levé — `TicketResponseDto` enrichi |

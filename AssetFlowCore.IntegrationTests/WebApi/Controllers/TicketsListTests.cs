@@ -54,7 +54,7 @@ public class TicketsListTests : IClassFixture<CustomWebApplicationFactory<Progra
             new MaintenanceTicket(Guid.NewGuid(), _portableId, "Clavier HS", "Plusieurs touches inertes.", TicketCriticality.Medium, equipeSupport.Id),
             new MaintenanceTicket(Guid.NewGuid(), _portableId, "Batterie", "Autonomie réduite à 20 minutes.", TicketCriticality.Low, equipeSupport.Id)
         };
-        incidents[0].AssignToTechnician();
+        incidents[0].AssignToTechnician(Guid.NewGuid());
         db.Tickets.AddRange(incidents);
 
         db.SaveChanges();

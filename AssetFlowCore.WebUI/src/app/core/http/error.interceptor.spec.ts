@@ -97,6 +97,35 @@ describe('errorInterceptor', () => {
     expect(erreur.hasFieldErrors).toBe(false);
   });
 
+  it('traduit un 401 en session expirée ou invalide', () => {
+    const appel = appelerEtCapturer();
+
+    controleur
+      .expectOne(URL_APPEL)
+      .flush(
+        { title: 'Non authentifié', status: 401 },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+
+    const erreur = appel.lire();
+    expect(erreur.kind).toBe('unauthorized');
+    expect(erreur.status).toBe(401);
+    expect(erreur.message).toContain('session');
+  });
+
+  it('traduit un 403 en autorisation refusée', () => {
+    const appel = appelerEtCapturer();
+
+    controleur
+      .expectOne(URL_APPEL)
+      .flush({ title: 'Interdit', status: 403 }, { status: 403, statusText: 'Forbidden' });
+
+    const erreur = appel.lire();
+    expect(erreur.kind).toBe('forbidden');
+    expect(erreur.status).toBe(403);
+    expect(erreur.hasFieldErrors).toBe(false);
+  });
+
   it('traduit un 404 en ressource introuvable', () => {
     const appel = appelerEtCapturer();
 
