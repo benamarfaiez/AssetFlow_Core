@@ -6,6 +6,7 @@ import {
   AssetDetailResponse,
   AssetResponse,
   RegisterAssetRequest,
+  RestoreAssetToServiceRequest,
 } from '../../shared/models/asset.model';
 
 /**
@@ -18,11 +19,11 @@ import {
 @Injectable({ providedIn: 'root' })
 export class AssetsApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api/assets`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/api/v1/assets`;
 
   /**
    * Liste l'inventaire complet des actifs, triés par le backend.
-   * `GET /api/assets` → 200 `AssetResponse[]`
+   * `GET /api/v1/assets` → 200 `AssetResponse[]`
    *
    * Erreurs : 500. Pas de pagination : la collection est servie en intégralité.
    * La réponse provient d'un cache serveur de 5 minutes, invalidé par les écritures — un
@@ -34,7 +35,7 @@ export class AssetsApiService {
 
   /**
    * Fiche d'un actif, ses incidents inclus, du plus récent au plus ancien.
-   * `GET /api/assets/{id}` → 200 `AssetDetailResponse`
+   * `GET /api/v1/assets/{id}` → 200 `AssetDetailResponse`
    *
    * Erreurs : 404 (actif inexistant), 500.
    */
@@ -44,7 +45,7 @@ export class AssetsApiService {
 
   /**
    * Enregistre un nouvel actif ; il naît à l'état `InService`.
-   * `POST /api/assets` → **201** `AssetResponse`, en-tête `Location` vers la fiche créée
+   * `POST /api/v1/assets` → **201** `AssetResponse`, en-tête `Location` vers la fiche créée
    *
    * Erreurs : 400 (numéro de série déjà enregistré, longueur hors 5–50 caractères, nom vide,
    * type hors énumération), 500.
@@ -54,14 +55,24 @@ export class AssetsApiService {
   }
 
   /**
-   * Met un actif au rebut. L'opération est **irréversible** : aucun endpoint ne remet un
-   * actif en service (décision 0.4 non tranchée).
-   * `PUT /api/assets/{id}/decommission` → 204
+   * Met un actif au rebut. Réversible via `restoreToService` (décision 0.4).
+   * `PUT /api/v1/assets/{id}/decommission` → 204
    *
    * Erreurs : 404 (actif inexistant), 400 (l'actif porte des incidents en cours — le message
    * en précise le nombre), 500.
    */
   decommission(id: string): Observable<void> {
     return this.http.put<void>(`${this.baseUrl}/${id}/decommission`, null);
+  }
+
+  /**
+   * Remet en service un actif mis au rebut. Motif obligatoire, réservé au rôle `Administrateur`.
+   * `PUT /api/v1/assets/{id}/restore-to-service` → 204
+   *
+   * Erreurs : 404 (actif inexistant), 400 (motif vide, actif non `Decommissioned`),
+   * 403 (rôle insuffisant), 500.
+   */
+  restoreToService(id: string, request: RestoreAssetToServiceRequest): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl}/${id}/restore-to-service`, request);
   }
 }

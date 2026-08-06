@@ -6,6 +6,7 @@ using AssetFlowCore.Infrastructure.Persistence;
 using AssetFlowCore.WebApi.Requests;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;
@@ -42,7 +43,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
             "Medium"
         );
 
-        var response = await _client.PostAsJsonAsync("/api/tickets", payload);
+        var response = await _client.PostAsJsonAsync("/api/v1/tickets", payload);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -79,7 +80,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         }
 
         // Act : Appel du endpoint API réel
-        var response = await client.PostAsJsonAsync($"/api/tickets/{ticketId}/transfer", requestPayload);
+        var response = await client.PostAsJsonAsync($"/api/v1/tickets/{ticketId}/transfer", requestPayload);
 
         // Assert : Vérification de la réponse HTTP
         response.StatusCode.Should().Be(HttpStatusCode.NoContent); // 204
@@ -93,6 +94,57 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
             updatedTicket.Should().NotBeNull();
             updatedTicket.AssignedTeamId.Should().Be(teamNew.Id);
         }
+    }
+
+    [Fact]
+    public async Task TransferTicket_Twice_Should_ExposeTransferHistory_And_LeaveDescriptionUnchanged()
+    {
+        // Arrange : un ticket assigné à une équipe d'origine, deux équipes cibles successives
+        var client = _factory.CreateClient();
+        var ticketId = Guid.NewGuid();
+        const string descriptionOriginale = "Description saisie à l'ouverture, jamais réécrite.";
+        var equipeOrigine = new Team("Equipe-Origine", AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Desc");
+        var equipeIntermediaire = new Team("Equipe-Intermediaire", AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Desc");
+        var equipeFinale = new Team("Equipe-Finale", AssetType.Laptop.ToString(), TicketCriticality.Medium.ToString(), "Desc");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            await dbContext.Database.EnsureDeletedAsync();
+
+            var ticket = new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", descriptionOriginale, TicketCriticality.Low, equipeOrigine.Id);
+
+            await dbContext.Teams.AddRangeAsync(equipeOrigine, equipeIntermediaire, equipeFinale);
+            await dbContext.Tickets.AddAsync(ticket);
+            await dbContext.SaveChangesAsync();
+        }
+
+        // Act : deux transferts successifs
+        var premierTransfert = await client.PostAsJsonAsync(
+            $"/api/v1/tickets/{ticketId}/transfer",
+            new TransferTicketRequest(equipeIntermediaire.Name, "Premier motif"));
+        premierTransfert.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var secondTransfert = await client.PostAsJsonAsync(
+            $"/api/v1/tickets/{ticketId}/transfer",
+            new TransferTicketRequest(equipeFinale.Name, "Second motif"));
+        secondTransfert.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var response = await client.GetAsync($"/api/v1/tickets/{ticketId}");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var ticketDto = await response.Content.ReadFromJsonAsync<TicketResponseDto>();
+
+        // Assert : deux entrées d'historique, dans l'ordre chronologique, description intacte
+        ticketDto!.Description.Should().Be(descriptionOriginale);
+        ticketDto.TransferHistory.Should().HaveCount(2);
+
+        var historique = ticketDto.TransferHistory.OrderBy(h => h.TransferredAt).ToList();
+        historique[0].FromTeamName.Should().Be(equipeOrigine.Name);
+        historique[0].ToTeamName.Should().Be(equipeIntermediaire.Name);
+        historique[0].Reason.Should().Be("Premier motif");
+        historique[1].FromTeamName.Should().Be(equipeIntermediaire.Name);
+        historique[1].ToTeamName.Should().Be(equipeFinale.Name);
+        historique[1].Reason.Should().Be("Second motif");
     }
 
     [Fact]
@@ -125,7 +177,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         }
 
         // Act
-        var response = await client.GetAsync($"/api/tickets/{ticketId}");
+        var response = await client.GetAsync($"/api/v1/tickets/{ticketId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -157,7 +209,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
             await db.SaveChangesAsync();
         }
 
-        var resp = await _client.PutAsync($"/api/tickets/{ticketId}/assign", null);
+        var resp = await _client.PutAsync($"/api/v1/tickets/{ticketId}/assign", null);
         resp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         using (var scope = _factory.Services.CreateScope())
@@ -178,7 +230,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
     {
         var unknownId = Guid.NewGuid();
 
-        var resp = await _client.PutAsync($"/api/tickets/{unknownId}/assign", null);
+        var resp = await _client.PutAsync($"/api/v1/tickets/{unknownId}/assign", null);
 
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
         var problem = await resp.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
@@ -211,7 +263,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         }
 
         // Act
-        var resp = await _client.PutAsync($"/api/tickets/{ticketId}/assign", null);
+        var resp = await _client.PutAsync($"/api/v1/tickets/{ticketId}/assign", null);
 
         // Assert
         resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -245,7 +297,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
 
         // Act
         var payload = new CloseTicketRequest("Resolution");
-        var resp = await _client.PutAsJsonAsync($"/api/tickets/{ticketId}/close", payload);
+        var resp = await _client.PutAsJsonAsync($"/api/v1/tickets/{ticketId}/close", payload);
 
         // Assert
         resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -278,7 +330,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         }
 
         var payload = new CloseTicketRequest("Resolution ok");
-        var resp = await _client.PutAsJsonAsync($"/api/tickets/{ticketId}/close", payload);
+        var resp = await _client.PutAsJsonAsync($"/api/v1/tickets/{ticketId}/close", payload);
         resp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         using (var scope = _factory.Services.CreateScope())
@@ -299,7 +351,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
     public async Task CloseTicket_NotFound_ShouldReturnNotFound()
     {
         var payload = new CloseTicketRequest("x");
-        var resp = await _client.PutAsJsonAsync($"/api/tickets/{Guid.NewGuid()}/close", payload);
+        var resp = await _client.PutAsJsonAsync($"/api/v1/tickets/{Guid.NewGuid()}/close", payload);
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
@@ -319,7 +371,30 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         }
 
         var payload = new TransferTicketRequest("NonExistingTeam", "reason");
-        var resp = await _client.PostAsJsonAsync($"/api/tickets/{ticketId}/transfer", payload);
+        var resp = await _client.PostAsJsonAsync($"/api/v1/tickets/{ticketId}/transfer", payload);
+        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task TransferTicket_WithBlankReason_ShouldReturnBadRequest()
+    {
+        // Le motif est désormais obligatoire : TicketTransferHistory lève une ArgumentException
+        // s'il est vide, effet de bord de l'historisation (décision 0.5, Lot 2 bis).
+        var ticketId = Guid.NewGuid();
+        var targetTeam = new Team("Equipe-Cible-MotifVide", AssetType.Server.ToString(), TicketCriticality.Low.ToString(), "Desc");
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AssetFlowDbContext>();
+            await db.Database.EnsureDeletedAsync();
+            var team = new Team("Origine-MotifVide", AssetType.Server.ToString(), TicketCriticality.Low.ToString(), "Desc");
+            var ticket = new MaintenanceTicket(ticketId, Guid.NewGuid(), "titre", "desc", TicketCriticality.Low, team.Id);
+            await db.Tickets.AddAsync(ticket);
+            await db.Teams.AddRangeAsync(team, targetTeam);
+            await db.SaveChangesAsync();
+        }
+
+        var payload = new TransferTicketRequest(targetTeam.Name, "   ");
+        var resp = await _client.PostAsJsonAsync($"/api/v1/tickets/{ticketId}/transfer", payload);
         resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
@@ -338,7 +413,7 @@ public class TicketsControllerTests(CustomWebApplicationFactory<Program> factory
         }
 
         var payload = new CreateTicketRequest(assetId, "t", "d", "Low");
-        var resp = await _client.PostAsJsonAsync("/api/tickets", payload);
+        var resp = await _client.PostAsJsonAsync("/api/v1/tickets", payload);
         resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

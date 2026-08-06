@@ -13,14 +13,14 @@ using Microsoft.AspNetCore.Mvc;
 namespace AssetFlowCore.WebApi.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [Authorize]
 public class TicketsController(ISender mediator) : ControllerBase
 {
     /// <summary>
     /// Liste paginée des incidents. Les filtres sont facultatifs et se cumulent.
     /// </summary>
-    /// <param name="status">`Opened` · `InProgress` · `Resolved` · `Closed`.</param>
+    /// <param name="status">`Opened` · `InProgress` · `Closed`.</param>
     /// <param name="criticality">`Low` · `Medium` · `High`.</param>
     /// <param name="teamId">Identifiant de l'équipe assignée.</param>
     /// <param name="assetId">Identifiant de l'actif concerné.</param>

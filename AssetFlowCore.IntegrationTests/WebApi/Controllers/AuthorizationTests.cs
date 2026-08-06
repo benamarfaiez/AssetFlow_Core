@@ -37,9 +37,9 @@ public class AuthorizationTests(CustomWebApplicationFactory<Program> factory) : 
     }
 
     [Theory]
-    [InlineData("GET", "/api/assets")]
-    [InlineData("GET", "/api/tickets")]
-    [InlineData("GET", "/api/teams")]
+    [InlineData("GET", "/api/v1/assets")]
+    [InlineData("GET", "/api/v1/tickets")]
+    [InlineData("GET", "/api/v1/teams")]
     public async Task AnonymousRequest_OnProtectedEndpoint_ShouldReturnUnauthorized(string method, string path)
     {
         var client = CreateAnonymousClient();
@@ -65,7 +65,7 @@ public class AuthorizationTests(CustomWebApplicationFactory<Program> factory) : 
         var client = CreateClientWithRoles(Roles.Technicien);
         var payload = new CreateTeamRequest("Équipe-403", "Server", "Low", "Créée par un rôle non habilité");
 
-        var response = await client.PostAsJsonAsync("/api/teams", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/teams", payload);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
@@ -76,7 +76,7 @@ public class AuthorizationTests(CustomWebApplicationFactory<Program> factory) : 
         var client = CreateClientWithRoles(Roles.Administrateur);
         var payload = new CreateTeamRequest("Équipe-201-Admin", "Server", "Low", "Créée par un administrateur");
 
-        var response = await client.PostAsJsonAsync("/api/teams", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/teams", payload);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
     }
@@ -98,21 +98,21 @@ public class AuthorizationTests(CustomWebApplicationFactory<Program> factory) : 
 
         var client = _factory.CreateClient();
         var createResponse = await client.PostAsJsonAsync(
-            "/api/tickets",
+            "/api/v1/tickets",
             new CreateTicketRequest(assetId, "Titre", "Description de l'incident", "Low"));
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await createResponse.Content.ReadFromJsonAsync<TicketResponseDto>();
         created.Should().NotBeNull();
 
-        var assignResponse = await client.PutAsync($"/api/tickets/{created!.Id}/assign", null);
+        var assignResponse = await client.PutAsync($"/api/v1/tickets/{created!.Id}/assign", null);
         assignResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         var closeResponse = await client.PutAsJsonAsync(
-            $"/api/tickets/{created.Id}/close",
+            $"/api/v1/tickets/{created.Id}/close",
             new CloseTicketRequest("Résolu."));
         closeResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        var getResponse = await client.GetAsync($"/api/tickets/{created.Id}");
+        var getResponse = await client.GetAsync($"/api/v1/tickets/{created.Id}");
         var ticket = await getResponse.Content.ReadFromJsonAsync<TicketResponseDto>();
 
         ticket.Should().NotBeNull();

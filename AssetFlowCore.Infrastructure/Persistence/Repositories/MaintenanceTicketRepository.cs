@@ -18,6 +18,16 @@ public class MaintenanceTicketRepository(AssetFlowDbContext context) : IMaintena
         => await context.Tickets
         .AddAsync(ticket, cancellationToken);
 
+    public async Task AddTransferHistoryAsync(TicketTransferHistory entry, CancellationToken cancellationToken = default)
+        => await context.TicketTransferHistories.AddAsync(entry, cancellationToken);
+
+    public async Task<IReadOnlyCollection<TicketTransferHistory>> GetTransferHistoryAsync(Guid ticketId, CancellationToken cancellationToken = default)
+        => await context.TicketTransferHistories
+        .AsNoTracking()
+        .Where(h => h.MaintenanceTicketId == ticketId)
+        .OrderBy(h => h.TransferredAt)
+        .ToListAsync(cancellationToken);
+
     public async Task<int> CountActiveTicketsByAssetIdAsync(Guid assetId, CancellationToken cancellationToken = default)
         => await context.Tickets
         .CountAsync(t => t.AssetId == assetId && (t.Status == Domain.Enums.TicketStatus.Opened || t.Status == Domain.Enums.TicketStatus.InProgress), cancellationToken);
@@ -80,8 +90,7 @@ public class MaintenanceTicketRepository(AssetFlowDbContext context) : IMaintena
     private static readonly System.Linq.Expressions.Expression<Func<MaintenanceTicket, int>> StatusRank =
         t => t.Status == Domain.Enums.TicketStatus.Opened ? 0
            : t.Status == Domain.Enums.TicketStatus.InProgress ? 1
-           : t.Status == Domain.Enums.TicketStatus.Resolved ? 2
-           : 3;
+           : 2;
 
     private static IOrderedQueryable<MaintenanceTicket> ApplySort(IQueryable<MaintenanceTicket> query, TicketSearchCriteria criteria)
         => (criteria.SortBy, criteria.SortDescending) switch

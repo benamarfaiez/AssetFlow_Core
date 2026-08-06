@@ -20,11 +20,11 @@ import {
 @Injectable({ providedIn: 'root' })
 export class TicketsApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api/tickets`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/api/v1/tickets`;
 
   /**
    * Liste paginée des incidents. Les filtres sont facultatifs et se cumulent.
-   * `GET /api/tickets` → 200 `PagedResult<TicketResponse>`
+   * `GET /api/v1/tickets` → 200 `PagedResult<TicketResponse>`
    *
    * Erreurs : 400 (valeur d'état, de criticité ou de champ de tri hors énumération, page < 1,
    * taille de page hors 1–100), 500.
@@ -53,7 +53,7 @@ export class TicketsApiService {
 
   /**
    * Fiche d'un incident.
-   * `GET /api/tickets/{id}` → 200 `TicketResponse`
+   * `GET /api/v1/tickets/{id}` → 200 `TicketResponse`
    *
    * Erreurs : 404 (incident inexistant), 500.
    */
@@ -64,7 +64,7 @@ export class TicketsApiService {
   /**
    * Ouvre un incident. L'équipe n'est pas choisie par le client : le moteur d'assignation la
    * déduit du couple (type d'actif × criticité) et la réponse indique celle retenue.
-   * `POST /api/tickets` → **201** `TicketResponse`, en-tête `Location` vers la fiche créée
+   * `POST /api/v1/tickets` → **201** `TicketResponse`, en-tête `Location` vers la fiche créée
    *
    * Erreurs : 400 (actif inexistant ou au rebut, titre vide ou de plus de 150 caractères,
    * description vide, criticité hors énumération, **aucune équipe ne couvre le couple
@@ -80,7 +80,7 @@ export class TicketsApiService {
   /**
    * Prend en charge un incident ouvert (passage à `InProgress`). Aucun technicien nominatif
    * n'est transmis : la prise en charge est collective (décision 0.2 non tranchée).
-   * `PUT /api/tickets/{id}/assign` → 204
+   * `PUT /api/v1/tickets/{id}/assign` → 204
    *
    * Erreurs : 404 (incident inexistant), 400 (l'incident n'est pas à l'état `Opened`),
    * 409 (l'incident a été modifié entre-temps), 500.
@@ -91,7 +91,7 @@ export class TicketsApiService {
 
   /**
    * Clôture un incident en cours et remet l'actif en service.
-   * `PUT /api/tickets/{id}/close` → 204
+   * `PUT /api/v1/tickets/{id}/close` → 204
    *
    * Erreurs : 404 (incident inexistant), 400 (l'incident n'est pas à l'état `InProgress`,
    * compte rendu vide), 409 (l'incident a été modifié entre-temps), 500.
@@ -102,13 +102,13 @@ export class TicketsApiService {
 
   /**
    * Transfère un incident vers une autre équipe, désignée par son **nom**.
-   * `POST /api/tickets/{id}/transfer` → 204
+   * `POST /api/v1/tickets/{id}/transfer` → 204
    *
    * Erreurs : 404 (incident inexistant), 400 (équipe cible introuvable ou déjà assignée,
    * incident clôturé, nom d'équipe vide), 409 (l'incident a été modifié entre-temps), 500.
    *
-   * Le motif est concaténé à la description de l'incident, sans historisation séparée
-   * (décision 0.5 non tranchée).
+   * Le motif est historisé à part (décision 0.5) ; la description de l'incident n'est plus
+   * modifiée par un transfert.
    */
   transfer(id: string, request: TransferTicketRequest): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/${id}/transfer`, request);

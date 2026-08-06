@@ -58,6 +58,10 @@ public class RequestTicketTransferCommandHandlerTests
         // On vérifie que la sauvegarde a bien été appelée exactement 1 fois
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         existingTicket.AssignedTeam.Name.Should().Be(team.Name);
+        existingTicket.AssignedTeamId.Should().Be(team.Id);
+        _ticketRepositoryMock.Verify(
+            r => r.AddTransferHistoryAsync(It.Is<TicketTransferHistory>(h => h.ToTeamId == team.Id), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

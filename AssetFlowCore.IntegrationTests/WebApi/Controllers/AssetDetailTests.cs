@@ -49,7 +49,7 @@ public class AssetDetailTests : IClassFixture<CustomWebApplicationFactory<Progra
     [Fact]
     public async Task GetAsset_ShouldReturnTheAssetAndItsTickets_MostRecentFirst()
     {
-        var response = await _client.GetAsync($"/api/assets/{_actifAvecIncidents}");
+        var response = await _client.GetAsync($"/api/v1/assets/{_actifAvecIncidents}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var fiche = await response.Content.ReadFromJsonAsync<AssetDetailResponseDto>();
@@ -69,7 +69,7 @@ public class AssetDetailTests : IClassFixture<CustomWebApplicationFactory<Progra
     [Fact]
     public async Task GetAsset_WithoutTicket_ShouldReturnAnEmptyCollection()
     {
-        var fiche = await _client.GetFromJsonAsync<AssetDetailResponseDto>($"/api/assets/{_actifSansIncident}");
+        var fiche = await _client.GetFromJsonAsync<AssetDetailResponseDto>($"/api/v1/assets/{_actifSansIncident}");
 
         fiche.Should().NotBeNull();
         // Une collection vide, jamais null : le client n'a pas à distinguer les deux cas.
@@ -81,7 +81,7 @@ public class AssetDetailTests : IClassFixture<CustomWebApplicationFactory<Progra
     {
         var unknownId = Guid.NewGuid();
 
-        var response = await _client.GetAsync($"/api/assets/{unknownId}");
+        var response = await _client.GetAsync($"/api/v1/assets/{unknownId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         var problem = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
@@ -93,7 +93,7 @@ public class AssetDetailTests : IClassFixture<CustomWebApplicationFactory<Progra
     public async Task GetAsset_WithMalformedIdentifier_ShouldReturn404FromRouting()
     {
         // La contrainte de route {id:guid} rejette la valeur avant d'atteindre le cas d'usage.
-        var response = await _client.GetAsync("/api/assets/pas-un-guid");
+        var response = await _client.GetAsync("/api/v1/assets/pas-un-guid");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }

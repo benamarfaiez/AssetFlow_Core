@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Application.DTOs;
+using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.WebApi.Requests;
 using FluentAssertions;
 using System.Net;
@@ -19,7 +19,7 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
             var payload = new CreateTeamRequest("Integration-Team", "Laptop", "High", "Desc Test");
 
             // Act: create
-            var createResponse = await _client.PostAsJsonAsync("/api/teams", payload);
+            var createResponse = await _client.PostAsJsonAsync("/api/v1/teams", payload);
 
             // Assert create
             createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -28,7 +28,7 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
             created!.Name.Should().Be("Integration-Team");
 
             // Act: get
-            var getResponse = await _client.GetAsync($"/api/teams/{created.Id}");
+            var getResponse = await _client.GetAsync($"/api/v1/teams/{created.Id}");
 
             // Assert get
             getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -42,18 +42,18 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
         {
             // Arrange: create team
             var payload = new CreateTeamRequest("ToDelete", "Server", "High", "Desc");
-            var createResponse = await _client.PostAsJsonAsync("/api/teams", payload);
+            var createResponse = await _client.PostAsJsonAsync("/api/v1/teams", payload);
             createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
             var created = await createResponse.Content.ReadFromJsonAsync<TeamResponseDto>();
 
             // Act: delete
-            var deleteResponse = await _client.DeleteAsync($"/api/teams/{created!.Id}");
+            var deleteResponse = await _client.DeleteAsync($"/api/v1/teams/{created!.Id}");
 
             // Assert delete
             deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
             // Act : la ressource n'existe plus, le middleware traduit NotFoundException en 404
-            var getAfter = await _client.GetAsync($"/api/teams/{created.Id}");
+            var getAfter = await _client.GetAsync($"/api/v1/teams/{created.Id}");
             getAfter.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
@@ -62,7 +62,7 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
         {
             var unknownId = Guid.NewGuid();
 
-            var resp = await _client.GetAsync($"/api/teams/{unknownId}");
+            var resp = await _client.GetAsync($"/api/v1/teams/{unknownId}");
 
             resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
             var problem = await resp.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
@@ -74,7 +74,7 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
         public async Task CreateTeam_BadRequest_ShouldReturn400()
         {
             var payload = new CreateTeamRequest("", "", "", null);
-            var resp = await _client.PostAsJsonAsync("/api/teams", payload);
+            var resp = await _client.PostAsJsonAsync("/api/v1/teams", payload);
             // Creating with invalid data currently throws ArgumentException in handler -> 500
             resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
@@ -84,13 +84,13 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
         {
             // Arrange: Création d'une équipe valide au préalable
             var payload = new CreateTeamRequest("ToUpdateBad", "Server", "High", "Desc");
-            var createResponse = await _client.PostAsJsonAsync("/api/teams", payload);
+            var createResponse = await _client.PostAsJsonAsync("/api/v1/teams", payload);
             createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
             var created = await createResponse.Content.ReadFromJsonAsync<TeamResponseDto>();
 
             // Act: Tentative de mise à jour avec un corps de texte invalide (chaînes vides)
             var update = new UpdateTeamRequest("", "", "", null);
-            var updateResponse = await _client.PutAsJsonAsync($"/api/teams/{created!.Id}", update);
+            var updateResponse = await _client.PutAsJsonAsync($"/api/v1/teams/{created!.Id}", update);
 
             // Assert: Grâce au ValidationBehavior, l'API rejette proprement la requête avant le plantage du Domaine
             updateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest); // Attend désormais une erreur 400 !
@@ -100,7 +100,7 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
         public async Task UpdateTeam_NotFound_ShouldReturn404()
         {
             var update = new UpdateTeamRequest("Name", "Server", "High", "Desc");
-            var resp = await _client.PutAsJsonAsync($"/api/teams/{Guid.NewGuid()}", update);
+            var resp = await _client.PutAsJsonAsync($"/api/v1/teams/{Guid.NewGuid()}", update);
             resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
@@ -113,11 +113,11 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
         {
             // Arrange
             var payload = new CreateTeamRequest("Equipe-Doublon", "Server", "High", "Première création");
-            var first = await _client.PostAsJsonAsync("/api/teams", payload);
+            var first = await _client.PostAsJsonAsync("/api/v1/teams", payload);
             first.StatusCode.Should().Be(HttpStatusCode.Created);
 
             // Act
-            var duplicate = await _client.PostAsJsonAsync("/api/teams", payload);
+            var duplicate = await _client.PostAsJsonAsync("/api/v1/teams", payload);
 
             // Assert
             duplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -131,17 +131,17 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
         public async Task UpdateTeam_WithNameOfAnotherTeam_ShouldReturn400WithBusinessMessage()
         {
             // Arrange : deux équipes distinctes
-            var existing = await _client.PostAsJsonAsync("/api/teams",
+            var existing = await _client.PostAsJsonAsync("/api/v1/teams",
                 new CreateTeamRequest("Equipe-Occupee", "Server", "High", "Nom déjà pris"));
             existing.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            var toRename = await _client.PostAsJsonAsync("/api/teams",
+            var toRename = await _client.PostAsJsonAsync("/api/v1/teams",
                 new CreateTeamRequest("Equipe-A-Renommer", "Laptop", "Low", "À renommer"));
             toRename.StatusCode.Should().Be(HttpStatusCode.Created);
             var created = await toRename.Content.ReadFromJsonAsync<TeamResponseDto>();
 
             // Act
-            var response = await _client.PutAsJsonAsync($"/api/teams/{created!.Id}",
+            var response = await _client.PutAsJsonAsync($"/api/v1/teams/{created!.Id}",
                 new UpdateTeamRequest("Equipe-Occupee", "Laptop", "Low", "À renommer"));
 
             // Assert
@@ -155,13 +155,13 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers
         {
             // Arrange: create first
             var payload = new CreateTeamRequest("ToUpdate", "Server", "High", "Desc");
-            var createResponse = await _client.PostAsJsonAsync("/api/teams", payload);
+            var createResponse = await _client.PostAsJsonAsync("/api/v1/teams", payload);
             createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
             var created = await createResponse.Content.ReadFromJsonAsync<TeamResponseDto>();
 
             // Act: update
             var update = new UpdateTeamRequest("UpdatedName", "Laptop", "Low", "NewDesc");
-            var updateResponse = await _client.PutAsJsonAsync($"/api/teams/{created!.Id}", update);
+            var updateResponse = await _client.PutAsJsonAsync($"/api/v1/teams/{created!.Id}", update);
 
             // Assert : une mise à jour répond 200, plus 201
             updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);

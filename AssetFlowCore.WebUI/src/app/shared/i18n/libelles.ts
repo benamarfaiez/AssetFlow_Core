@@ -30,7 +30,6 @@ export const LIBELLES_ASSET_STATUS: Readonly<Record<AssetStatus, string>> = {
 export const LIBELLES_TICKET_STATUS: Readonly<Record<TicketStatus, string>> = {
   Opened: 'Ouvert',
   InProgress: 'En cours',
-  Resolved: 'Résolu',
   Closed: 'Clôturé',
 };
 

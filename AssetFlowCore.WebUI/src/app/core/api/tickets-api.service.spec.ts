@@ -18,6 +18,9 @@ const INCIDENT: TicketResponse = {
   createdAt: '2026-08-05T09:30:00Z',
   assistanceNote: null,
   isAiProcessing: true,
+  assignedByUserId: null,
+  closedByUserId: null,
+  transferHistory: [],
 };
 
 describe('TicketsApiService', () => {
@@ -39,7 +42,7 @@ describe('TicketsApiService', () => {
     let recu: PagedResult<TicketResponse> | undefined;
     service.search().subscribe((page) => (recu = page));
 
-    const requete = controleur.expectOne((r) => r.url === '/api/tickets');
+    const requete = controleur.expectOne((r) => r.url === '/api/v1/tickets');
     expect(requete.request.method).toBe('GET');
     expect(requete.request.params.keys()).toEqual([]);
     requete.flush({ items: [INCIDENT], page: 1, pageSize: 20, totalCount: 1, totalPages: 1 });
@@ -61,7 +64,7 @@ describe('TicketsApiService', () => {
       })
       .subscribe();
 
-    const requete = controleur.expectOne((r) => r.url === '/api/tickets');
+    const requete = controleur.expectOne((r) => r.url === '/api/v1/tickets');
     const params = requete.request.params;
     expect(params.get('status')).toBe('InProgress');
     expect(params.get('criticality')).toBe('High');
@@ -74,15 +77,15 @@ describe('TicketsApiService', () => {
     requete.flush({ items: [], page: 2, pageSize: 50, totalCount: 0, totalPages: 0 });
   });
 
-  it('lit un incident — GET /api/tickets/{id}', () => {
+  it('lit un incident — GET /api/v1/tickets/{id}', () => {
     service.getById(INCIDENT.id).subscribe();
 
-    const requete = controleur.expectOne(`/api/tickets/${INCIDENT.id}`);
+    const requete = controleur.expectOne(`/api/v1/tickets/${INCIDENT.id}`);
     expect(requete.request.method).toBe('GET');
     requete.flush(INCIDENT);
   });
 
-  it('ouvre un incident — POST /api/tickets', () => {
+  it('ouvre un incident — POST /api/v1/tickets', () => {
     const demande = {
       assetId: INCIDENT.assetId,
       title: INCIDENT.title,
@@ -92,36 +95,36 @@ describe('TicketsApiService', () => {
 
     service.create(demande).subscribe();
 
-    const requete = controleur.expectOne('/api/tickets');
+    const requete = controleur.expectOne('/api/v1/tickets');
     expect(requete.request.method).toBe('POST');
     expect(requete.request.body).toEqual(demande);
     requete.flush(INCIDENT, { status: 201, statusText: 'Created' });
   });
 
-  it('prend en charge un incident sans corps — PUT /api/tickets/{id}/assign', () => {
+  it('prend en charge un incident sans corps — PUT /api/v1/tickets/{id}/assign', () => {
     service.assign(INCIDENT.id).subscribe();
 
-    const requete = controleur.expectOne(`/api/tickets/${INCIDENT.id}/assign`);
+    const requete = controleur.expectOne(`/api/v1/tickets/${INCIDENT.id}/assign`);
     expect(requete.request.method).toBe('PUT');
     expect(requete.request.body).toBeNull();
     requete.flush(null, { status: 204, statusText: 'No Content' });
   });
 
-  it('clôture un incident avec son compte rendu — PUT /api/tickets/{id}/close', () => {
+  it('clôture un incident avec son compte rendu — PUT /api/v1/tickets/{id}/close', () => {
     service.close(INCIDENT.id, { resolutionComment: 'Ventilateur remplacé.' }).subscribe();
 
-    const requete = controleur.expectOne(`/api/tickets/${INCIDENT.id}/close`);
+    const requete = controleur.expectOne(`/api/v1/tickets/${INCIDENT.id}/close`);
     expect(requete.request.method).toBe('PUT');
     expect(requete.request.body).toEqual({ resolutionComment: 'Ventilateur remplacé.' });
     requete.flush(null, { status: 204, statusText: 'No Content' });
   });
 
-  it('transfère un incident vers une équipe désignée par son nom — POST /api/tickets/{id}/transfer', () => {
+  it('transfère un incident vers une équipe désignée par son nom — POST /api/v1/tickets/{id}/transfer', () => {
     service
       .transfer(INCIDENT.id, { targetTeam: 'Équipe Réseau', reason: 'Panne de commutateur' })
       .subscribe();
 
-    const requete = controleur.expectOne(`/api/tickets/${INCIDENT.id}/transfer`);
+    const requete = controleur.expectOne(`/api/v1/tickets/${INCIDENT.id}/transfer`);
     expect(requete.request.method).toBe('POST');
     expect(requete.request.body).toEqual({
       targetTeam: 'Équipe Réseau',

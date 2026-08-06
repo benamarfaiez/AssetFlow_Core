@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Application.DTOs;
+using AssetFlowCore.Application.DTOs;
 using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.ValueObjects;
@@ -23,7 +23,7 @@ public class AssetsControllerTests(CustomWebApplicationFactory<Program> factory)
         var payload = new RegisterAssetRequest("Serveur-Web-Test", "SRV-WEB-99", "Server");
 
         // Act
-        var response = await _client.PostAsJsonAsync("/api/assets", payload);
+        var response = await _client.PostAsJsonAsync("/api/v1/assets", payload);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -49,7 +49,7 @@ public class AssetsControllerTests(CustomWebApplicationFactory<Program> factory)
         }
 
         // Act
-        var response = await _client.GetAsync("/api/assets");
+        var response = await _client.GetAsync("/api/v1/assets");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -74,7 +74,7 @@ public class AssetsControllerTests(CustomWebApplicationFactory<Program> factory)
         }
 
         // Act
-        var resp = await _client.PutAsync($"/api/assets/{assetId}/decommission", null);
+        var resp = await _client.PutAsync($"/api/v1/assets/{assetId}/decommission", null);
 
         // Assert
         resp.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -94,7 +94,7 @@ public class AssetsControllerTests(CustomWebApplicationFactory<Program> factory)
         var unknownId = Guid.NewGuid();
 
         // Act
-        var resp = await _client.PutAsync($"/api/assets/{unknownId}/decommission", null);
+        var resp = await _client.PutAsync($"/api/v1/assets/{unknownId}/decommission", null);
 
         // Assert : NotFoundException est traduite en 404 par le middleware
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -127,7 +127,7 @@ public class AssetsControllerTests(CustomWebApplicationFactory<Program> factory)
         }
 
         // Act
-        var resp = await _client.PutAsync($"/api/assets/{assetId}/decommission", null);
+        var resp = await _client.PutAsync($"/api/v1/assets/{assetId}/decommission", null);
 
         // Assert
         resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);

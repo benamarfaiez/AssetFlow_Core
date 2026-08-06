@@ -83,4 +83,45 @@ public class AssetTests
         asset.RestoreToService();
         asset.Status.Should().Be(AssetStatus.InService);
     }
+
+    [Fact]
+    public void RestoreFromDecommission_WhenDecommissioned_ShouldTransitionToInService()
+    {
+        var asset = new Asset(Guid.NewGuid(), "PC-Prod", SerialNumber.Create("LAP-12345"), AssetType.Laptop);
+        asset.Decommission();
+
+        asset.RestoreFromDecommission("Rebut par erreur");
+        asset.Status.Should().Be(AssetStatus.InService);
+    }
+
+    [Theory]
+    [InlineData(AssetStatus.InService)]
+    [InlineData(AssetStatus.Down)]
+    [InlineData(AssetStatus.InMaintenance)]
+    public void RestoreFromDecommission_WhenNotDecommissioned_ShouldThrowDomainException(AssetStatus initialStatus)
+    {
+        var asset = new Asset(Guid.NewGuid(), "PC-Prod", SerialNumber.Create("LAP-12345"), AssetType.Laptop);
+        if (initialStatus == AssetStatus.Down) asset.MarkAsDown();
+        if (initialStatus == AssetStatus.InMaintenance)
+        {
+            asset.MarkAsDown();
+            asset.MarkInMaintenance();
+        }
+
+        Action act = () => asset.RestoreFromDecommission("Motif");
+        act.Should().Throw<DomainException>().WithMessage("*Seul un actif mis au rebut peut être remis en service*");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void RestoreFromDecommission_WithBlankReason_ShouldThrowArgumentException(string? reason)
+    {
+        var asset = new Asset(Guid.NewGuid(), "PC-Prod", SerialNumber.Create("LAP-12345"), AssetType.Laptop);
+        asset.Decommission();
+
+        Action act = () => asset.RestoreFromDecommission(reason!);
+        act.Should().Throw<ArgumentException>().WithMessage("*Le motif de remise en service est obligatoire*");
+    }
 }

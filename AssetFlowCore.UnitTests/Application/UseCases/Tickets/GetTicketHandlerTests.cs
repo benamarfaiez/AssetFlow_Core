@@ -28,6 +28,9 @@ public class GetTicketHandlerTests
 
         _ticketRepoMock.Setup(t => t.GetByIdAsync(ticket.Id, CancellationToken.None)).ReturnsAsync(ticket);
         _ticketRepoMock.Setup(t => t.CountActiveTicketsByAssetIdAsync(Guid.NewGuid(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
+        _ticketRepoMock
+            .Setup(t => t.GetTransferHistoryAsync(ticket.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         _teamRepoMock
             .Setup(r => r.GetByIdAsync(team.Id, CancellationToken.None))
             .ReturnsAsync(team);

@@ -3,7 +3,7 @@ import { DiagnosticService } from './diagnostic.service';
 
 /**
  * Écran de diagnostic du socle : il vérifie de bout en bout que l'application atteint l'API
- * (`GET /api/assets`), que les erreurs sont normalisées et que la liaison temps réel s'établit.
+ * (`GET /api/v1/assets`), que les erreurs sont normalisées et que la liaison temps réel s'établit.
  *
  * Ce n'est **pas** un écran produit : il n'implémente aucun des écrans `E-01`→`E-09` et sera
  * remplacé par l'inventaire au Lot 5. Il sert de preuve d'exécution du socle, exigée par les

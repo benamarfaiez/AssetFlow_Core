@@ -51,7 +51,8 @@ public class SignalRNotificationServiceTests
             AssistanceNote: null,
             IsAiProcessing: true,
             AssignedByUserId: null,
-            ClosedByUserId: null
+            ClosedByUserId: null,
+            TransferHistory: []
         );
 
         // Act

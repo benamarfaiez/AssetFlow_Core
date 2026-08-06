@@ -12,8 +12,8 @@ namespace AssetFlowCore.IntegrationTests.WebApi.Controllers;
 
 /// <summary>
 /// Couvre l'étape 2.2 : liste des équipes, avec ou sans les équipes désactivées.
-/// L'équipe désactivée est amorcée directement en base, aucun endpoint ne permettant
-/// aujourd'hui de désactiver une équipe (décision 0.6 non tranchée).
+/// L'équipe désactivée est amorcée directement en base ; la bascule par endpoint
+/// (décision 0.6, étape 2b.4) est couverte par <see cref="TeamActivationTests"/>.
 /// </summary>
 public class TeamsListTests : IClassFixture<CustomWebApplicationFactory<Program>>
 {
@@ -37,7 +37,7 @@ public class TeamsListTests : IClassFixture<CustomWebApplicationFactory<Program>
     [Fact]
     public async Task GetTeams_ShouldReturnEveryTeam_IncludingDeactivatedOnes()
     {
-        var response = await _client.GetAsync("/api/teams");
+        var response = await _client.GetAsync("/api/v1/teams");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var teams = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<TeamResponseDto>>();
@@ -50,7 +50,7 @@ public class TeamsListTests : IClassFixture<CustomWebApplicationFactory<Program>
     [Fact]
     public async Task GetTeams_OnlyActive_ShouldExcludeDeactivatedTeams()
     {
-        var response = await _client.GetAsync("/api/teams?onlyActive=true");
+        var response = await _client.GetAsync("/api/v1/teams?onlyActive=true");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var teams = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<TeamResponseDto>>();
@@ -62,7 +62,7 @@ public class TeamsListTests : IClassFixture<CustomWebApplicationFactory<Program>
     [Fact]
     public async Task GetTeams_ShouldExposeTheRoutingCouple()
     {
-        var teams = await _client.GetFromJsonAsync<IReadOnlyCollection<TeamResponseDto>>("/api/teams?onlyActive=true");
+        var teams = await _client.GetFromJsonAsync<IReadOnlyCollection<TeamResponseDto>>("/api/v1/teams?onlyActive=true");
 
         // Sans ce couple, l'écran d'administration ne peut ni préremplir un formulaire
         // ni signaler les combinaisons (type × criticité) non couvertes.
@@ -75,13 +75,13 @@ public class TeamsListTests : IClassFixture<CustomWebApplicationFactory<Program>
     public async Task GetTeams_ShouldReflectACreationImmediately()
     {
         // Amorce le cache de liste avant l'écriture.
-        (await _client.GetFromJsonAsync<IReadOnlyCollection<TeamResponseDto>>("/api/teams"))!.Should().HaveCount(2);
+        (await _client.GetFromJsonAsync<IReadOnlyCollection<TeamResponseDto>>("/api/v1/teams"))!.Should().HaveCount(2);
 
-        var created = await _client.PostAsJsonAsync("/api/teams",
+        var created = await _client.PostAsJsonAsync("/api/v1/teams",
             new CreateTeamRequest("Liste-Equipe-Nouvelle", "NetworkDevice", "Medium", "Réseau"));
         created.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var teams = await _client.GetFromJsonAsync<IReadOnlyCollection<TeamResponseDto>>("/api/teams");
+        var teams = await _client.GetFromJsonAsync<IReadOnlyCollection<TeamResponseDto>>("/api/v1/teams");
 
         teams.Should().HaveCount(3);
         teams!.Should().ContainSingle(t => t.Name == "Liste-Equipe-Nouvelle");

@@ -2,6 +2,7 @@
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Domain.Exceptions;
 using FluentAssertions;
+using System.Linq;
 
 namespace AssetFlowCore.UnitTests.Domain.Entities;
 
@@ -127,8 +128,49 @@ public class MaintenanceTicketTests
         // Act
         ticket.TransferToTeam(newTeam, "Besoin d'une expertise réseau.");
 
-        // Assert
+        // Assert : AssignedTeamId doit être mis à jour explicitement, pas uniquement la navigation
         ticket.AssignedTeam.Should().Be(newTeam);
+        ticket.AssignedTeamId.Should().Be(newTeam.Id);
+    }
+
+    [Fact]
+    public void TransferToTeam_Should_RecordHistoryEntry_WithOriginAndTargetTeams()
+    {
+        // Arrange
+        var originTeamId = Guid.NewGuid();
+        var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", "Description", TicketCriticality.High, originTeamId);
+        var targetTeam = new Team("Equipe-Cible", "asset", "Low", "desc");
+
+        // Act
+        ticket.TransferToTeam(targetTeam, "Besoin d'une expertise réseau.");
+
+        // Assert
+        ticket.TransferHistory.Should().ContainSingle();
+        var entry = ticket.TransferHistory.Single();
+        entry.FromTeamId.Should().Be(originTeamId);
+        entry.ToTeamId.Should().Be(targetTeam.Id);
+        entry.Reason.Should().Be("Besoin d'une expertise réseau.");
+    }
+
+    [Fact]
+    public void TransferToTeam_CalledTwice_Should_AppendTwoHistoryEntries_AndLeaveDescriptionUnchanged()
+    {
+        // Arrange
+        const string descriptionOriginale = "Description saisie à l'ouverture.";
+        var ticket = new MaintenanceTicket(Guid.NewGuid(), Guid.NewGuid(), "Titre", descriptionOriginale, TicketCriticality.High, Guid.NewGuid());
+        var premiereEquipe = new Team("Equipe-1", "asset", "Low", "desc");
+        var secondeEquipe = new Team("Equipe-2", "asset", "Low", "desc");
+
+        // Act
+        ticket.TransferToTeam(premiereEquipe, "Premier motif");
+        ticket.TransferToTeam(secondeEquipe, "Second motif");
+
+        // Assert : deux entrées, dans l'ordre chronologique, et la description reste intacte
+        ticket.TransferHistory.Should().HaveCount(2);
+        ticket.TransferHistory.Select(h => h.Reason).Should().Equal("Premier motif", "Second motif");
+        ticket.TransferHistory.Last().ToTeamId.Should().Be(secondeEquipe.Id);
+        ticket.Description.Should().Be(descriptionOriginale);
+        ticket.AssignedTeamId.Should().Be(secondeEquipe.Id);
     }
 
     [Fact]

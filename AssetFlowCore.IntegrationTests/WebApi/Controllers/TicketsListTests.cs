@@ -62,7 +62,7 @@ public class TicketsListTests : IClassFixture<CustomWebApplicationFactory<Progra
 
     private async Task<PagedResultDto<TicketResponseDto>> GetPageAsync(string queryString)
     {
-        var response = await _client.GetAsync($"/api/tickets{queryString}");
+        var response = await _client.GetAsync($"/api/v1/tickets{queryString}");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var page = await response.Content.ReadFromJsonAsync<PagedResultDto<TicketResponseDto>>();
         page.Should().NotBeNull();
@@ -180,7 +180,19 @@ public class TicketsListTests : IClassFixture<CustomWebApplicationFactory<Progra
     [InlineData("?sortBy=Couleur")]
     public async Task GetTickets_WithInvalidParameter_ShouldReturn400(string queryString)
     {
-        var response = await _client.GetAsync($"/api/tickets{queryString}");
+        var response = await _client.GetAsync($"/api/v1/tickets{queryString}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        problem!.Title.Should().Be("Validation de la requête échouée");
+    }
+
+    [Fact]
+    public async Task GetTickets_WithResolvedStatus_ShouldReturn400_SinceValueWasRemoved()
+    {
+        // Décision 0.3 (Lot 2 bis) : TicketStatus.Resolved n'existe plus dans le domaine ;
+        // le filtre acceptait auparavant cette valeur et répondait 200 avec une liste vide.
+        var response = await _client.GetAsync("/api/v1/tickets?status=Resolved");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problem = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();

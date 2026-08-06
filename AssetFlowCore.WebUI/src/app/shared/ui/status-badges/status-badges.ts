@@ -30,7 +30,6 @@ const TONALITES_ASSET_STATUS: Readonly<Record<AssetStatus, Tonalite>> = {
 const TONALITES_TICKET_STATUS: Readonly<Record<TicketStatus, Tonalite>> = {
   Opened: 'info',
   InProgress: 'alerte',
-  Resolved: 'succes',
   Closed: 'neutre',
 };
 

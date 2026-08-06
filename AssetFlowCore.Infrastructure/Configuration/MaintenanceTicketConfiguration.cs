@@ -20,6 +20,11 @@ public class MaintenanceTicketConfiguration : IEntityTypeConfiguration<Maintenan
             .HasColumnName("assigned_team_id")
             .IsRequired();
 
+        // Non suivie par EF (voir TicketTransferHistoryConfiguration et MaintenanceTicket.LoadTransferHistory) :
+        // un nouvel enregistrement d'historique découvert en cascade dans la même transaction que
+        // la réaffectation d'équipe fait échouer à tort le fournisseur EF InMemory (RowVersion).
+        builder.Ignore(t => t.TransferHistory);
+
         builder.Property(t => t.AssetId)
             .HasColumnName("asset_id")
             .IsRequired();

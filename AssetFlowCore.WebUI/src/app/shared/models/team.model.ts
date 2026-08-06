@@ -17,10 +17,7 @@ export interface TeamResponse {
   readonly id: string;
   readonly name: string;
   readonly description: string | null;
-  /**
-   * Aucun endpoint ne permet aujourd'hui de basculer cette valeur (décision 0.6 non tranchée) :
-   * le champ est exposé et filtrable, mais non pilotable.
-   */
+  /** Pilotable via `TeamsApiService.activate`/`deactivate` (décision 0.6), réservé à l'administrateur. */
   readonly isActive: boolean;
   readonly createdAt: string;
   readonly assetType: AssetType;

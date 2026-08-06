@@ -100,6 +100,7 @@ public class CancellationTokenPropagationTests
 
         ticketRepo.Verify(r => r.GetByIdWithTrackingAsync(ticket.Id, Token), Times.Once);
         teamRepo.Verify(r => r.GetByNameAsync("Réseau", Token), Times.Once);
+        ticketRepo.Verify(r => r.AddTransferHistoryAsync(It.IsAny<TicketTransferHistory>(), Token), Times.Once);
     }
 
     [Fact]

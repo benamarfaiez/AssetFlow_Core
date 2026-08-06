@@ -13,11 +13,11 @@ import { CreateTeamRequest, TeamResponse, UpdateTeamRequest } from '../../shared
 @Injectable({ providedIn: 'root' })
 export class TeamsApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api/teams`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/api/v1/teams`;
 
   /**
    * Liste des équipes, triée par nom par le backend.
-   * `GET /api/teams` → 200 `TeamResponse[]`
+   * `GET /api/v1/teams` → 200 `TeamResponse[]`
    *
    * Erreurs : 500. Pas de pagination : la collection est servie en intégralité.
    *
@@ -31,7 +31,7 @@ export class TeamsApiService {
 
   /**
    * Fiche d'une équipe.
-   * `GET /api/teams/{id}` → 200 `TeamResponse`
+   * `GET /api/v1/teams/{id}` → 200 `TeamResponse`
    *
    * Erreurs : 404 (équipe inexistante), 500.
    */
@@ -42,7 +42,7 @@ export class TeamsApiService {
   /**
    * Crée une équipe. Le couple (type d'actif × criticité) détermine les incidents qu'elle
    * recevra : une combinaison non couverte fait échouer l'ouverture d'incident correspondante.
-   * `POST /api/teams` → **201** `TeamResponse`, en-tête `Location` vers la fiche créée
+   * `POST /api/v1/teams` → **201** `TeamResponse`, en-tête `Location` vers la fiche créée
    *
    * Erreurs : 400 (nom vide, de plus de 100 caractères ou **déjà pris**, type d'actif ou
    * criticité hors énumération, description de plus de 500 caractères), 500.
@@ -53,7 +53,7 @@ export class TeamsApiService {
 
   /**
    * Met à jour une équipe. Tous les champs sont facultatifs : seuls ceux fournis sont appliqués.
-   * `PUT /api/teams/{id}` → **200** `TeamResponse`
+   * `PUT /api/v1/teams/{id}` → **200** `TeamResponse`
    *
    * Erreurs : 404 (équipe inexistante), 400 (nom déjà porté par une autre équipe, longueurs
    * dépassées, valeurs hors énumération), 500.
@@ -64,14 +64,35 @@ export class TeamsApiService {
 
   /**
    * Supprime une équipe.
-   * `DELETE /api/teams/{id}` → 204
+   * `DELETE /api/v1/teams/{id}` → 204
    *
    * Erreurs : 404 (équipe inexistante), 400 (des incidents actifs lui sont assignés), 500.
    *
-   * La suppression est définitive : la désactivation en remplacement de la suppression n'est
-   * pas exposée par l'API (décision 0.6 non tranchée).
+   * La suppression reste définitive ; l'activation/désactivation (décision 0.6) offre une
+   * alternative réversible pour les équipes créées par erreur.
    */
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  /**
+   * Réactive une équipe désactivée. Réservé au rôle `Administrateur`.
+   * `PUT /api/v1/teams/{id}/activate` → 200 `TeamResponse`
+   *
+   * Erreurs : 404 (équipe inexistante), 403 (rôle insuffisant), 500.
+   */
+  activate(id: string): Observable<TeamResponse> {
+    return this.http.put<TeamResponse>(`${this.baseUrl}/${id}/activate`, null);
+  }
+
+  /**
+   * Désactive une équipe : elle disparaît de `?onlyActive=true` et cesse de recevoir de
+   * nouveaux incidents, sans être supprimée. Réservé au rôle `Administrateur`.
+   * `PUT /api/v1/teams/{id}/deactivate` → 200 `TeamResponse`
+   *
+   * Erreurs : 404 (équipe inexistante), 403 (rôle insuffisant), 500.
+   */
+  deactivate(id: string): Observable<TeamResponse> {
+    return this.http.put<TeamResponse>(`${this.baseUrl}/${id}/deactivate`, null);
   }
 }

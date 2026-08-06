@@ -1,5 +1,5 @@
 // Contrat synchronisé depuis le backend .NET — ne pas modifier à la main.
-// Sources : AssetFlowCore.Application/DTOs/TicketResponseDto.cs
+// Sources : AssetFlowCore.Application/DTOs/TicketResponseDto.cs · TicketTransferHistoryDto.cs
 //           AssetFlowCore.WebApi/Requests/CreateTicketRequest.cs · CloseTicketRequest.cs
 //           AssetFlowCore.WebApi/Requests/TransferTicketRequest.cs
 //           AssetFlowCore.Application/UseCases/Tickets/GetTickets/GetTicketsQuery.cs
@@ -10,13 +10,8 @@
 /** Criticité d'un incident. Valeurs sérialisées en `PascalCase`. */
 export type TicketCriticality = 'Low' | 'Medium' | 'High';
 
-/**
- * État d'un incident.
- *
- * `Resolved` fait partie de l'énumération du domaine mais **aucune transition ne l'atteint**
- * aujourd'hui (décision 0.3 non tranchée) : ne construire aucune logique sur sa présence.
- */
-export type TicketStatus = 'Opened' | 'InProgress' | 'Resolved' | 'Closed';
+/** État d'un incident. */
+export type TicketStatus = 'Opened' | 'InProgress' | 'Closed';
 
 /** Champ de tri accepté par la recherche d'incidents. */
 export type TicketSortField = 'CreatedAt' | 'Criticality' | 'Status' | 'Title';
@@ -25,19 +20,26 @@ export type TicketSortField = 'CreatedAt' | 'Criticality' | 'Status' | 'Title';
 export const TICKET_CRITICALITIES: readonly TicketCriticality[] = ['Low', 'Medium', 'High'];
 
 /** Valeurs de `TicketStatus` dans l'ordre du C#. */
-export const TICKET_STATUSES: readonly TicketStatus[] = [
-  'Opened',
-  'InProgress',
-  'Resolved',
-  'Closed',
-];
+export const TICKET_STATUSES: readonly TicketStatus[] = ['Opened', 'InProgress', 'Closed'];
+
+/**
+ * `TicketTransferHistoryDto` — entrée de l'historique de transferts (décision 0.5).
+ */
+export interface TicketTransferHistory {
+  readonly fromTeamId: string;
+  readonly fromTeamName: string;
+  readonly toTeamId: string;
+  readonly toTeamName: string;
+  readonly reason: string;
+  readonly transferredAt: string;
+}
 
 /** `TicketResponseDto` — représentation complète d'un incident de maintenance. */
 export interface TicketResponse {
   readonly id: string;
   readonly assetId: string;
   readonly title: string;
-  /** Description de l'anomalie, enrichie du motif à chaque transfert. */
+  /** Description de l'anomalie, saisie à l'ouverture — jamais réécrite par un transfert. */
   readonly description: string;
   readonly criticality: TicketCriticality;
   readonly status: TicketStatus;
@@ -53,6 +55,15 @@ export interface TicketResponse {
   readonly assistanceNote: string | null;
   /** Vrai tant que l'analyse IA est en cours ; repasse à faux qu'elle réussisse ou échoue. */
   readonly isAiProcessing: boolean;
+  /** Auteur de la prise en charge (décision 0.2) ; `null` tant que jamais pris en charge. */
+  readonly assignedByUserId: string | null;
+  /** Auteur de la clôture (décision 0.2) ; `null` tant que non clôturé. */
+  readonly closedByUserId: string | null;
+  /**
+   * Historique des transferts, du plus ancien au plus récent. Peuplé uniquement par
+   * `GET /api/v1/tickets/{id}` — vide sur les autres réponses portant ce type (liste, création).
+   */
+  readonly transferHistory: readonly TicketTransferHistory[];
 }
 
 /**
@@ -82,8 +93,8 @@ export interface CloseTicketRequest {
  * `TransferTicketRequest` — corps du transfert.
  *
  * ⚠️ `targetTeam` est le **nom** de l'équipe, pas son identifiant : le backend résout
- * l'équipe par son nom. Le motif est concaténé à la description de l'incident (décision 0.5
- * non tranchée, aucune historisation séparée).
+ * l'équipe par son nom. Le motif est historisé à part (décision 0.5) et n'altère plus la
+ * description de l'incident.
  */
 export interface TransferTicketRequest {
   readonly targetTeam: string;
@@ -91,7 +102,7 @@ export interface TransferTicketRequest {
 }
 
 /**
- * Paramètres de `GET /api/tickets`. Tous facultatifs et cumulatifs ; la casse des valeurs
+ * Paramètres de `GET /api/v1/tickets`. Tous facultatifs et cumulatifs ; la casse des valeurs
  * d'énumération est indifférente côté backend.
  */
 export interface TicketSearchParams {

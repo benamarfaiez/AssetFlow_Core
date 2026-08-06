@@ -61,4 +61,23 @@ public class Asset
     {
         Status = AssetStatus.Decommissioned;
     }
+
+    /// <summary>
+    /// Remet en service un actif mis au rebut (décision 0.4, Lot 2 bis) : transition distincte de
+    /// <see cref="RestoreToService"/>, laquelle sert la fin de réparation (Down/InMaintenance →
+    /// InService, sans garde) et non l'annulation d'une mise au rebut. Le motif n'est pas
+    /// persisté (aucun champ dédié, à la différence de l'historique de transfert de ticket) mais
+    /// sa présence est requise, validée ici et non par FluentValidation : le pipeline MediatR ne
+    /// s'applique pas aux commandes sans retour (<c>IRequest</c> void) dans ce projet.
+    /// </summary>
+    public void RestoreFromDecommission(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("Le motif de remise en service est obligatoire.", nameof(reason));
+
+        if (Status != AssetStatus.Decommissioned)
+            throw new DomainException("Seul un actif mis au rebut peut être remis en service.");
+
+        Status = AssetStatus.InService;
+    }
 }

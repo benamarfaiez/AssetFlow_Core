@@ -28,26 +28,26 @@ describe('AssetsApiService', () => {
 
   afterEach(() => controleur.verify());
 
-  it("liste l'inventaire — GET /api/assets", () => {
+  it("liste l'inventaire — GET /api/v1/assets", () => {
     let recu: readonly AssetResponse[] | undefined;
     service.getAll().subscribe((actifs) => (recu = actifs));
 
-    const requete = controleur.expectOne('/api/assets');
+    const requete = controleur.expectOne('/api/v1/assets');
     expect(requete.request.method).toBe('GET');
     requete.flush([ACTIF]);
 
     expect(recu).toEqual([ACTIF]);
   });
 
-  it("lit la fiche d'un actif — GET /api/assets/{id}", () => {
+  it("lit la fiche d'un actif — GET /api/v1/assets/{id}", () => {
     service.getById(ACTIF.id).subscribe();
 
-    const requete = controleur.expectOne(`/api/assets/${ACTIF.id}`);
+    const requete = controleur.expectOne(`/api/v1/assets/${ACTIF.id}`);
     expect(requete.request.method).toBe('GET');
     requete.flush({ ...ACTIF, tickets: [] });
   });
 
-  it('enregistre un actif — POST /api/assets', () => {
+  it('enregistre un actif — POST /api/v1/assets', () => {
     const demande: RegisterAssetRequest = {
       name: 'Portable RH',
       serialNumber: 'LAP-00099',
@@ -56,18 +56,27 @@ describe('AssetsApiService', () => {
 
     service.register(demande).subscribe();
 
-    const requete = controleur.expectOne('/api/assets');
+    const requete = controleur.expectOne('/api/v1/assets');
     expect(requete.request.method).toBe('POST');
     expect(requete.request.body).toEqual(demande);
     requete.flush(ACTIF, { status: 201, statusText: 'Created' });
   });
 
-  it('met un actif au rebut — PUT /api/assets/{id}/decommission', () => {
+  it('met un actif au rebut — PUT /api/v1/assets/{id}/decommission', () => {
     service.decommission(ACTIF.id).subscribe();
 
-    const requete = controleur.expectOne(`/api/assets/${ACTIF.id}/decommission`);
+    const requete = controleur.expectOne(`/api/v1/assets/${ACTIF.id}/decommission`);
     expect(requete.request.method).toBe('PUT');
     expect(requete.request.body).toBeNull();
+    requete.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('remet un actif en service — PUT /api/v1/assets/{id}/restore-to-service', () => {
+    service.restoreToService(ACTIF.id, { reason: 'Rebut par erreur' }).subscribe();
+
+    const requete = controleur.expectOne(`/api/v1/assets/${ACTIF.id}/restore-to-service`);
+    expect(requete.request.method).toBe('PUT');
+    expect(requete.request.body).toEqual({ reason: 'Rebut par erreur' });
     requete.flush(null, { status: 204, statusText: 'No Content' });
   });
 });
