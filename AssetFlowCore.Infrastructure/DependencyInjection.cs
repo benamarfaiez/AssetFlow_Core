@@ -1,6 +1,7 @@
 ﻿using AssetFlowCore.Application.Interfaces;
 using AssetFlowCore.Application.Interfaces.RAG;
 using AssetFlowCore.Domain.Repositories;
+using AssetFlowCore.Infrastructure.Auth;
 using AssetFlowCore.Infrastructure.Cache;
 using AssetFlowCore.Infrastructure.Configuration;
 using AssetFlowCore.Infrastructure.Notifications;
@@ -51,11 +52,16 @@ public static class DependencyInjection
 
         // 5. Autres repositories et Unité de Travail
         services.AddScoped<IMaintenanceTicketRepository, MaintenanceTicketRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // 6. Services d'infrastructure transverses
         services.AddScoped<IDbContextFactory, SqlServerDbContextFactory>();
         services.AddScoped<INotificationService, SignalRNotificationService>();
+
+        // Lot 7 : identité de l'utilisateur authentifié, lue depuis le HttpContext courant
+        services.AddHttpContextAccessor();
+        services.AddScoped<IAuthenticatedUserAccessor, HttpContextAuthenticatedUserAccessor>();
 
         // 6. Services RAG (Retrieval-Augmented Generation) et file d'attente pour l'assistance IA
         services.AddScoped<ILocalVectorStore, LocalVectorStore>();

@@ -42,6 +42,10 @@ public class MaintenanceTicketConfiguration : IEntityTypeConfiguration<Maintenan
         // Gestion de la concurrence optimiste via jeton d'infrastructure
         builder.Property(t => t.RowVersion).HasColumnName("row_version").IsRowVersion();
 
+        // Lot 7 (décision 0.2) : traçabilité de l'auteur, additive et nullable (tickets historiques sans auteur)
+        builder.Property(t => t.AssignedByUserId).HasColumnName("assigned_by_user_id");
+        builder.Property(t => t.ClosedByUserId).HasColumnName("closed_by_user_id");
+
         builder.HasIndex(t => new { t.AssetId, t.Status })
             .HasDatabaseName("IX_t_maintenance_tickets_asset_id_status");
 
@@ -60,6 +64,17 @@ public class MaintenanceTicketConfiguration : IEntityTypeConfiguration<Maintenan
         builder.HasOne(t => t.Asset)
            .WithMany(asset => asset.Tickets)
            .HasForeignKey(t => t.AssetId)
+           .OnDelete(DeleteBehavior.Restrict);
+
+        // 3. MaintenanceTicket -> User (auteurs de la prise en charge / de la clôture, Lot 7)
+        builder.HasOne<User>()
+           .WithMany()
+           .HasForeignKey(t => t.AssignedByUserId)
+           .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<User>()
+           .WithMany()
+           .HasForeignKey(t => t.ClosedByUserId)
            .OnDelete(DeleteBehavior.Restrict);
     }
 }

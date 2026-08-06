@@ -1,4 +1,5 @@
 ﻿using AssetFlowCore.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -39,6 +40,12 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
                 options.UseInMemoryDatabase(_dbName)
                        .UseInternalServiceProvider(internalServiceProvider);
             });
+
+            // 4. Lot 7 : remplace le schéma JWT Bearer réel par un schéma de test qui authentifie
+            // par défaut un utilisateur disposant de tous les rôles (voir TestAuthHandler). Le
+            // schéma "Bearer" de Program.cs reste enregistré mais n'est plus le schéma par défaut.
+            services.AddAuthentication(TestAuthHandler.SchemeName)
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
         });
     }
 }

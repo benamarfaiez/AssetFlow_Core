@@ -1,7 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { HubConnection } from '@microsoft/signalr';
+import {
+  HubConnection,
+  HubConnectionBuilder,
+  type IHttpConnectionOptions,
+} from '@microsoft/signalr';
 import { vi } from 'vitest';
 import { TicketResponse } from '../../shared/models/ticket.model';
+import { EntraAuthService } from '../auth/entra-auth.service';
 import { HUB_CONNECTION_FACTORY, TicketHubService } from './ticket-hub.service';
 
 const INCIDENT = {
@@ -170,5 +175,43 @@ describe('TicketHubService', () => {
     // décompte reste celui du seul abonnement demandé avant la fermeture.
     await service.connect();
     expect(connexion.groupesRejoints()).toHaveLength(1);
+  });
+});
+
+describe('HUB_CONNECTION_FACTORY (fabrique réelle, non substituée)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('câble `accessTokenFactory` sur `EntraAuthService.obtenirJetonFrais()`', async () => {
+    // Contrairement aux tests ci-dessus, on ne fournit ici aucune valeur pour
+    // `HUB_CONNECTION_FACTORY` : on résout la vraie fabrique, on n'y substitue qu'`EntraAuthService`.
+    const obtenirJetonFrais = vi.fn().mockResolvedValue('jeton-frais');
+
+    TestBed.configureTestingModule({
+      providers: [{ provide: EntraAuthService, useValue: { obtenirJetonFrais } }],
+    });
+
+    const withUrl = vi.spyOn(HubConnectionBuilder.prototype, 'withUrl');
+
+    const creerConnexion = TestBed.inject(HUB_CONNECTION_FACTORY);
+
+    // `withUrl` est appelé — et donc espionné — avant le reste de la chaîne
+    // (`withAutomaticReconnect().configureLogging(...).build()`) : seul ce premier appel nous
+    // intéresse ici. `build()` peut échouer sous ce faux navigateur (jsdom exécuté par un
+    // processus Node, que le SDK SignalR détecte comme tel et qui exige alors une URL absolue) —
+    // sans rapport avec ce qu'on vérifie, on l'ignore.
+    try {
+      creerConnexion();
+    } catch {
+      // Ignoré : voir commentaire ci-dessus.
+    }
+
+    expect(withUrl).toHaveBeenCalledTimes(1);
+    const options = withUrl.mock.calls[0][1] as IHttpConnectionOptions | undefined;
+    expect(options?.accessTokenFactory).toBeInstanceOf(Function);
+
+    await expect(options?.accessTokenFactory?.()).resolves.toBe('jeton-frais');
+    expect(obtenirJetonFrais).toHaveBeenCalledTimes(1);
   });
 });

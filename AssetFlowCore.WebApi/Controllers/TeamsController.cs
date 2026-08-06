@@ -4,14 +4,17 @@ using AssetFlowCore.Application.UseCases.Team.DeleteTeam;
 using AssetFlowCore.Application.UseCases.Team.GetTeam;
 using AssetFlowCore.Application.UseCases.Team.GetTeams;
 using AssetFlowCore.Application.UseCases.Team.UpdateTeam;
+using AssetFlowCore.WebApi.Authorization;
 using AssetFlowCore.WebApi.Requests;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AssetFlowCore.WebApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class TeamsController(ISender mediator) : ControllerBase
 {
     /// <summary>
@@ -39,7 +42,11 @@ public class TeamsController(ISender mediator) : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Réservée à l'administrateur du référentiel (PRD §3) : création et maintenance des équipes.
+    /// </summary>
     [HttpPost]
+    [Authorize(Roles = Roles.Administrateur)]
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TeamResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TeamResponseDto>> Create([FromBody] CreateTeamRequest request, CancellationToken cancellationToken)
@@ -50,6 +57,7 @@ public class TeamsController(ISender mediator) : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = Roles.Administrateur)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TeamResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -61,6 +69,7 @@ public class TeamsController(ISender mediator) : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = Roles.Administrateur)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

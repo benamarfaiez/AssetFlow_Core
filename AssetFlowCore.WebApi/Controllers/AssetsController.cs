@@ -5,12 +5,14 @@ using AssetFlowCore.Application.UseCases.Assets.GetAsset;
 using AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
 using AssetFlowCore.WebApi.Requests;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AssetFlowCore.WebApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class AssetsController(ISender mediator) : ControllerBase
 {
     [HttpGet]

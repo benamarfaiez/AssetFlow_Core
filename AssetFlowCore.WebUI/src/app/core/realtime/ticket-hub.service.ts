@@ -3,6 +3,7 @@ import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signal
 import { Observable, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { TicketResponse } from '../../shared/models/ticket.model';
+import { EntraAuthService } from '../auth/entra-auth.service';
 
 /** État de la liaison temps réel, destiné à être affiché : une coupure doit être visible. */
 export type RealtimeStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
@@ -22,18 +23,29 @@ const METHODE_REJOINDRE_GROUPE = 'JoinTeamGroup';
 /**
  * Fabrique de connexion au hub. Isolée derrière un jeton d'injection afin que les tests
  * substituent une double sans ouvrir de socket réel.
+ *
+ * `accessTokenFactory` (Lot 7, étape 7.5) : SignalR l'appelle à chaque tentative de connexion,
+ * y compris lors d'une reconnexion automatique — jamais un jeton capturé une fois pour toutes.
+ * `EntraAuthService` est résolu ici, dans la fabrique de l'`InjectionToken` (exécutée une seule
+ * fois en contexte d'injection), et capturé par la fermeture lexicale de la fonction retournée.
  */
 export const HUB_CONNECTION_FACTORY = new InjectionToken<() => HubConnection>(
   'Fabrique de connexion au hub des incidents',
   {
     providedIn: 'root',
-    factory: () => (): HubConnection =>
-      new HubConnectionBuilder()
-        .withUrl(`${environment.apiBaseUrl}${environment.ticketHubUrl}`)
-        // Reconnexion automatique avec les délais par défaut (0, 2, 10 puis 30 secondes).
-        .withAutomaticReconnect()
-        .configureLogging(environment.production ? LogLevel.Error : LogLevel.Information)
-        .build(),
+    factory: () => {
+      const authentification = inject(EntraAuthService);
+
+      return (): HubConnection =>
+        new HubConnectionBuilder()
+          .withUrl(`${environment.apiBaseUrl}${environment.ticketHubUrl}`, {
+            accessTokenFactory: () => authentification.obtenirJetonFrais(),
+          })
+          // Reconnexion automatique avec les délais par défaut (0, 2, 10 puis 30 secondes).
+          .withAutomaticReconnect()
+          .configureLogging(environment.production ? LogLevel.Error : LogLevel.Information)
+          .build();
+    },
   },
 );
 

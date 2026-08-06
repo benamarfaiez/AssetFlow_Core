@@ -8,6 +8,7 @@ public class AssetFlowDbContext(DbContextOptions<AssetFlowDbContext> options) : 
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<MaintenanceTicket> Tickets => Set<MaintenanceTicket>();
     public DbSet<Team> Teams => Set<Team>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

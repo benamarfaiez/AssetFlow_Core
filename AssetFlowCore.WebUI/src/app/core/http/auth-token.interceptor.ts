@@ -26,8 +26,11 @@ export const authTokenInterceptor: HttpInterceptorFn = (request, next) => {
 /**
  * Vrai si l'URL vise l'API AssetFlow. `apiBaseUrl` est vide en développement comme en
  * production (même origine, cf. `environment.ts`) : le test porte alors sur le chemin relatif.
+ *
+ * Exportée pour `sessionRenewalInterceptor`, qui doit ignorer les mêmes requêtes hors API —
+ * évite de dupliquer ce test dans un second fichier.
  */
-function isApiRequest(url: string): boolean {
+export function isApiRequest(url: string): boolean {
   const base = environment.apiBaseUrl;
   return base === '' ? url.startsWith('/api/') : url.startsWith(`${base}/api/`);
 }

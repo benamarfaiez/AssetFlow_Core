@@ -34,7 +34,7 @@ Documentation de référence de l'API HTTP exposée par `AssetFlowCore.WebApi`, 
 | Versioning | **Aucun** — pas de segment de version ni d'en-tête de version |
 | Format d'échange | JSON (`application/json`), erreurs en `application/problem+json` |
 | Documentation interactive | Swagger UI sur `/swagger` — **Development uniquement** |
-| Authentification | **Aucune** (voir [§9](#authentification-absente)) |
+| Authentification | **JWT Bearer** (Entra ID/OIDC) requis sur toute route hors sondes et documentation (voir [§9](#authentification-jwt-bearer-entra-id)). Tenant réel non encore enregistré (étape 7.0) |
 | Pagination / filtrage / tri | sur `GET /api/tickets` uniquement ([§6.1](#61-get-apitickets--lister-les-incidents)) |
 
 ### Ressources et opérations
@@ -786,17 +786,25 @@ Le Lot 0 du [plan d'implémentation](IMPLEMENTATION-PLAN.md) (§3, réalisation 
 | **Activation / désactivation d'équipe** | nouvelle opération sur `Team` ; `isActive` devient pilotable, et `?onlyActive=true` reflète enfin un état modifiable | ➕ additif |
 | **Remise en service d'un actif** | nouvelle opération, motif obligatoire ; `Decommissioned` cesse d'être terminal. Réservée à un rôle d'administrateur une fois l'authentification en place | ➕ additif |
 
-Deux évolutions supplémentaires suivront au Lot 7, toutes deux **additives** : l'exigence d'un jeton `JWT Bearer` sur l'ensemble des routes (hors sondes), et l'exposition de l'identité de l'auteur d'une prise en charge ou d'une clôture.
+Deux évolutions supplémentaires ont été livrées au Lot 7, toutes deux **additives** : l'exigence d'un jeton `JWT Bearer` sur l'ensemble des routes (hors sondes), et l'exposition de l'identité de l'auteur d'une prise en charge ou d'une clôture — `TicketResponseDto.AssignedByUserId`/`ClosedByUserId` (`Guid?`, ajoutés en fin de contrat, `null` pour un ticket jamais pris en charge ou clôturé).
 
 ### Fin d'analyse IA non notifiée
 
 `assistanceNote` et `isAiProcessing` sont désormais exposés, mais aucun événement temps réel n'annonce la fin de l'analyse : pour l'observer, un client doit relire l'incident.
 
-### Authentification absente
+### Authentification JWT Bearer (Entra ID)
 
-Aucun `[Authorize]`, aucun `AddAuthentication` / `AddJwtBearer`, aucun endpoint d'émission de jeton. `Program.cs` appelle `UseAuthorization()` **sans schéma d'authentification** : toutes les opérations, y compris les créations et la suppression d'équipes, sont **accessibles anonymement**.
+Livrée au Lot 7 (décision 0.1) : `AddAuthentication().AddJwtBearer(...)` dans `Program.cs`, activé **avant** `UseAuthorization()`. Les trois contrôleurs portent `[Authorize]` au niveau classe — toute route hors sondes (`/health`, `/alive`) et documentation (`/swagger`) exige un jeton `JWT Bearer` valide. L'API n'émet **aucun** jeton et n'expose pas d'endpoint de connexion : le client obtient son jeton de l'annuaire (OIDC, PKCE côté navigateur) et le joint en en-tête `Authorization`.
 
-Schéma retenu le 2026-08-05 (décision 0.1) : **OIDC sur annuaire d'entreprise**, jetons `JWT Bearer` validés par l'API, rôles dérivés des groupes d'annuaire. L'API n'émettra donc **aucun** jeton et n'exposera pas d'endpoint de connexion : le client obtient son jeton de l'annuaire et le joint en en-tête `Authorization`. Réalisation au Lot 7.
+**Rôles** (`AssetFlowCore.WebApi/Authorization/Roles.cs`) : `Administrateur`, `Technicien`, `GestionnaireDeParc`, `ResponsableEquipe`, dérivés des quatre personas du PRD §3 et portés par la revendication `roles` du jeton (`TokenValidationParameters.RoleClaimType`, configurable via `Authentication:Entra:RoleClaimType`, `"roles"` par défaut). Seule restriction posée à ce jour : `POST`/`PUT`/`DELETE /api/teams` exigent le rôle `Administrateur` (persona « Administrateur du référentiel », PRD §3). Tout le reste n'exige qu'un jeton valide, sans restriction de rôle additionnelle.
+
+**Configuration** (`Authentication:Entra:Authority`/`Audience`/`RoleClaimType`) : présente dans `appsettings.json`/`appsettings.Development.json` avec des valeurs vides — le tenant Entra ID réel (étape 7.0 : enregistrement d'application en plateforme « Single-page application », attribution des groupes d'annuaire aux rôles ci-dessus) reste une tâche d'exploitation non réalisée. Tant qu'`Authority` est vide, l'API démarre normalement ; l'échec ne survient qu'à la première requête protégée (résolution différée des métadonnées OIDC).
+
+**Hub SignalR** (`/ticketHub`) : porte `[Authorize]`. Un WebSocket ne portant pas d'en-tête `Authorization`, le jeton est fourni en chaîne de requête (`?access_token=...`), lu par `JwtBearerEvents.OnMessageReceived` **uniquement** pour les chemins `/ticketHub` — arbitrage assumé, ce jeton atterrit dans les journaux d'accès du serveur/proxy.
+
+**Traçabilité de l'auteur** (décision 0.2) : `PUT /api/tickets/{id}/assign` et `PUT /api/tickets/{id}/close` enregistrent l'identité de l'appelant (entité `User`, provisionnée « just-in-time » à partir des revendications du jeton — `oid`, `name`, `preferred_username`) dans `MaintenanceTicket.AssignedByUserId`/`ClosedByUserId`. La prise en charge reste un geste d'équipe : aucune affectation dirigée vers une personne (`EF-21` hors périmètre).
+
+**Hors périmètre du Lot 7**, écarts assumés : l'enregistrement réel du tenant (étape 7.0, opérationnel) ; l'endpoint de remise en service d'un actif au rebut (2b.5, Lot 2 bis — le rôle `Administrateur` est prêt à le restreindre dès sa création) ; le rattachement d'un `User` à une équipe (Lot 6.6 — colonne `TeamId` nullable déjà présente sur `User`).
 
 ### CORS
 

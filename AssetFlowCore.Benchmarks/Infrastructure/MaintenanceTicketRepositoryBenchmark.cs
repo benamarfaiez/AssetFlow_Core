@@ -53,7 +53,7 @@ public class MaintenanceTicketRepositoryBenchmark
 
             if (i % 10 == 0)          // 10% InProgress
             {
-                ticket.AssignToTechnician();
+                ticket.AssignToTechnician(Guid.NewGuid());
             }
             // Les autres restent Opened
 

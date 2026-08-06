@@ -41,7 +41,9 @@ public static class MappingExtensions
             ticket.ResolutionComment,
             ticket.CreatedAt,
             ticket.AssistanceNote,
-            ticket.IsAiProcessing);
+            ticket.IsAiProcessing,
+            ticket.AssignedByUserId,
+            ticket.ClosedByUserId);
 
     public static TeamResponseDto ToDto(this Team team) =>
         new(team.Id, team.Name, team.Description, team.IsActive, team.CreatedAt, team.AssetType, team.TicketCriticality);

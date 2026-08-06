@@ -309,11 +309,11 @@ Les **noms de propriétés** sont en `camelCase`, les **valeurs d'enums** resten
 | Versioning | **`/api/v1/...`** (décision 0.15) — à appliquer avant la construction des écrans ; les URL non versionnées disparaissent, sans période de dépréciation, le seul client étant livré depuis ce dépôt |
 | Types | générés depuis le C# (`/sync-api-dtos`), regroupés dans `shared/models/` |
 | Erreurs | intercepteur unique traduisant `ProblemDetails` en `ApiError` (`validation` · `business` · `notFound` · `conflict` · `server` · `network`) ; les clés du dictionnaire `errors` sont converties de `PascalCase` en `camelCase` pour correspondre aux contrôles de formulaire ; le `detail` d'une 5xx n'est **jamais** affiché, seul le `traceId` l'est |
-| Authentification (préparée) | `authTokenInterceptor` + `AuthTokenService` en place mais **sans source de jeton**. Schéma retenu (décision 0.1) : **OIDC sur annuaire d'entreprise (Entra ID)**, autorisation avec code et PKCE côté navigateur, validation `JWT Bearer` côté API. Le Lot 7 alimente le service ; le jeton n'est joint qu'aux URL de l'API |
+| Authentification (Lot 7) | `authTokenInterceptor` + `AuthTokenService` alimentés par MSAL (bibliothèque de flux uniquement, PKCE, `acquireTokenSilent`) via `EntraAuthService`. Validation `JWT Bearer` côté API. 🟡 inerte tant que le tenant Entra ID réel n'est pas enregistré (étape 7.0) — `environment.entra.*` reste vide. Le jeton n'est joint qu'aux URL de l'API |
 | Codes de statut | ressource absente → **404** ; règle métier refusée → 400 ; création → 201 avec en-tête `Location` ; mise à jour d'équipe → 200 |
 | Listes | seul `GET /api/tickets` est paginé (enveloppe `{ items, page, pageSize, totalCount, totalPages }`) ; l'inventaire et les équipes se filtrent côté client |
 | Temps réel | `@microsoft/signalr` sur `/ticketHub` ; `JoinTeamGroup(nomEquipe)` puis écoute de `ReceiveNewTicket` |
-| Authentification | ⛔ inexistante côté API : l'interceptor de jeton peut être préparé, il n'a rien à porter |
+| Authentification | ✅ requise côté API (Lot 7, `[Authorize]`) ; 🟡 inerte en pratique tant que le tenant Entra ID n'est pas enregistré (étape 7.0) |
 | Fraîcheur des données | `GET /api/assets` est servi d'un cache serveur de 5 minutes **invalidé par les écritures** : un rechargement après création ou mise au rebut reflète immédiatement l'état réel |
 
 ---
@@ -334,7 +334,7 @@ Constats vérifiés, classés par gravité. Le détail comportemental est dans [
 
 | Gravité | Constat | Effet |
 |---|---|---|
-| **Critique** | aucune authentification ni autorisation | API totalement ouverte ; schéma retenu (décision 0.1 : OIDC / Entra ID), réalisation au Lot 7 |
+| ~~**Critique**~~ | ~~aucune authentification ni autorisation~~ | ✅ **résolu au Lot 7** (décision 0.1 : OIDC / Entra ID, `[Authorize]` côté API) ; 🟡 le tenant Entra ID réel (étape 7.0) reste à enregistrer en exploitation |
 | **Majeur** | file d'analyse IA en mémoire | demandes perdues au redémarrage |
 | **Majeur** | base vectorielle jamais alimentée en production | assistance IA sans corpus, valeur nulle ; **décision 0.7 tranchée** : indexation à la clôture et rétro-indexation, au Lot 6 |
 | **Majeur** | fin d'analyse IA non notifiée | l'état `isAiProcessing` est exposé mais son évolution n'est observable que par relecture |

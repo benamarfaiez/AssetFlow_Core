@@ -67,6 +67,10 @@ namespace AssetFlowCore.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("asset_id");
 
+                    b.Property<Guid?>("AssignedByUserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("assigned_by_user_id");
+
                     b.Property<Guid>("AssignedTeamId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("assigned_team_id");
@@ -74,6 +78,10 @@ namespace AssetFlowCore.Infrastructure.Migrations
                     b.Property<string>("AssistanceNote")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("assistance_note");
+
+                    b.Property<Guid?>("ClosedByUserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("closed_by_user_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
@@ -121,8 +129,12 @@ namespace AssetFlowCore.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AssignedByUserId");
+
                     b.HasIndex("AssignedTeamId")
                         .HasDatabaseName("IX_t_tickets_assigned_team_id");
+
+                    b.HasIndex("ClosedByUserId");
 
                     b.HasIndex("AssetId", "Status")
                         .HasDatabaseName("IX_t_maintenance_tickets_asset_id_status");
@@ -181,6 +193,48 @@ namespace AssetFlowCore.Infrastructure.Migrations
                     b.ToTable("t_teams", (string)null);
                 });
 
+            modelBuilder.Entity("AssetFlowCore.Domain.Entities.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("external_id");
+
+                    b.Property<Guid?>("TeamId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("team_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_t_users_external_id");
+
+                    b.HasIndex("TeamId");
+
+                    b.ToTable("t_users", (string)null);
+                });
+
             modelBuilder.Entity("AssetFlowCore.Domain.Entities.Asset", b =>
                 {
                     b.OwnsOne("AssetFlowCore.Domain.ValueObjects.SerialNumber", "SerialNumber", b1 =>
@@ -217,15 +271,33 @@ namespace AssetFlowCore.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AssetFlowCore.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("AssignedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("AssetFlowCore.Domain.Entities.Team", "AssignedTeam")
                         .WithMany("Tickets")
                         .HasForeignKey("AssignedTeamId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AssetFlowCore.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ClosedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Asset");
 
                     b.Navigation("AssignedTeam");
+                });
+
+            modelBuilder.Entity("AssetFlowCore.Domain.Entities.User", b =>
+                {
+                    b.HasOne("AssetFlowCore.Domain.Entities.Team", null)
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("AssetFlowCore.Domain.Entities.Asset", b =>
