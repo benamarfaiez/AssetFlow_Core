@@ -1,7 +1,7 @@
 // Contrat synchronisé depuis le backend .NET — ne pas modifier à la main.
 // Sources : AssetFlowCore.Application/DTOs/AssetResponseDto.cs
 //           AssetFlowCore.Application/DTOs/AssetDetailResponseDto.cs
-//           AssetFlowCore.WebApi/Requests/RegisterAssetRequest.cs
+//           AssetFlowCore.WebApi/Requests/RegisterAssetRequest.cs · RestoreAssetToServiceRequest.cs
 //           AssetFlowCore.Domain/Enums/AssetType.cs · AssetStatus.cs
 // Resynchroniser avec : /sync-api-dtos AssetFlowCore.WebApi/Controllers/AssetsController.cs
 
@@ -77,4 +77,12 @@ export interface RegisterAssetRequest {
   readonly name: string;
   readonly serialNumber: string;
   readonly type: AssetType;
+}
+
+/**
+ * `RestoreAssetToServiceRequest` — corps de la remise en service d'un actif au rebut
+ * (décision 0.4). Le motif est obligatoire ; l'opération est réservée au rôle `Administrateur`.
+ */
+export interface RestoreAssetToServiceRequest {
+  readonly reason: string;
 }

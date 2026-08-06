@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.Domain.Entities;
+using AssetFlowCore.Domain.Entities;
 using AssetFlowCore.Domain.Enums;
 using AssetFlowCore.Infrastructure.Persistence.Repositories;
 using FluentAssertions;
@@ -34,5 +34,40 @@ public class MaintenanceTicketRepositoryTests : IntegrationTestBase
         var activeCount = await repository.CountActiveTicketsByAssetIdAsync(assetId);
 
         activeCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task TransferToTeam_Then_AddTransferHistoryAsync_ShouldPersist_WithoutConcurrencyConflict()
+    {
+        // Réaffecter l'équipe (RowVersion) et ajouter une entrée d'historique doivent pouvoir
+        // se persister dans le même SaveChanges — la navigation TransferHistory est ignorée par
+        // EF précisément pour permettre cette combinaison (voir MaintenanceTicket.LoadTransferHistory).
+        var dbName = Guid.NewGuid().ToString();
+        var ticketId = Guid.NewGuid();
+
+        Team teamOld, teamNew;
+        using (var writeContext = CreateInMemoryDbContext(dbName))
+        {
+            teamOld = new Team("Equipe-Origine", "Laptop", "Low", "desc");
+            teamNew = new Team("Equipe-Cible", "Laptop", "Low", "desc");
+            var ticket = new MaintenanceTicket(ticketId, Guid.NewGuid(), "Titre", "Description", TicketCriticality.Low, teamOld.Id);
+            await writeContext.Teams.AddRangeAsync(teamOld, teamNew);
+            await writeContext.Tickets.AddAsync(ticket);
+            await writeContext.SaveChangesAsync();
+        }
+
+        using var context = CreateInMemoryDbContext(dbName);
+        var repository = new MaintenanceTicketRepository(context);
+        var ticketLoaded = await repository.GetByIdWithTrackingAsync(ticketId);
+        var teamNewLoaded = await context.Teams.FindAsync(teamNew.Id);
+
+        var historyEntry = ticketLoaded!.TransferToTeam(teamNewLoaded!, "Besoin d'une expertise réseau.");
+        await repository.AddTransferHistoryAsync(historyEntry);
+        await context.SaveChangesAsync();
+
+        var history = await repository.GetTransferHistoryAsync(ticketId);
+        history.Should().ContainSingle();
+        history.Single().FromTeamId.Should().Be(teamOld.Id);
+        history.Single().ToTeamId.Should().Be(teamNew.Id);
     }
 }

@@ -25,7 +25,7 @@ public class GetTicketsQueryValidator : AbstractValidator<GetTicketsQuery>
         RuleFor(x => x.Status)
             .IsEnumName(typeof(TicketStatus), caseSensitive: false)
             .When(x => !string.IsNullOrWhiteSpace(x.Status))
-            .WithMessage("L'état doit être l'un des suivants : Opened, InProgress, Resolved ou Closed.");
+            .WithMessage("L'état doit être l'un des suivants : Opened, InProgress ou Closed.");
 
         RuleFor(x => x.Criticality)
             .IsEnumName(typeof(TicketCriticality), caseSensitive: false)

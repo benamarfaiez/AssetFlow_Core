@@ -2,9 +2,11 @@
 
 Documentation de référence de l'API HTTP exposée par `AssetFlowCore.WebApi`, destinée aux consommateurs de l'API (notamment le frontend Angular).
 
-> **Portée et fiabilité de ce document.** Tout ce qui suit a été relevé directement dans le code source le **2026-08-05**, après les lots de corrections backend (Lot 1) et de complétion du contrat (Lot 2) — controllers, commandes, validateurs FluentValidation, handlers, entités, configurations EF Core, middleware d'exception. Les comportements documentés sont ceux **réellement implémentés**, y compris lorsqu'ils s'écartent des attributs `ProducesResponseType` déclarés sur les controllers. La section [Écarts et limitations connus](#9-écarts-et-limitations-connus) recense ces divergences.
+> **Portée et fiabilité de ce document.** Tout ce qui suit a été relevé directement dans le code source le **2026-08-06**, après les lots de corrections backend (Lot 1), de complétion du contrat (Lot 2) et du Lot 2 bis (contrat débloqué par le Lot 0) — controllers, commandes, validateurs FluentValidation, handlers, entités, configurations EF Core, middleware d'exception. Les comportements documentés sont ceux **réellement implémentés**, y compris lorsqu'ils s'écartent des attributs `ProducesResponseType` déclarés sur les controllers. La section [Écarts et limitations connus](#9-écarts-et-limitations-connus) recense ces divergences.
 
-> **Ruptures de contrat du Lot 2.** Un client écrit contre la version précédente doit être repris sur quatre points : les ressources introuvables répondent désormais **404** et non 400 ; `PUT /api/teams/{id}` répond **200** et non 201 ; `TicketResponseDto` et `TeamResponseDto` portent de nouveaux champs ; les réponses `201` portent un en-tête `Location`.
+> **Ruptures de contrat du Lot 2.** Un client écrit contre la version antérieure au Lot 2 doit être repris sur quatre points : les ressources introuvables répondent désormais **404** et non 400 ; `PUT /api/v1/teams/{id}` répond **200** et non 201 ; `TicketResponseDto` et `TeamResponseDto` portent de nouveaux champs ; les réponses `201` portent un en-tête `Location`.
+>
+> **Ruptures de contrat du Lot 2 bis.** Un client écrit contre la version antérieure au Lot 2 bis doit être repris sur trois points supplémentaires : toutes les routes sont désormais sous `/api/v1/...` (l'ancien préfixe a disparu) ; `TicketStatus.Resolved` n'existe plus ; le motif de transfert n'est plus concaténé à `description` mais exposé dans `TicketResponseDto.transferHistory`. Voir [§9](#9-écarts-et-limitations-connus) pour le détail.
 
 ## Sommaire
 
@@ -30,20 +32,20 @@ Documentation de référence de l'API HTTP exposée par `AssetFlowCore.WebApi`, 
 | Framework | ASP.NET Core (.NET 8), controllers MVC |
 | Base d'URL en développement | `http://localhost:5046` · `https://localhost:7138` |
 | Base d'URL en conteneur | `http://localhost:8080` (docker-compose) |
-| Préfixe des routes | `/api/[controller]` → `/api/assets`, `/api/tickets`, `/api/teams` |
-| Versioning | **Aucun** — pas de segment de version ni d'en-tête de version |
+| Préfixe des routes | `/api/v1/[controller]` → `/api/v1/assets`, `/api/v1/tickets`, `/api/v1/teams` |
+| Versioning | **Segment d'URL `/v1`** (décision 0.15, Lot 2 bis) — pas de période de dépréciation pour l'ancien préfixe non versionné |
 | Format d'échange | JSON (`application/json`), erreurs en `application/problem+json` |
 | Documentation interactive | Swagger UI sur `/swagger` — **Development uniquement** |
 | Authentification | **JWT Bearer** (Entra ID/OIDC) requis sur toute route hors sondes et documentation (voir [§9](#authentification-jwt-bearer-entra-id)). Tenant réel non encore enregistré (étape 7.0) |
-| Pagination / filtrage / tri | sur `GET /api/tickets` uniquement ([§6.1](#61-get-apitickets--lister-les-incidents)) |
+| Pagination / filtrage / tri | sur `GET /api/v1/tickets` uniquement ([§6.1](#61-get-apiv1tickets--lister-les-incidents)) |
 
 ### Ressources et opérations
 
 | Ressource | Opérations disponibles |
 |---|---|
-| **Assets** (actifs matériels) | lister, consulter par id (avec ses incidents), créer, mettre au rebut |
-| **Tickets** (incidents de maintenance) | lister (filtres, tri, pagination), consulter par id, créer, prendre en charge, clôturer, transférer |
-| **Teams** (équipes d'astreinte) | lister, consulter par id, créer, modifier, supprimer |
+| **Assets** (actifs matériels) | lister, consulter par id (avec ses incidents), créer, mettre au rebut, **remettre en service** |
+| **Tickets** (incidents de maintenance) | lister (filtres, tri, pagination), consulter par id, créer, prendre en charge, clôturer, transférer (motif historisé) |
+| **Teams** (équipes d'astreinte) | lister, consulter par id, créer, modifier, supprimer, **activer**, **désactiver** |
 
 ---
 
@@ -77,7 +79,7 @@ Documentation de référence de l'API HTTP exposée par `AssetFlowCore.WebApi`, 
 | `409 Conflict` | conflit de concurrence optimiste |
 | `500 Internal Server Error` | toute autre exception non gérée |
 
-`201 Created` porte l'en-tête **`Location`** pointant vers la ressource créée : `/api/Assets/{id}`, `/api/Tickets/{id}`, `/api/Teams/{id}`. La casse du segment reprend le nom du controller ; le routage étant insensible à la casse, l'adresse est directement suivable.
+`201 Created` porte l'en-tête **`Location`** pointant vers la ressource créée : `/api/v1/Assets/{id}`, `/api/v1/Tickets/{id}`, `/api/v1/Teams/{id}`. La casse du segment reprend le nom du controller ; le routage étant insensible à la casse, l'adresse est directement suivable.
 
 ---
 
@@ -104,8 +106,8 @@ Les règles métier du domaine — y compris les transitions d'état d'un incide
 
 | Situation | Code | Exemple |
 |---|---|---|
-| La ressource **désignée par l'URI** n'existe pas | **404** | `GET /api/tickets/{id}` sur un identifiant inconnu |
-| Une référence portée par le **corps** ou la chaîne de requête ne correspond à rien | **400** | `POST /api/tickets/{id}/transfer` vers une équipe inconnue ; `POST /api/tickets` sur un actif inexistant |
+| La ressource **désignée par l'URI** n'existe pas | **404** | `GET /api/v1/tickets/{id}` sur un identifiant inconnu |
+| Une référence portée par le **corps** ou la chaîne de requête ne correspond à rien | **400** | `POST /api/v1/tickets/{id}/transfer` vers une équipe inconnue ; `POST /api/v1/tickets` sur un actif inexistant |
 
 La requête est recevable dans le second cas : c'est la donnée fournie qui est refusée, au même titre qu'une valeur d'énumération invalide.
 
@@ -182,9 +184,9 @@ Le `detail` est un message générique : le message d'exception est **journalis�
 | `AssetType` | `Server` · `Laptop` · `NetworkDevice` |
 | `AssetStatus` | `InService` · `Down` · `InMaintenance` · `Decommissioned` |
 | `TicketCriticality` | `Low` · `Medium` · `High` |
-| `TicketStatus` | `Opened` · `InProgress` · `Resolved` · `Closed` |
+| `TicketStatus` | `Opened` · `InProgress` · `Closed` |
 
-> `TicketStatus.Resolved` existe dans le modèle mais **aucun endpoint ne l'attribue** : le cycle réel est `Opened → InProgress → Closed`. La valeur est **supprimée** par la décision 0.3 du 2026-08-05 : un client ne doit pas la traiter, ni l'envoyer comme filtre.
+> `TicketStatus.Resolved` a été **supprimée** de l'énumération (décision 0.3, Lot 2 bis) : le cycle est `Opened → InProgress → Closed`, sans étape intermédiaire de résolution.
 
 ### `AssetResponseDto`
 
@@ -199,7 +201,7 @@ Le `detail` est un message générique : le message d'exception est **journalis�
 
 ### `AssetDetailResponseDto`
 
-Renvoyé par `GET /api/assets/{id}`. Reprend tous les champs d'`AssetResponseDto` et y ajoute :
+Renvoyé par `GET /api/v1/assets/{id}`. Reprend tous les champs d'`AssetResponseDto` et y ajoute :
 
 | Propriété JSON | Type | Description |
 |---|---|---|
@@ -222,7 +224,7 @@ Le contexte de l'actif étant déjà porté par la fiche, cette forme réduite n
 | `id` | `string` (Guid) | |
 | `assetId` | `string` (Guid) | actif concerné |
 | `title` | `string` | max. 150 caractères |
-| `description` | `string` | description de l'anomalie, **enrichie du motif à chaque transfert** |
+| `description` | `string` | description de l'anomalie, **exactement celle saisie à l'ouverture** — un transfert ne la modifie plus (décision 0.5, Lot 2 bis) |
 | `criticality` | `TicketCriticality` | |
 | `status` | `TicketStatus` | |
 | `assignedTeamId` | `string \| null` | équipe résolue par le moteur d'assignation |
@@ -231,8 +233,24 @@ Le contexte de l'actif étant déjà porté par la fiche, cette forme réduite n
 | `createdAt` | `string` (date-heure) | UTC, date d'ouverture |
 | `assistanceNote` | `string \| null` | note d'assistance **Markdown** produite par l'analyse IA ; `null` tant qu'elle n'a pas abouti |
 | `isAiProcessing` | `boolean` | vrai tant que l'analyse IA est en cours ; repasse à faux qu'elle réussisse ou échoue |
+| `assignedByUserId` | `string \| null` (Guid) | auteur de la prise en charge (décision 0.2) ; `null` tant que jamais pris en charge |
+| `closedByUserId` | `string \| null` (Guid) | auteur de la clôture (décision 0.2) ; `null` tant que non clôturé |
+| `transferHistory` | `TicketTransferHistoryDto[]` | historique des transferts (décision 0.5), du plus ancien au plus récent. **Peuplé uniquement par `GET /api/v1/tickets/{id}`** — tableau vide sur les autres réponses portant ce DTO (liste, création), la collection n'y étant pas chargée |
 
 > Le couple `assistanceNote` / `isAiProcessing` permet à un écran d'afficher « analyse en cours » puis la note. La fin de traitement n'étant notifiée par aucun événement temps réel, le client doit relire l'incident pour l'observer (voir [§10.4](#104-assistance-ia-asynchrone)).
+
+#### `TicketTransferHistoryDto`
+
+| Propriété JSON | Type | Description |
+|---|---|---|
+| `fromTeamId` | `string` (Guid) | équipe d'origine au moment du transfert |
+| `fromTeamName` | `string` | nom résolu de l'équipe d'origine ; `"Équipe inconnue"` si l'équipe a depuis été supprimée |
+| `toTeamId` | `string` (Guid) | équipe cible |
+| `toTeamName` | `string` | nom résolu de l'équipe cible |
+| `reason` | `string` | motif saisi lors du transfert, max. 1000 caractères |
+| `transferredAt` | `string` (date-heure) | UTC |
+
+Aucune contrainte de clé étrangère vers `t_teams` : une équipe historiquement transférée peut être supprimée depuis sans que cela bloque sa suppression, laquelle ne vérifie que les tickets **actifs** qui lui sont assignés.
 
 ### `TeamResponseDto`
 
@@ -248,7 +266,7 @@ Le contexte de l'actif étant déjà porté par la fiche, cette forme réduite n
 
 ### `PagedResultDto<T>`
 
-Enveloppe de pagination, aujourd'hui utilisée par `GET /api/tickets`.
+Enveloppe de pagination, aujourd'hui utilisée par `GET /api/v1/tickets`.
 
 | Propriété JSON | Type | Description |
 |---|---|---|
@@ -267,12 +285,13 @@ Une page au-delà de la dernière renvoie `items` vide avec un `totalCount` inch
 | `t_assets` | `name` requis (100) · `serial_num` requis (50) **unique** |
 | `t_teams` | `name` requis (100) **unique** (`IX_t_teams_name`) · `asset_type` requis (100) · `ticket_criticality` requis (100) · `description` (500) · index sur `is_active` |
 | `t_maintenance_tickets` | `title` requis (150) · `description` requis (`nvarchar(max)`) · `asset_id` et `assigned_team_id` requis · `row_version` = jeton de concurrence · index `(asset_id, status)` et `assigned_team_id` · suppression des équipes et actifs référencés en `RESTRICT` |
+| `t_ticket_transfer_histories` | `reason` requis (1000) · `maintenance_ticket_id` requis, FK vers `t_maintenance_tickets` en `RESTRICT`, index dédié · **aucune** FK vers `t_teams` (`from_team_id`/`to_team_id` sont de simples colonnes `Guid`) |
 
 ---
 
 ## 5. Endpoints — Assets
 
-### 5.1 `GET /api/assets` — Lister les actifs
+### 5.1 `GET /api/v1/assets` — Lister les actifs
 
 Retourne l'inventaire complet, sans pagination ni filtre.
 
@@ -280,7 +299,7 @@ Retourne l'inventaire complet, sans pagination ni filtre.
 - **Mise en cache** : réponse servie depuis un cache mémoire de **5 minutes**, invalidé par toute écriture sur un actif — voir [§10.1](#101-cache-mémoire-et-fraîcheur-des-données).
 
 ```bash
-curl https://localhost:7138/api/assets
+curl https://localhost:7138/api/v1/assets
 ```
 
 ```json
@@ -296,7 +315,7 @@ curl https://localhost:7138/api/assets
 ]
 ```
 
-### 5.2 `GET /api/assets/{id}` — Consulter un actif et ses incidents
+### 5.2 `GET /api/v1/assets/{id}` — Consulter un actif et ses incidents
 
 Fiche unitaire : les caractéristiques de l'actif et l'ensemble de ses incidents, du plus récent au plus ancien. Lecture **non mise en cache**.
 
@@ -304,7 +323,7 @@ Fiche unitaire : les caractéristiques de l'actif et l'ensemble de ses incidents
 - **Réponse `404`** : `L'actif {id} est introuvable.`
 
 ```bash
-curl https://localhost:7138/api/assets/8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f
+curl https://localhost:7138/api/v1/assets/8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f
 ```
 
 ```json
@@ -329,7 +348,7 @@ curl https://localhost:7138/api/assets/8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f
 }
 ```
 
-### 5.3 `POST /api/assets` — Enregistrer un actif
+### 5.3 `POST /api/v1/assets` — Enregistrer un actif
 
 **Corps** (`RegisterAssetRequest`)
 
@@ -339,10 +358,10 @@ curl https://localhost:7138/api/assets/8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f
 | `serialNumber` | `string` | oui | **5 à 50 caractères**, normalisé en majuscules sans espaces de bord, unique |
 | `type` | `AssetType` | oui | `Server` · `Laptop` · `NetworkDevice` (casse indifférente) |
 
-- **Réponse `201 Created`** : `AssetResponseDto` (statut initial `InService`), avec l'en-tête `Location: /api/Assets/{id}`
+- **Réponse `201 Created`** : `AssetResponseDto` (statut initial `InService`), avec l'en-tête `Location: /api/v1/Assets/{id}`
 
 ```bash
-curl -X POST https://localhost:7138/api/assets \
+curl -X POST https://localhost:7138/api/v1/assets \
   -H "Content-Type: application/json" \
   -d '{"name":"Poste comptabilité","serialNumber":"lpt-00871","type":"laptop"}'
 ```
@@ -370,15 +389,15 @@ curl -X POST https://localhost:7138/api/assets \
 
 > La vérification d'unicité précède la validation du format : un `serialNumber` de moins de 5 caractères déjà présent en base renvoie l'erreur de doublon, pas l'erreur de longueur.
 
-### 5.4 `PUT /api/assets/{id}/decommission` — Mettre au rebut
+### 5.4 `PUT /api/v1/assets/{id}/decommission` — Mettre au rebut
 
-Passe l'actif en `Decommissioned`. Opération **irréversible** (aucun endpoint ne remet un actif en service).
+Passe l'actif en `Decommissioned`. Réversible via [§5.5](#55-put-apiv1assetsidrestore-to-service--remettre-en-service) (décision 0.4, Lot 2 bis).
 
 - **Paramètre** : `id` (Guid, contraint par la route)
 - **Réponse `204 No Content`**
 
 ```bash
-curl -X PUT https://localhost:7138/api/assets/8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f/decommission
+curl -X PUT https://localhost:7138/api/v1/assets/8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f/decommission
 ```
 
 **Erreurs**
@@ -390,11 +409,41 @@ curl -X PUT https://localhost:7138/api/assets/8f14e45f-ceea-467a-9c33-1b2f3c4d5e
 
 > Un incident « en cours » est un ticket au statut `Opened` ou `InProgress`.
 
+### 5.5 `PUT /api/v1/assets/{id}/restore-to-service` — Remettre en service
+
+Remet un actif **mis au rebut** en service (décision 0.4, Lot 2 bis). Réservé au rôle **`Administrateur`** (Lot 7). Motif obligatoire, non persisté mais journalisé (`ILogger`) — aucune entité d'historique dédiée, à la différence du transfert de ticket ([§6.6](#66-post-apiv1ticketsidtransfer--transférer-à-une-autre-équipe)).
+
+**Corps** (`RestoreAssetToServiceRequest`)
+
+| Champ | Type | Obligatoire | Contraintes |
+|---|---|---|---|
+| `reason` | `string` | oui | non vide (après trim) |
+
+- **Réponse `204 No Content`**
+
+```bash
+curl -X PUT https://localhost:7138/api/v1/assets/8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f/restore-to-service \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <jeton avec le rôle Administrateur>" \
+  -d '{"reason":"Mise au rebut réalisée par erreur"}'
+```
+
+**Erreurs**
+
+| Cause | Code | `detail` |
+|---|---|---|
+| actif inexistant | **404** | `L'actif {id} est introuvable.` |
+| `reason` vide | 400 | `Le motif de remise en service est obligatoire.` |
+| actif non `Decommissioned` | 400 | `Seul un actif mis au rebut peut être remis en service.` |
+| rôle insuffisant | **403** | — |
+
+> Une fois remis en service, l'actif redevient immédiatement éligible à l'ouverture d'un incident ([§6.2](#62-post-apiv1tickets--ouvrir-un-ticket)), qui rejette tout actif `Decommissioned`. Le numéro de série reste unique quel que soit l'état de l'actif : cette contrainte ne filtre jamais sur le statut.
+
 ---
 
 ## 6. Endpoints — Tickets
 
-### 6.1 `GET /api/tickets` — Lister les incidents
+### 6.1 `GET /api/v1/tickets` — Lister les incidents
 
 Liste **paginée** des incidents, avec filtres et tri. Lecture directe en base, sans cache.
 
@@ -402,7 +451,7 @@ Liste **paginée** des incidents, avec filtres et tri. Lecture directe en base, 
 
 | Paramètre | Type | Défaut | Description |
 |---|---|---|---|
-| `status` | `TicketStatus` | — | `Opened` · `InProgress` · `Resolved` · `Closed` |
+| `status` | `TicketStatus` | — | `Opened` · `InProgress` · `Closed` |
 | `criticality` | `TicketCriticality` | — | `Low` · `Medium` · `High` |
 | `teamId` | `string` (Guid) | — | équipe assignée |
 | `assetId` | `string` (Guid) | — | actif concerné |
@@ -416,7 +465,7 @@ Liste **paginée** des incidents, avec filtres et tri. Lecture directe en base, 
 Les tris sur `criticality` et `status` suivent l'**ordre métier**, non l'ordre alphabétique du texte stocké : décroissant sur la criticité place `High` en tête ; décroissant sur le statut place le stade le plus avancé du cycle de vie en tête. Le tri est complété par l'identifiant, de sorte qu'une valeur de tri partagée ne fasse pas varier la composition des pages d'un appel à l'autre.
 
 ```bash
-curl "https://localhost:7138/api/tickets?status=Opened&criticality=High&sortBy=CreatedAt&page=1&pageSize=20"
+curl "https://localhost:7138/api/v1/tickets?status=Opened&criticality=High&sortBy=CreatedAt&page=1&pageSize=20"
 ```
 
 ```json
@@ -450,13 +499,13 @@ curl "https://localhost:7138/api/tickets?status=Opened&criticality=High&sortBy=C
 |---|---|
 | `Page` | `Le numéro de page doit être supérieur ou égal à 1.` |
 | `PageSize` | `La taille de page doit être comprise entre 1 et 100.` |
-| `Status` | `L'état doit être l'un des suivants : Opened, InProgress, Resolved ou Closed.` |
+| `Status` | `L'état doit être l'un des suivants : Opened, InProgress ou Closed.` |
 | `Criticality` | `La criticité doit être l'une des suivantes : Low, Medium ou High.` |
 | `SortBy` | `Le tri doit porter sur l'un des champs suivants : CreatedAt, Criticality, Status ou Title.` |
 
 Un `teamId` ou un `assetId` inconnu n'est pas une erreur : la liste est simplement vide.
 
-### 6.2 `POST /api/tickets` — Ouvrir un ticket
+### 6.2 `POST /api/v1/tickets` — Ouvrir un ticket
 
 Crée l'incident, **résout automatiquement l'équipe d'astreinte** (pattern Strategy) et bascule l'actif en `Down`. La demande d'assistance IA est ensuite mise en file d'attente de façon asynchrone ([§10.4](#104-assistance-ia-asynchrone)).
 
@@ -469,11 +518,11 @@ Crée l'incident, **résout automatiquement l'équipe d'astreinte** (pattern Str
 | `description` | `string` | oui | non vide (stocké en `nvarchar(max)`) |
 | `criticality` | `TicketCriticality` | oui | `Low` · `Medium` · `High` (casse indifférente) |
 
-- **Réponse `201 Created`** : `TicketResponseDto` (statut `Opened`), avec l'en-tête `Location: /api/Tickets/{id}`
+- **Réponse `201 Created`** : `TicketResponseDto` (statut `Opened`), avec l'en-tête `Location: /api/v1/Tickets/{id}`
 - **Effets de bord** : `asset.status` → `Down` ; notification SignalR `ReceiveNewTicket` au groupe de l'équipe assignée ; ticket mis en file pour analyse IA (`isAiProcessing = true` en base).
 
 ```bash
-curl -X POST https://localhost:7138/api/tickets \
+curl -X POST https://localhost:7138/api/v1/tickets \
   -H "Content-Type: application/json" \
   -d '{"assetId":"8f14e45f-ceea-467a-9c33-1b2f3c4d5e6f","title":"Disque système saturé","description":"Le volume C: est à 99 %, les sauvegardes échouent.","criticality":"High"}'
 ```
@@ -517,24 +566,24 @@ curl -X POST https://localhost:7138/api/tickets \
 
 > ⚠️ **Prérequis de données** : sans équipes de référence en base pour le couple `(AssetType, TicketCriticality)` demandé, **toute création de ticket échoue en 400**. Voir [§10.3](#103-moteur-dassignation-automatique).
 
-### 6.3 `GET /api/tickets/{id}` — Consulter un ticket
+### 6.3 `GET /api/v1/tickets/{id}` — Consulter un ticket
 
 - **Réponse `200 OK`** : `TicketResponseDto`
 - **Erreur `404`** : `L'incident {id} est introuvable.`
 - **Erreur `400`** : `Le team avec l'ID {id} est introuvable.` — incohérence référentielle, l'équipe assignée ayant disparu
 
 ```bash
-curl https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d
+curl https://localhost:7138/api/v1/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d
 ```
 
-### 6.4 `PUT /api/tickets/{id}/assign` — Prendre en charge
+### 6.4 `PUT /api/v1/tickets/{id}/assign` — Prendre en charge
 
 Passe le ticket en `InProgress` et l'actif lié en `InMaintenance`. **Aucun corps de requête** : l'endpoint ne désigne pas de technicien, malgré son nom interne (`AssignTicketToTechnician`).
 
 - **Réponse `204 No Content`**
 
 ```bash
-curl -X PUT https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d/assign
+curl -X PUT https://localhost:7138/api/v1/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d/assign
 ```
 
 **Erreurs**
@@ -547,7 +596,7 @@ curl -X PUT https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6
 | actif pas au statut `Down` | 400 | `Règle métier violée` — `L'actif doit être en panne avant d'entrer en maintenance.` |
 | modification concurrente | 409 | `Concurrence d'accès détectée` |
 
-### 6.5 `PUT /api/tickets/{id}/close` — Clôturer
+### 6.5 `PUT /api/v1/tickets/{id}/close` — Clôturer
 
 Passe le ticket en `Closed` et, **s'il ne reste aucun autre ticket actif sur l'actif**, remet celui-ci `InService`.
 
@@ -560,7 +609,7 @@ Passe le ticket en `Closed` et, **s'il ne reste aucun autre ticket actif sur l'a
 - **Réponse `204 No Content`**
 
 ```bash
-curl -X PUT https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d/close \
+curl -X PUT https://localhost:7138/api/v1/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d/close \
   -H "Content-Type: application/json" \
   -d '{"resolutionComment":"Purge des journaux et extension du volume système."}'
 ```
@@ -575,21 +624,21 @@ curl -X PUT https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6
 | `resolutionComment` vide | 400 | `Un commentaire de résolution est obligatoire.` |
 | modification concurrente | 409 | — |
 
-### 6.6 `POST /api/tickets/{id}/transfer` — Transférer à une autre équipe
+### 6.6 `POST /api/v1/tickets/{id}/transfer` — Transférer à une autre équipe
 
-Réaffecte le ticket à une équipe **désignée par son nom** et journalise le motif **en l'ajoutant à la description du ticket** (`\n\n---\n\n**Motif du transfert :** {reason}`).
+Réaffecte le ticket à une équipe **désignée par son nom** et historise le motif dans une entrée dédiée (`TicketTransferHistoryDto`, décision 0.5, Lot 2 bis), exposée sur la fiche d'incident ([§4](#4-modèle-de-données)). La **description du ticket n'est plus modifiée** par un transfert — rupture de comportement par rapport à la version précédente du contrat, qui l'y concaténait.
 
 **Corps** (`TransferTicketRequest`)
 
 | Champ | Type | Obligatoire | Contraintes |
 |---|---|---|---|
 | `targetTeam` | `string` | oui | nom exact d'une équipe **active** |
-| `reason` | `string` | non validé | concaténé à la description |
+| `reason` | `string` | oui | historisé, max. 1000 caractères en base |
 
 - **Réponse `204 No Content`**
 
 ```bash
-curl -X POST https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d/transfer \
+curl -X POST https://localhost:7138/api/v1/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b6c7d/transfer \
   -H "Content-Type: application/json" \
   -d '{"targetTeam":"Réseau-Télécom","reason":"Cause racine identifiée sur le commutateur."}'
 ```
@@ -598,12 +647,13 @@ curl -X POST https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b
 
 | Cause | Code | Message |
 |---|---|---|
-| `TicketId` vide | 400 | `L'identifiant du ticket est requis.` (validation, avec `errors`) |
-| `TeamName` vide | 400 | `L'équipe cible est requise.` (validation, avec `errors`) |
 | ticket inexistant | **404** | `L'incident {id} est introuvable.` |
-| équipe inexistante ou inactive | 400 | `L'équipe '{nom}' n'existe pas ou n'est plus active.` — référence du corps |
+| `targetTeam` vide, inexistant ou inactif | 400 | `L'équipe '{nom}' n'existe pas ou n'est plus active.` — référence du corps ; une chaîne vide emprunte le même message |
 | ticket déjà clôturé | 400 | `Impossible de transférer un ticket clôturé.` |
 | équipe cible identique à l'actuelle | 400 | `Le ticket est déjà assigné à l'équipe '{nom}'.` |
+| `reason` vide | 400 | `Le motif du transfert est obligatoire.` — effet de bord de `TicketTransferHistory` (décision 0.5, Lot 2 bis), pas d'un validateur FluentValidation |
+
+> ⚠️ `RequestTicketTransferCommandValidator` déclare des règles FluentValidation (`TicketId`/`TeamName` non vides), mais le pipeline `MediatR` de validation ne s'exécute **jamais** pour les commandes sans valeur de retour dans ce projet (constat du Lot 2 bis, hors périmètre de correction ce lot) : ces règles ne produisent aucune erreur en pratique. Un `targetTeam` vide aboutit tout de même à un 400, via le message « équipe inexistante » ci-dessus.
 
 ---
 
@@ -611,7 +661,7 @@ curl -X POST https://localhost:7138/api/tickets/c9d8e7f6-a5b4-43c2-91d0-2e3f4a5b
 
 Les équipes portent le couple `(assetType, ticketCriticality)` qui permet au moteur d'assignation de router les tickets. Ces deux champs sont stockés **en texte** et comparés au nom de la valeur d'enum.
 
-### 7.1 `GET /api/teams` — Lister les équipes
+### 7.1 `GET /api/v1/teams` — Lister les équipes
 
 Liste complète triée par nom, sans pagination : le référentiel compte au plus quelques dizaines d'équipes.
 
@@ -623,7 +673,7 @@ Liste complète triée par nom, sans pagination : le référentiel compte au plu
 - **Mise en cache** : les deux listes (complète et actives seules) sont servies depuis un cache mémoire de **5 minutes**, invalidé par toute écriture sur une équipe.
 
 ```bash
-curl "https://localhost:7138/api/teams?onlyActive=true"
+curl "https://localhost:7138/api/v1/teams?onlyActive=true"
 ```
 
 ```json
@@ -642,12 +692,12 @@ curl "https://localhost:7138/api/teams?onlyActive=true"
 
 > Aucun endpoint ne permet **aujourd'hui** de désactiver une équipe : une équipe inactive ne peut provenir que d'une intervention en base. La décision 0.6 du plan d'implémentation, tranchée le 2026-08-05, ajoute cette opération sans retirer la suppression — voir « Évolutions de contrat décidées » au §9.
 
-### 7.2 `GET /api/teams/{id}` — Consulter une équipe
+### 7.2 `GET /api/v1/teams/{id}` — Consulter une équipe
 
 - **Réponse `200 OK`** : `TeamResponseDto`
 - **Erreur `404`** : `L'équipe {id} est introuvable.`
 
-### 7.3 `POST /api/teams` — Créer une équipe
+### 7.3 `POST /api/v1/teams` — Créer une équipe
 
 **Corps** (`CreateTeamRequest`)
 
@@ -658,10 +708,10 @@ curl "https://localhost:7138/api/teams?onlyActive=true"
 | `ticketCriticality` | `string` | oui | nom valide de `TicketCriticality` (casse indifférente) |
 | `description` | `string \| null` | non | max. 500 caractères |
 
-- **Réponse `201 Created`** : `TeamResponseDto` (`isActive` = `true`), avec l'en-tête `Location: /api/Teams/{id}`
+- **Réponse `201 Created`** : `TeamResponseDto` (`isActive` = `true`), avec l'en-tête `Location: /api/v1/Teams/{id}`
 
 ```bash
-curl -X POST https://localhost:7138/api/teams \
+curl -X POST https://localhost:7138/api/v1/teams \
   -H "Content-Type: application/json" \
   -d '{"name":"Infrastructure-Serveurs","assetType":"Server","ticketCriticality":"High","description":"Astreinte serveurs critiques"}'
 ```
@@ -677,7 +727,7 @@ curl -X POST https://localhost:7138/api/teams \
 
 **Erreur `400` de règle métier** : `Une équipe nommée '{nom}' existe déjà.` — l'unicité du nom est contrôlée avant la persistance, l'index unique `IX_t_teams_name` ne sert plus que de garde-fou.
 
-### 7.4 `PUT /api/teams/{id}` — Modifier une équipe
+### 7.4 `PUT /api/v1/teams/{id}` — Modifier une équipe
 
 Mise à jour **partielle** : chaque champ omis ou `null` est laissé inchangé.
 
@@ -694,7 +744,7 @@ Mise à jour **partielle** : chaque champ omis ou `null` est laissé inchangé.
 
 ```bash
 # Mise à jour de la seule description : les autres champs sont omis
-curl -X PUT https://localhost:7138/api/teams/5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5f \
+curl -X PUT https://localhost:7138/api/v1/teams/5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5f \
   -H "Content-Type: application/json" \
   -d '{"description":"Astreinte 24/7"}'
 ```
@@ -710,9 +760,9 @@ curl -X PUT https://localhost:7138/api/teams/5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5
 
 > La réponse n'exposant ni `assetType` ni `ticketCriticality`, un client ne peut pas confirmer la prise en compte de ces deux champs.
 
-### 7.5 `DELETE /api/teams/{id}` — Supprimer une équipe
+### 7.5 `DELETE /api/v1/teams/{id}` — Supprimer une équipe
 
-Suppression **physique** (pas de désactivation logique, bien que `isActive` existe).
+Suppression **physique et définitive**. [§7.6](#76-put-apiv1teamsidactivate--réactiver-une-équipe)/[§7.7](#77-put-apiv1teamsiddeactivate--désactiver-une-équipe) offrent une alternative **réversible** (décision 0.6, Lot 2 bis), pour une équipe créée par erreur sans avoir à la supprimer.
 
 - **Réponse `204 No Content`**
 
@@ -725,6 +775,32 @@ Suppression **physique** (pas de désactivation logique, bien que `isActive` exi
 
 > Un ticket **clôturé** rattaché à l'équipe ne bloque pas la vérification métier, mais la clé étrangère `assigned_team_id` est en `ON DELETE RESTRICT` : la suppression échoue alors au niveau base et remonte en **500**.
 
+### 7.6 `PUT /api/v1/teams/{id}/activate` — Réactiver une équipe
+
+Repasse `isActive` à `true` : l'équipe redevient éligible à `?onlyActive=true` ([§7.1](#71-get-apiv1teams--lister-les-équipes)) et aux nouvelles assignations. Réservé au rôle **`Administrateur`** (Lot 7). Aucune garde d'idempotence : réactiver une équipe déjà active réussit sans effet.
+
+- **Réponse `200 OK`** : `TeamResponseDto` reflétant l'état après activation
+
+```bash
+curl -X PUT https://localhost:7138/api/v1/teams/5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5f/activate \
+  -H "Authorization: Bearer <jeton avec le rôle Administrateur>"
+```
+
+**Erreurs** : équipe inexistante → **404** `L'équipe {id} est introuvable.` · rôle insuffisant → **403**.
+
+### 7.7 `PUT /api/v1/teams/{id}/deactivate` — Désactiver une équipe
+
+Repasse `isActive` à `false` : l'équipe disparaît de `?onlyActive=true` et cesse de recevoir de nouveaux incidents, **sans être supprimée** — ses tickets déjà assignés (y compris clôturés) restent intacts. Réservé au rôle **`Administrateur`**. Aucune garde n'empêche de désactiver la **dernière** équipe couvrant un couple (type × criticité) : un client doit avertir avant confirmation si cela rendrait un couple non couvert (`RM-12`, à la charge de l'écran d'administration, Lot 5).
+
+- **Réponse `200 OK`** : `TeamResponseDto` reflétant l'état après désactivation
+
+```bash
+curl -X PUT https://localhost:7138/api/v1/teams/5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5f/deactivate \
+  -H "Authorization: Bearer <jeton avec le rôle Administrateur>"
+```
+
+**Erreurs** : équipe inexistante → **404** `L'équipe {id} est introuvable.` · rôle insuffisant → **403**.
+
 ---
 
 ## 8. Temps réel — SignalR
@@ -735,7 +811,7 @@ Suppression **physique** (pas de désactivation logique, bien que `isActive` exi
 | Client recommandé | `@microsoft/signalr` |
 | Méthode serveur appelable | `JoinTeamGroup(teamName: string)` — abonne la connexion au groupe de l'équipe |
 | Événement reçu | `ReceiveNewTicket` avec un `TicketResponseDto` |
-| Déclenchement | après `POST /api/tickets`, diffusé **au seul groupe de l'équipe assignée** |
+| Déclenchement | après `POST /api/v1/tickets`, diffusé **au seul groupe de l'équipe assignée** |
 
 ```ts
 const connexion = new signalR.HubConnectionBuilder()
@@ -755,38 +831,33 @@ Le nom de groupe est le **nom de l'équipe**, tel que renvoyé dans `assignedTea
 
 ## 9. Écarts et limitations connus
 
-Points relevés dans le code au 2026-08-05, après les lots de corrections backend (Lot 1) et de complétion du contrat (Lot 2). Ils décrivent le comportement **réel** de l'API et doivent être pris en compte par les clients.
+Points relevés dans le code au 2026-08-06, après les lots de corrections backend (Lot 1), de complétion du contrat (Lot 2) et du Lot 2 bis (contrat débloqué par le Lot 0). Ils décrivent le comportement **réel** de l'API et doivent être pris en compte par les clients.
 
 ### Endpoints manquants
 
 | Manque | Conséquence pour un client |
 |---|---|
 | pas de modification d'un actif | nom, numéro de série et type sont figés à la création — aucune décision prise, le besoin n'étant pas exprimé |
-| pas de remise en service d'un actif | `Decommissioned` est un état terminal, et le numéro de série reste réservé : un rebut par erreur interdit de réenregistrer la machine. **Décidé le 2026-08-05** (voir « Évolutions décidées » plus bas) |
 | pas de recherche plein texte | la liste d'incidents se filtre par état, criticité, équipe et actif, pas par mots du titre ou de la description |
-| pas de pagination sur l'inventaire ni sur les équipes | `GET /api/assets` et `GET /api/teams` renvoient l'intégralité de la collection |
+| pas de pagination sur l'inventaire ni sur les équipes | `GET /api/v1/assets` et `GET /api/v1/teams` renvoient l'intégralité de la collection |
 
-### Cycle de vie incomplet
+### Évolutions de contrat livrées au Lot 2 bis (2026-08-06)
 
-- `TicketStatus.Resolved` reste inatteignable : aucun endpoint ne l'attribue, bien que le filtre `status=Resolved` l'accepte (et renvoie une liste vide).
-- Aucun endpoint ne désactive une équipe, alors que `isActive` est exposé et exploité par le filtre `onlyActive`.
-- Le **motif de transfert** est concaténé à la description de l'incident plutôt qu'historisé à part : la description s'allonge à chaque transfert et son texte d'origine n'est plus isolable.
+Le Lot 0 du [plan d'implémentation](IMPLEMENTATION-PLAN.md) (§3, réalisation ordonnancée en §5.1) avait arrêté cinq évolutions modifiant ce contrat. **Les cinq sont livrées** : les sections 5 à 8 ci-dessus décrivent déjà le comportement réel qui en résulte. Un client écrit contre la version précédente du contrat doit être repris sur les trois ruptures.
 
-> Ces trois points dépendaient des décisions 0.3, 0.5 et 0.6 du plan d'implémentation, **toutes tranchées le 2026-08-05** : `Resolved` est supprimé, le motif de transfert est historisé à part, la désactivation d'équipe est exposée. Voir « Évolutions de contrat décidées » plus bas.
-
-### Évolutions de contrat décidées, non encore implémentées (2026-08-05)
-
-Le Lot 0 du [plan d'implémentation](IMPLEMENTATION-PLAN.md) (§3, réalisation ordonnancée en §5.1) a arrêté cinq évolutions qui **modifient ce contrat**. Elles ne sont pas réalisées : tout ce qui est décrit dans les sections 5 à 8 reste le comportement réel de l'API à ce jour. Un client écrit maintenant doit s'attendre à ces ruptures, prévues **avant** la construction des écrans.
-
-| Évolution décidée | Effet sur le contrat | Nature |
+| Évolution | Effet sur le contrat | Nature |
 |---|---|---|
-| **URL versionnées** `/api/v1/...` | les 15 routes changent de préfixe ; les anciennes disparaissent, **sans période de dépréciation** | ⛔ rupture |
-| **Suppression de `TicketStatus.Resolved`** | l'énumération passe à trois valeurs ; `GET /api/tickets?status=Resolved` devient une valeur invalide (400) au lieu d'une liste vide | ⛔ rupture |
-| **Historique de transferts** | `POST /api/tickets/{id}/transfer` cesse d'ajouter le motif à `description` ; l'historique (équipe d'origine, équipe cible, motif, date) est exposé sur la fiche d'incident | ⛔ rupture de comportement pour un client qui lisait le motif dans la description |
-| **Activation / désactivation d'équipe** | nouvelle opération sur `Team` ; `isActive` devient pilotable, et `?onlyActive=true` reflète enfin un état modifiable | ➕ additif |
-| **Remise en service d'un actif** | nouvelle opération, motif obligatoire ; `Decommissioned` cesse d'être terminal. Réservée à un rôle d'administrateur une fois l'authentification en place | ➕ additif |
+| **URL versionnées** `/api/v1/...` | les 15 routes ont changé de préfixe ; l'ancien préfixe non versionné a disparu, **sans période de dépréciation** | ⛔ rupture |
+| **Suppression de `TicketStatus.Resolved`** | l'énumération ne porte plus que trois valeurs ; `GET /api/v1/tickets?status=Resolved` est désormais une valeur invalide (400) | ⛔ rupture |
+| **Historique de transferts** | `POST /api/v1/tickets/{id}/transfer` n'ajoute plus le motif à `description` ; l'historique (équipe d'origine, équipe cible, motif, date) est exposé sur la fiche d'incident (`TicketResponseDto.transferHistory`) | ⛔ rupture de comportement pour un client qui lisait le motif dans la description |
+| **Activation / désactivation d'équipe** | `PUT /api/v1/teams/{id}/activate` et `.../deactivate` ; `isActive` est désormais pilotable, réservé au rôle `Administrateur` | ➕ additif |
+| **Remise en service d'un actif** | `PUT /api/v1/assets/{id}/restore-to-service`, motif obligatoire ; `Decommissioned` n'est plus un état terminal. Réservée au rôle `Administrateur` | ➕ additif |
 
 Deux évolutions supplémentaires ont été livrées au Lot 7, toutes deux **additives** : l'exigence d'un jeton `JWT Bearer` sur l'ensemble des routes (hors sondes), et l'exposition de l'identité de l'auteur d'une prise en charge ou d'une clôture — `TicketResponseDto.AssignedByUserId`/`ClosedByUserId` (`Guid?`, ajoutés en fin de contrat, `null` pour un ticket jamais pris en charge ou clôturé).
+
+### Dette technique constatée (hors périmètre du Lot 2 bis)
+
+Le pipeline de validation `MediatR` (`ValidationBehavior`, `AssetFlowCore.Application/Behaviors/ValidationBehavior.cs`) ne s'exécute **jamais** pour les commandes sans valeur de retour (`IRequest` void / `MediatR.Unit`) : constaté en implémentant la remise en service d'un actif, et confirmé pré-existant sur `RequestTicketTransferCommandValidator` (ses règles `TicketId`/`TeamName` non vides ne produisent aucune erreur en pratique — un `targetTeam` vide aboutit tout de même à un 400, mais via le message « équipe inexistante », pas via la validation). Les commandes avec valeur de retour (ex. `CreateTeamCommand`) ne sont pas concernées. Non corrigé dans ce lot : la remise en service d'un actif valide donc son motif directement dans `Asset.RestoreFromDecommission`, pas via FluentValidation.
 
 ### Fin d'analyse IA non notifiée
 
@@ -796,15 +867,15 @@ Deux évolutions supplémentaires ont été livrées au Lot 7, toutes deux **add
 
 Livrée au Lot 7 (décision 0.1) : `AddAuthentication().AddJwtBearer(...)` dans `Program.cs`, activé **avant** `UseAuthorization()`. Les trois contrôleurs portent `[Authorize]` au niveau classe — toute route hors sondes (`/health`, `/alive`) et documentation (`/swagger`) exige un jeton `JWT Bearer` valide. L'API n'émet **aucun** jeton et n'expose pas d'endpoint de connexion : le client obtient son jeton de l'annuaire (OIDC, PKCE côté navigateur) et le joint en en-tête `Authorization`.
 
-**Rôles** (`AssetFlowCore.WebApi/Authorization/Roles.cs`) : `Administrateur`, `Technicien`, `GestionnaireDeParc`, `ResponsableEquipe`, dérivés des quatre personas du PRD §3 et portés par la revendication `roles` du jeton (`TokenValidationParameters.RoleClaimType`, configurable via `Authentication:Entra:RoleClaimType`, `"roles"` par défaut). Seule restriction posée à ce jour : `POST`/`PUT`/`DELETE /api/teams` exigent le rôle `Administrateur` (persona « Administrateur du référentiel », PRD §3). Tout le reste n'exige qu'un jeton valide, sans restriction de rôle additionnelle.
+**Rôles** (`AssetFlowCore.WebApi/Authorization/Roles.cs`) : `Administrateur`, `Technicien`, `GestionnaireDeParc`, `ResponsableEquipe`, dérivés des quatre personas du PRD §3 et portés par la revendication `roles` du jeton (`TokenValidationParameters.RoleClaimType`, configurable via `Authentication:Entra:RoleClaimType`, `"roles"` par défaut). Restrictions posées à ce jour : `POST`/`PUT`/`DELETE`/`.../activate`/`.../deactivate` sur `/api/v1/teams`, et `PUT /api/v1/assets/{id}/restore-to-service`, exigent le rôle `Administrateur` (persona « Administrateur du référentiel », PRD §3 ; la restriction sur la remise en service a été posée dès la création de l'endpoint, Lot 2 bis, comme anticipé à l'étape 7.2). Tout le reste n'exige qu'un jeton valide, sans restriction de rôle additionnelle.
 
 **Configuration** (`Authentication:Entra:Authority`/`Audience`/`RoleClaimType`) : présente dans `appsettings.json`/`appsettings.Development.json` avec des valeurs vides — le tenant Entra ID réel (étape 7.0 : enregistrement d'application en plateforme « Single-page application », attribution des groupes d'annuaire aux rôles ci-dessus) reste une tâche d'exploitation non réalisée. Tant qu'`Authority` est vide, l'API démarre normalement ; l'échec ne survient qu'à la première requête protégée (résolution différée des métadonnées OIDC).
 
 **Hub SignalR** (`/ticketHub`) : porte `[Authorize]`. Un WebSocket ne portant pas d'en-tête `Authorization`, le jeton est fourni en chaîne de requête (`?access_token=...`), lu par `JwtBearerEvents.OnMessageReceived` **uniquement** pour les chemins `/ticketHub` — arbitrage assumé, ce jeton atterrit dans les journaux d'accès du serveur/proxy.
 
-**Traçabilité de l'auteur** (décision 0.2) : `PUT /api/tickets/{id}/assign` et `PUT /api/tickets/{id}/close` enregistrent l'identité de l'appelant (entité `User`, provisionnée « just-in-time » à partir des revendications du jeton — `oid`, `name`, `preferred_username`) dans `MaintenanceTicket.AssignedByUserId`/`ClosedByUserId`. La prise en charge reste un geste d'équipe : aucune affectation dirigée vers une personne (`EF-21` hors périmètre).
+**Traçabilité de l'auteur** (décision 0.2) : `PUT /api/v1/tickets/{id}/assign` et `PUT /api/v1/tickets/{id}/close` enregistrent l'identité de l'appelant (entité `User`, provisionnée « just-in-time » à partir des revendications du jeton — `oid`, `name`, `preferred_username`) dans `MaintenanceTicket.AssignedByUserId`/`ClosedByUserId`. La prise en charge reste un geste d'équipe : aucune affectation dirigée vers une personne (`EF-21` hors périmètre).
 
-**Hors périmètre du Lot 7**, écarts assumés : l'enregistrement réel du tenant (étape 7.0, opérationnel) ; l'endpoint de remise en service d'un actif au rebut (2b.5, Lot 2 bis — le rôle `Administrateur` est prêt à le restreindre dès sa création) ; le rattachement d'un `User` à une équipe (Lot 6.6 — colonne `TeamId` nullable déjà présente sur `User`).
+**Hors périmètre du Lot 7**, écarts assumés : l'enregistrement réel du tenant (étape 7.0, opérationnel) ; le rattachement d'un `User` à une équipe (Lot 6.6 — colonne `TeamId` nullable déjà présente sur `User`).
 
 ### CORS
 
@@ -826,11 +897,11 @@ Les **listes** d'actifs et d'équipes sont servies par des décorateurs de cache
 
 | Scénario | Effet |
 |---|---|
-| `POST /api/assets` puis `GET /api/assets` | le nouvel actif est **présent immédiatement** |
-| `PUT /api/assets/{id}/decommission` puis `GET /api/assets` | le statut `Decommissioned` est **visible immédiatement** |
-| `POST` / `PUT` / `DELETE /api/teams` puis `GET /api/teams` | les deux listes d'équipes (complète et actives seules) sont rechargées |
+| `POST /api/v1/assets` puis `GET /api/v1/assets` | le nouvel actif est **présent immédiatement** |
+| `PUT /api/v1/assets/{id}/decommission` ou `.../restore-to-service` puis `GET /api/v1/assets` | le nouveau statut est **visible immédiatement** |
+| `POST` / `PUT` / `DELETE` / `.../activate` / `.../deactivate` sur `/api/v1/teams` puis `GET /api/v1/teams` | les deux listes d'équipes (complète et actives seules) sont rechargées |
 
-Ne sont **pas** mises en cache, et reflètent donc toujours l'état courant : `GET /api/assets/{id}` (fiche et incidents) et `GET /api/tickets` (liste paginée).
+Ne sont **pas** mises en cache, et reflètent donc toujours l'état courant : `GET /api/v1/assets/{id}` (fiche et incidents) et `GET /api/v1/tickets` (liste paginée).
 
 ### 10.2 Transactions et concurrence
 
@@ -887,54 +958,55 @@ En développement, l'API impose également une redirection HTTPS (`UseHttpsRedir
 
 ```mermaid
 stateDiagram-v2
-    [*] --> InService : POST /api/assets
-    InService --> Down : POST /api/tickets
-    Down --> InMaintenance : PUT /api/tickets/{id}/assign
-    Down --> InService : PUT /api/tickets/{id}/close<br/>(si plus aucun ticket actif)
-    InMaintenance --> InService : PUT /api/tickets/{id}/close<br/>(si plus aucun ticket actif)
-    InService --> Decommissioned : PUT /api/assets/{id}/decommission<br/>(refusé si tickets actifs)
-    Decommissioned --> [*] : état terminal
+    [*] --> InService : POST /api/v1/assets
+    InService --> Down : POST /api/v1/tickets
+    Down --> InMaintenance : PUT /api/v1/tickets/{id}/assign
+    Down --> InService : PUT /api/v1/tickets/{id}/close<br/>(si plus aucun ticket actif)
+    InMaintenance --> InService : PUT /api/v1/tickets/{id}/close<br/>(si plus aucun ticket actif)
+    InService --> Decommissioned : PUT /api/v1/assets/{id}/decommission<br/>(refusé si tickets actifs)
+    Decommissioned --> InService : PUT /api/v1/assets/{id}/restore-to-service<br/>(motif obligatoire, rôle Administrateur)
 ```
 
-Un actif reste en `Down` ou `InMaintenance` tant qu'au moins un ticket `Opened` ou `InProgress` lui est rattaché.
-
-> Décision 0.4 du 2026-08-05 : `Decommissioned` **cessera d'être terminal** — une remise en service, réservée à un administrateur et portant un motif, ramènera l'actif en `InService`. Non implémentée à ce jour.
+Un actif reste en `Down` ou `InMaintenance` tant qu'au moins un ticket `Opened` ou `InProgress` lui est rattaché. Depuis le Lot 2 bis (décision 0.4), `Decommissioned` n'est plus un état terminal.
 
 ### 12.2 Cycle de vie d'un ticket
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Opened : POST /api/tickets
-    Opened --> InProgress : PUT /api/tickets/{id}/assign
-    InProgress --> Closed : PUT /api/tickets/{id}/close
-    Opened --> Opened : POST /api/tickets/{id}/transfer
-    InProgress --> InProgress : POST /api/tickets/{id}/transfer
+    [*] --> Opened : POST /api/v1/tickets
+    Opened --> InProgress : PUT /api/v1/tickets/{id}/assign
+    InProgress --> Closed : PUT /api/v1/tickets/{id}/close
+    Opened --> Opened : POST /api/v1/tickets/{id}/transfer
+    InProgress --> InProgress : POST /api/v1/tickets/{id}/transfer
     Closed --> [*] : état terminal
 ```
 
-Le transfert réaffecte l'équipe **sans changer le statut**, et est refusé sur un ticket `Closed`. Le statut `Resolved` n'est jamais atteint par l'API, et la décision 0.3 du 2026-08-05 le **supprime** : ce cycle à trois états est donc définitif.
+Le transfert réaffecte l'équipe **sans changer le statut**, historise le motif et est refusé sur un ticket `Closed`. Depuis le Lot 2 bis (décision 0.3), `TicketStatus.Resolved` n'existe plus dans l'énumération : ce cycle à trois états est définitif.
 
 ### 12.3 Récapitulatif des opérations
 
 | Verbe | Route | Succès | Corps |
 |---|---|---|---|
-| `GET` | `/api/assets` | 200 | — |
-| `GET` | `/api/assets/{id}` | 200 | — |
-| `POST` | `/api/assets` | 201 + `Location` | `{ name, serialNumber, type }` |
-| `PUT` | `/api/assets/{id}/decommission` | 204 | — |
-| `GET` | `/api/tickets` | 200 | — (filtres, tri et pagination en chaîne de requête) |
-| `GET` | `/api/tickets/{id}` | 200 | — |
-| `POST` | `/api/tickets` | 201 + `Location` | `{ assetId, title, description, criticality }` |
-| `PUT` | `/api/tickets/{id}/assign` | 204 | — |
-| `PUT` | `/api/tickets/{id}/close` | 204 | `{ resolutionComment }` |
-| `POST` | `/api/tickets/{id}/transfer` | 204 | `{ targetTeam, reason }` |
-| `GET` | `/api/teams` | 200 | — (`?onlyActive=true` pour filtrer) |
-| `GET` | `/api/teams/{id}` | 200 | — |
-| `POST` | `/api/teams` | 201 + `Location` | `{ name, assetType, ticketCriticality, description? }` |
-| `PUT` | `/api/teams/{id}` | 200 | mêmes champs, tous optionnels |
-| `DELETE` | `/api/teams/{id}` | 204 | — |
+| `GET` | `/api/v1/assets` | 200 | — |
+| `GET` | `/api/v1/assets/{id}` | 200 | — |
+| `POST` | `/api/v1/assets` | 201 + `Location` | `{ name, serialNumber, type }` |
+| `PUT` | `/api/v1/assets/{id}/decommission` | 204 | — |
+| `PUT` | `/api/v1/assets/{id}/restore-to-service` | 204 | `{ reason }` — rôle `Administrateur` |
+| `GET` | `/api/v1/tickets` | 200 | — (filtres, tri et pagination en chaîne de requête) |
+| `GET` | `/api/v1/tickets/{id}` | 200 | — |
+| `POST` | `/api/v1/tickets` | 201 + `Location` | `{ assetId, title, description, criticality }` |
+| `PUT` | `/api/v1/tickets/{id}/assign` | 204 | — |
+| `PUT` | `/api/v1/tickets/{id}/close` | 204 | `{ resolutionComment }` |
+| `POST` | `/api/v1/tickets/{id}/transfer` | 204 | `{ targetTeam, reason }` |
+| `GET` | `/api/v1/teams` | 200 | — (`?onlyActive=true` pour filtrer) |
+| `GET` | `/api/v1/teams/{id}` | 200 | — |
+| `POST` | `/api/v1/teams` | 201 + `Location` | `{ name, assetType, ticketCriticality, description? }` |
+| `PUT` | `/api/v1/teams/{id}` | 200 | mêmes champs, tous optionnels |
+| `DELETE` | `/api/v1/teams/{id}` | 204 | — |
+| `PUT` | `/api/v1/teams/{id}/activate` | 200 | — rôle `Administrateur` |
+| `PUT` | `/api/v1/teams/{id}/deactivate` | 200 | — rôle `Administrateur` |
 
-Toute route comportant `{id}` répond **404** lorsque la ressource n'existe pas.
+Toute route comportant `{id}` répond **404** lorsque la ressource n'existe pas. Le décompte total des routes est désormais de 17 (15 + 2 endpoints additifs du Lot 2 bis).
 
 ### 12.4 Sources dans le code
 

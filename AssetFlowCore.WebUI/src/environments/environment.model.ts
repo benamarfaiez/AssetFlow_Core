@@ -34,7 +34,7 @@ export interface EnvironmentConfig {
 
   /**
    * Racine de l'API, sans barre oblique finale. Une chaîne vide signifie « même origine » :
-   * les requêtes partent en relatif (`/api/assets`). C'est le seul endroit à modifier pour
+   * les requêtes partent en relatif (`/api/v1/assets`). C'est le seul endroit à modifier pour
    * viser une API hébergée sur une autre origine.
    */
   readonly apiBaseUrl: string;

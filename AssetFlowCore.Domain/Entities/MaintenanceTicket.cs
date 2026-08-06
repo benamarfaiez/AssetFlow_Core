@@ -28,6 +28,11 @@ public class MaintenanceTicket
 
     /// <summary>Auteur de la clôture (décision 0.2) ; <c>null</c> tant que le ticket n'est pas clôturé.</summary>
     public Guid? ClosedByUserId { get; private set; }
+
+    /// <summary>Historique des transferts (décision 0.5), du plus ancien au plus récent.</summary>
+    public IReadOnlyCollection<TicketTransferHistory> TransferHistory => _transferHistory.AsReadOnly();
+    private readonly List<TicketTransferHistory> _transferHistory = [];
+
     private MaintenanceTicket()
     {
         Description = null!;
@@ -90,7 +95,12 @@ public class MaintenanceTicket
         ClosedByUserId = closedByUserId;
     }
 
-    public void TransferToTeam(Team team, string reason)
+    /// <summary>
+    /// Transfère le ticket vers une autre équipe et retourne l'entrée d'historique créée : à
+    /// persister explicitement par l'appelant (<c>IMaintenanceTicketRepository.AddTransferHistoryAsync</c>),
+    /// <see cref="TransferHistory"/> n'étant pas suivie par EF (voir <see cref="LoadTransferHistory"/>).
+    /// </summary>
+    public TicketTransferHistory TransferToTeam(Team team, string reason)
     {
         if (Status == TicketStatus.Closed)
             throw new DomainException("Impossible de transférer un ticket clôturé.");
@@ -98,8 +108,25 @@ public class MaintenanceTicket
         if (AssignedTeamId == team.Id)
             throw new DomainException($"Le ticket est déjà assigné à l'équipe '{team.Name}'.");
 
+        var entry = new TicketTransferHistory(Id, AssignedTeamId, team.Id, reason);
+        _transferHistory.Add(entry);
+
+        AssignedTeamId = team.Id;
         AssignedTeam = team;
-        Description += $"\n\n---\n\n**Motif du transfert :** {reason}";
+        return entry;
+    }
+
+    /// <summary>
+    /// Hydrate l'historique de transferts depuis une lecture séparée (repository) : la collection
+    /// n'est **pas** une navigation suivie par EF Core (voir <c>MaintenanceTicketConfiguration.Ignore</c>),
+    /// pour éviter la découverte en cascade d'un nouvel enregistrement d'historique lors du même
+    /// <c>SaveChanges</c> qui réaffecte l'équipe — combinaison qui, avec le jeton <see cref="RowVersion"/>,
+    /// fait échouer le fournisseur EF InMemory (<c>DbUpdateConcurrencyException</c> à tort).
+    /// </summary>
+    public void LoadTransferHistory(IEnumerable<TicketTransferHistory> history)
+    {
+        _transferHistory.Clear();
+        _transferHistory.AddRange(history);
     }
 
     public void SetAssistanceNote(string markdownNote)

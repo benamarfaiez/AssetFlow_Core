@@ -29,7 +29,10 @@ public static class MappingExtensions
                     t.AssignedTeamId,
                     t.AssignedTeam?.Name ?? string.Empty))]);
 
-    public static TicketResponseDto ToDto(this MaintenanceTicket ticket, string teamName) =>
+    public static TicketResponseDto ToDto(
+        this MaintenanceTicket ticket,
+        string teamName,
+        IReadOnlyCollection<TicketTransferHistoryDto>? transferHistory = null) =>
         new(ticket.Id,
             ticket.AssetId,
             ticket.Title,
@@ -43,7 +46,8 @@ public static class MappingExtensions
             ticket.AssistanceNote,
             ticket.IsAiProcessing,
             ticket.AssignedByUserId,
-            ticket.ClosedByUserId);
+            ticket.ClosedByUserId,
+            transferHistory ?? []);
 
     public static TeamResponseDto ToDto(this Team team) =>
         new(team.Id, team.Name, team.Description, team.IsActive, team.CreatedAt, team.AssetType, team.TicketCriticality);

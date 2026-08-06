@@ -3,6 +3,8 @@ using AssetFlowCore.Application.UseCases.Assets.DecommissionAsset;
 using AssetFlowCore.Application.UseCases.Assets.GetAllAssets;
 using AssetFlowCore.Application.UseCases.Assets.GetAsset;
 using AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
+using AssetFlowCore.Application.UseCases.Assets.RestoreAssetToService;
+using AssetFlowCore.WebApi.Authorization;
 using AssetFlowCore.WebApi.Requests;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -11,7 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AssetFlowCore.WebApi.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [Authorize]
 public class AssetsController(ISender mediator) : ControllerBase
 {
@@ -55,6 +57,22 @@ public class AssetsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> Decommission(Guid id, CancellationToken cancellationToken)
     {
         var command = new DecommissionAssetCommand(id);
+        await mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Remet en service un actif mis au rebut (décision 0.4). Réservée à l'administrateur du
+    /// référentiel : restriction posée dès la création de l'endpoint (Lot 7, étape 7.2).
+    /// </summary>
+    [HttpPut("{id:guid}/restore-to-service")]
+    [Authorize(Roles = Roles.Administrateur)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RestoreToService(Guid id, [FromBody] RestoreAssetToServiceRequest request, CancellationToken cancellationToken)
+    {
+        var command = new RestoreAssetToServiceCommand(id, request.Reason ?? string.Empty);
         await mediator.Send(command, cancellationToken);
         return NoContent();
     }

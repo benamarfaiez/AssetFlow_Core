@@ -5,7 +5,10 @@ using AssetFlowCore.Application.UseCases.Assets.DecommissionAsset;
 using AssetFlowCore.Application.UseCases.Assets.GetAllAssets;
 using AssetFlowCore.Application.UseCases.Assets.GetAsset;
 using AssetFlowCore.Application.UseCases.Assets.RegisterAsset;
+using AssetFlowCore.Application.UseCases.Assets.RestoreAssetToService;
+using AssetFlowCore.Application.UseCases.Team.ActivateTeam;
 using AssetFlowCore.Application.UseCases.Team.CreateTeam;
+using AssetFlowCore.Application.UseCases.Team.DeactivateTeam;
 using AssetFlowCore.Application.UseCases.Team.DeleteTeam;
 using AssetFlowCore.Application.UseCases.Team.GetTeam;
 using AssetFlowCore.Application.UseCases.Team.GetTeams;
@@ -43,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<GetAllAssetsHandler>();
         services.AddScoped<GetAssetHandler>();
         services.AddScoped<DecommissionAssetHandler>();
+        services.AddScoped<RestoreAssetToServiceHandler>();
         services.AddScoped<CreateMaintenanceTicketHandler>();
         services.AddScoped<AssignTicketToTechnicianHandler>();
         services.AddScoped<CloseTicketHandler>();
@@ -54,6 +58,8 @@ public static class DependencyInjection
         services.AddScoped<GetTeamsHandler>();
         services.AddScoped<DeleteTeamCommandHandler>();
         services.AddScoped<UpdateTeamCommandHandler>();
+        services.AddScoped<ActivateTeamCommandHandler>();
+        services.AddScoped<DeactivateTeamCommandHandler>();
 
         // Enregistrement MediatR
         services.AddMediatR(cfg =>

@@ -21,17 +21,17 @@ public class AssetInventoryCacheTests(CustomWebApplicationFactory<Program> facto
     public async Task Register_AfterInventoryWasCached_ShouldAppearInImmediateInventoryRead()
     {
         // Arrange : première lecture pour peupler le cache d'inventaire
-        var warmUp = await _client.GetAsync("/api/assets");
+        var warmUp = await _client.GetAsync("/api/v1/assets");
         warmUp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var payload = new RegisterAssetRequest("Serveur-Cache-01", "SRV-CACHE-01", "Server");
 
         // Act
-        var createResponse = await _client.PostAsJsonAsync("/api/assets", payload);
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/assets", payload);
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await createResponse.Content.ReadFromJsonAsync<AssetResponseDto>();
 
-        var inventory = await _client.GetFromJsonAsync<IEnumerable<AssetResponseDto>>("/api/assets");
+        var inventory = await _client.GetFromJsonAsync<IEnumerable<AssetResponseDto>>("/api/v1/assets");
 
         // Assert
         created.Should().NotBeNull();
@@ -45,19 +45,19 @@ public class AssetInventoryCacheTests(CustomWebApplicationFactory<Program> facto
     {
         // Arrange : actif créé puis inventaire relu, ce qui remet la liste en cache
         var payload = new RegisterAssetRequest("Serveur-Cache-02", "SRV-CACHE-02", "Server");
-        var createResponse = await _client.PostAsJsonAsync("/api/assets", payload);
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/assets", payload);
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await createResponse.Content.ReadFromJsonAsync<AssetResponseDto>();
         created.Should().NotBeNull();
 
-        var cachedInventory = await _client.GetFromJsonAsync<IEnumerable<AssetResponseDto>>("/api/assets");
+        var cachedInventory = await _client.GetFromJsonAsync<IEnumerable<AssetResponseDto>>("/api/v1/assets");
         cachedInventory!.Single(a => a.Id == created!.Id).Status.Should().Be("InService");
 
         // Act
-        var decommissionResponse = await _client.PutAsync($"/api/assets/{created!.Id}/decommission", null);
+        var decommissionResponse = await _client.PutAsync($"/api/v1/assets/{created!.Id}/decommission", null);
         decommissionResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        var inventory = await _client.GetFromJsonAsync<IEnumerable<AssetResponseDto>>("/api/assets");
+        var inventory = await _client.GetFromJsonAsync<IEnumerable<AssetResponseDto>>("/api/v1/assets");
 
         // Assert
         inventory.Should().NotBeNull();

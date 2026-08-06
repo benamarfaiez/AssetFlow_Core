@@ -15,7 +15,8 @@ public class RequestTicketTransferCommandHandler(IMaintenanceTicketRepository ti
         // une valeur inconnue est un refus métier (400), pas une ressource absente (404).
         var team = await teamRepository.GetByNameAsync(command.TeamName, cancellationToken)
             ?? throw new DomainException($"L'équipe '{command.TeamName}' n'existe pas ou n'est plus active.");
-        ticket.TransferToTeam(team, command.Reason);
+        var historyEntry = ticket.TransferToTeam(team, command.Reason);
+        await ticketRepository.AddTransferHistoryAsync(historyEntry, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

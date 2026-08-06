@@ -30,14 +30,14 @@ public class LocationHeaderTests : IClassFixture<CustomWebApplicationFactory<Pro
     [Fact]
     public async Task CreateAsset_ShouldReturnLocationOfTheCreatedAsset()
     {
-        var response = await _client.PostAsJsonAsync("/api/assets",
+        var response = await _client.PostAsJsonAsync("/api/v1/assets",
             new RegisterAssetRequest("Serveur Location", "LOC-SRV-01", "Server"));
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await response.Content.ReadFromJsonAsync<AssetResponseDto>();
 
         response.Headers.Location.Should().NotBeNull();
-        response.Headers.Location!.AbsolutePath.Should().Be($"/api/Assets/{created!.Id}");
+        response.Headers.Location!.AbsolutePath.Should().Be($"/api/v1/Assets/{created!.Id}");
 
         // L'adresse annoncée doit mener à la ressource.
         var suivi = await _client.GetAsync(response.Headers.Location);
@@ -47,14 +47,14 @@ public class LocationHeaderTests : IClassFixture<CustomWebApplicationFactory<Pro
     [Fact]
     public async Task CreateTeam_ShouldReturnLocationOfTheCreatedTeam()
     {
-        var response = await _client.PostAsJsonAsync("/api/teams",
+        var response = await _client.PostAsJsonAsync("/api/v1/teams",
             new CreateTeamRequest("Equipe-Location", "Laptop", "Medium", "Support"));
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await response.Content.ReadFromJsonAsync<TeamResponseDto>();
 
         response.Headers.Location.Should().NotBeNull();
-        response.Headers.Location!.AbsolutePath.Should().Be($"/api/Teams/{created!.Id}");
+        response.Headers.Location!.AbsolutePath.Should().Be($"/api/v1/Teams/{created!.Id}");
 
         var suivi = await _client.GetAsync(response.Headers.Location);
         suivi.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -72,14 +72,14 @@ public class LocationHeaderTests : IClassFixture<CustomWebApplicationFactory<Pro
             await db.SaveChangesAsync();
         }
 
-        var response = await _client.PostAsJsonAsync("/api/tickets",
+        var response = await _client.PostAsJsonAsync("/api/v1/tickets",
             new CreateTicketRequest(assetId, "Écran noir", "Le poste ne s'allume plus.", "Medium"));
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await response.Content.ReadFromJsonAsync<TicketResponseDto>();
 
         response.Headers.Location.Should().NotBeNull();
-        response.Headers.Location!.AbsolutePath.Should().Be($"/api/Tickets/{created!.Id}");
+        response.Headers.Location!.AbsolutePath.Should().Be($"/api/v1/Tickets/{created!.Id}");
 
         var suivi = await _client.GetAsync(response.Headers.Location);
         suivi.StatusCode.Should().Be(HttpStatusCode.OK);

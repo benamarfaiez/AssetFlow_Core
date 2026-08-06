@@ -1,4 +1,4 @@
-﻿using AssetFlowCore.WebApi.Middlewares;
+using AssetFlowCore.WebApi.Middlewares;
 using AssetFlowCore.WebApi.Requests;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
@@ -22,11 +22,11 @@ public class ExceptionHandlingMiddlewareTests(CustomWebApplicationFactory<Progra
         var uniqueSerial = $"SER-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
         var payload = new RegisterAssetRequest("Machine de Test Middleware", uniqueSerial, "Server");
 
-        var firstResponse = await _client.PostAsJsonAsync("/api/assets", payload);
+        var firstResponse = await _client.PostAsJsonAsync("/api/v1/assets", payload);
         firstResponse.StatusCode.Should().Be(HttpStatusCode.Created, "Le premier enregistrement doit réussir pour initialiser le doublon.");
 
         // Act
-        var response = await _client.PostAsJsonAsync("/api/assets", payload);
+        var response = await _client.PostAsJsonAsync("/api/v1/assets", payload);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest, "La base contient déjà ce numéro de série, une DomainException doit être levée.");

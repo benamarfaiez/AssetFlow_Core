@@ -7,6 +7,16 @@ public interface IMaintenanceTicketRepository
     Task<MaintenanceTicket?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<MaintenanceTicket?> GetByIdWithTrackingAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddAsync(MaintenanceTicket ticket, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Persiste une entrée d'historique de transferts, indépendamment de la navigation
+    /// <see cref="MaintenanceTicket.TransferHistory"/> (non suivie par EF, voir
+    /// <see cref="MaintenanceTicket.LoadTransferHistory"/>).
+    /// </summary>
+    Task AddTransferHistoryAsync(TicketTransferHistory entry, CancellationToken cancellationToken = default);
+
+    /// <summary>Historique des transferts d'un ticket, du plus ancien au plus récent.</summary>
+    Task<IReadOnlyCollection<TicketTransferHistory>> GetTransferHistoryAsync(Guid ticketId, CancellationToken cancellationToken = default);
     Task<int> CountActiveTicketsByAssetIdAsync(Guid assetId, CancellationToken cancellationToken = default);
     // Return true if there exists at least one active ticket for the given asset
     // other than the ticket with id `excludingTicketId`.

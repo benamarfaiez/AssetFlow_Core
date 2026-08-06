@@ -58,13 +58,13 @@ describe('Diagnostic', () => {
     const fixture = creer();
 
     expect(texte(fixture)).toContain("Interrogation de l'API");
-    controleur.expectOne('/api/assets').flush([]);
+    controleur.expectOne('/api/v1/assets').flush([]);
   });
 
   it("affiche l'inventaire reçu", async () => {
     const fixture = creer();
 
-    controleur.expectOne('/api/assets').flush([ACTIF]);
+    controleur.expectOne('/api/v1/assets').flush([ACTIF]);
     await fixture.whenStable();
 
     expect(texte(fixture)).toContain('1 actif(s)');
@@ -74,7 +74,7 @@ describe('Diagnostic', () => {
   it("distingue l'état vide d'une absence de réponse", async () => {
     const fixture = creer();
 
-    controleur.expectOne('/api/assets').flush([]);
+    controleur.expectOne('/api/v1/assets').flush([]);
     await fixture.whenStable();
 
     expect(texte(fixture)).toContain('0 actif(s)');
@@ -84,7 +84,7 @@ describe('Diagnostic', () => {
   it('affiche le message normalisé et le traceId sur une erreur serveur', async () => {
     const fixture = creer();
 
-    controleur.expectOne('/api/assets').flush(
+    controleur.expectOne('/api/v1/assets').flush(
       {
         title: 'Erreur interne du serveur',
         status: 500,
@@ -105,7 +105,7 @@ describe('Diagnostic', () => {
     const fixture = creer();
 
     controleur
-      .expectOne('/api/assets')
+      .expectOne('/api/v1/assets')
       .flush({ title: 'Erreur', status: 500 }, { status: 500, statusText: 'Server Error' });
     await fixture.whenStable();
 
@@ -113,7 +113,7 @@ describe('Diagnostic', () => {
     bouton?.click();
     TestBed.tick();
 
-    controleur.expectOne('/api/assets').flush([ACTIF]);
+    controleur.expectOne('/api/v1/assets').flush([ACTIF]);
     await fixture.whenStable();
 
     expect(texte(fixture)).toContain('1 actif(s)');
@@ -124,6 +124,6 @@ describe('Diagnostic', () => {
 
     expect(texte(fixture)).toContain('disconnected');
     expect(texte(fixture)).toContain('Aucun incident reçu');
-    controleur.expectOne('/api/assets').flush([]);
+    controleur.expectOne('/api/v1/assets').flush([]);
   });
 });

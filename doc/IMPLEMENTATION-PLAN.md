@@ -14,7 +14,7 @@ Documents de référence : [PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) (e
 
 | Domaine | État vérifié au 2026-08-05 |
 |---|---|
-| Backend | ✅ fonctionnel : 15 endpoints (authentifiés depuis le Lot 7), 220 tests unitaires verts, 80 tests d'intégration, 10 tests d'architecture, benchmarks, CI/CD complète, déploiement conteneurisé ; **Lots 1, 2 et 7 appliqués** |
+| Backend | ✅ fonctionnel : 17 endpoints (authentifiés depuis le Lot 7, versionnés `/api/v1` depuis le Lot 2 bis), 234 tests unitaires verts, 94 tests d'intégration, 10 tests d'architecture, benchmarks, CI/CD complète, déploiement conteneurisé ; **Lots 1, 2, 2 bis et 7 appliqués** |
 | Contrat d'API | ✅ complété : listes d'incidents (paginée) et d'équipes, fiche d'actif, DTOs enrichis, 404 pour les ressources absentes, `Location` sur les créations |
 | Sécurité | ✅ **Lot 7 appliqué** (2026-08-05) : JWT Bearer Entra ID/OIDC, rôles, traçabilité auteur — décision 0.1 ; 🟡 tenant Entra ID réel non enregistré (étape 7.0, opérationnelle) |
 | Décisions | ✅ **Lot 0 clos le 2026-08-05** : 16 décisions écrites, aucun ❓ résiduel ; cinq d'entre elles créent un reliquat de contrat à livrer avant le Lot 5 (§5.1) |
@@ -45,11 +45,11 @@ flowchart LR
     L0 --> L3["Lot 3 ✅<br/>Fondation frontend"]
     L1 --> L2["Lot 2 ✅<br/>Complétion du contrat"]
     L3 --> L4["Lot 4 ✅<br/>Design system"]
-    L2 --> L2B["Lot 2 bis 🎯<br/>Contrat débloqué par le Lot 0"]
+    L2 --> L2B["Lot 2 bis ✅<br/>Contrat débloqué par le Lot 0"]
     L2B --> L5["Lot 5<br/>Fonctionnalités"]
     L4 --> L5
     L5 --> L6["Lot 6<br/>Temps réel et IA"]
-    L0 --> L7["Lot 7<br/>Sécurité"]
+    L0 --> L7["Lot 7 ✅<br/>Sécurité"]
     L7 --> L8["Lot 8<br/>Industrialisation"]
     L6 --> L8
 ```
@@ -195,27 +195,33 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 - **2.12 reportée puis levée** : aucun workspace Angular n'existait à la clôture du Lot 2 ; la synchronisation a été réalisée au Lot 3, étape 3.6.
 - Pagination livrée sur `GET /api/tickets` uniquement ; l'inventaire et les équipes restent des collections complètes, leur volume ne le justifiant pas.
 
-### 5.1 Lot 2 bis — Contrat débloqué par le Lot 0 🎯 (à livrer **avant** le Lot 5)
+### 5.1 Lot 2 bis — Contrat débloqué par le Lot 0 ✅ (2026-08-06)
 
 **Objectif** : appliquer les cinq décisions du Lot 0 qui touchent le contrat d'API, avant qu'un écran ne le consomme (Principe 1). **Ce lot introduit des ruptures de contrat assumées** — c'est le dernier moment où elles sont bon marché, aucun écran produit n'existant encore.
 
 | # | Étape | Décision | Exigence | Charge |
 |---|---|---|---|---|
-| 2b.1 🎯 | **Versionner les URL en `/api/v1/...`** sur les 15 endpoints, puis répercuter sur [API-Specification.md](API-Specification.md), les tests d'intégration, les 3 services de `core/api/` et le relevé du skill `/sync-api-dtos`. `proxy.conf.json` intercepte `/api` par préfixe : aucun changement côté proxy de développement. À traiter **en premier**, l'étape touchant toutes les routes | 0.15 | `AD-13` révisée | M |
-| 2b.2 🎯 | **Supprimer `TicketStatus.Resolved`** : énumération du domaine, message et règle `IsEnumName` de `GetTicketsQueryValidator`, projection de rang de `MaintenanceTicketRepository.ApplySort`, union TypeScript et libellés de `shared/i18n/` | 0.3 | — | S |
-| 2b.3 🎯 | **Historiser le motif de transfert** : entité dédiée + migration, `TransferToTeam` cesse d'écrire dans `Description`, historique exposé sur la fiche d'incident. À vérifier au passage : `TransferToTeam` affecte `AssignedTeam` **sans** mettre à jour `AssignedTeamId`, ce que seule la correction de navigation d'EF rattrape aujourd'hui | 0.5 | `EF-17`, `RM-21` | M |
-| 2b.4 🎯 | **Activer / désactiver une équipe** : endpoint(s) dédiés, invalidation des **deux** clés de cache d'équipe (`Teams_List_Active` et `Teams_List_All`, centralisée par `CachedTeamRepository.InvalidateLists()`) | 0.6 | `EF-28` | S |
-| 2b.5 🎯 | **Remettre en service un actif au rebut** : transition de domaine, motif obligatoire, opération tracée. La restriction au rôle d'administrateur est posée au Lot 7, étape 7.2 — d'ici là l'endpoint est ouvert comme tous les autres | 0.4 | `EF-09` | M |
-| 2b.6 🎯 | **Relecture**, resynchronisation `/sync-api-dtos` et mise à jour du contrat documenté | — | — | S |
+| 2b.1 ✅ | **Versionner les URL en `/api/v1/...`** sur les 15 endpoints, puis répercuter sur [API-Specification.md](API-Specification.md), les tests d'intégration, les 3 services de `core/api/` et le relevé du skill `/sync-api-dtos`. `proxy.conf.json` intercepte `/api` par préfixe : aucun changement côté proxy de développement | 0.15 | `AD-13` révisée | M |
+| 2b.2 ✅ | **Supprimer `TicketStatus.Resolved`** : énumération du domaine, message et règle `IsEnumName` de `GetTicketsQueryValidator`, projection de rang de `MaintenanceTicketRepository.ApplySort`, union TypeScript et libellés de `shared/i18n/` | 0.3 | — | S |
+| 2b.3 ✅ | **Historiser le motif de transfert** : entité dédiée `TicketTransferHistory` + migration, `TransferToTeam` cesse d'écrire dans `Description`, historique exposé sur la fiche d'incident. Le bug latent (`TransferToTeam` affectait `AssignedTeam` sans mettre à jour `AssignedTeamId`) est corrigé, le FK scalaire étant désormais affecté explicitement | 0.5 | `EF-17`, `RM-21` | M |
+| 2b.4 ✅ | **Activer / désactiver une équipe** : `PUT /api/v1/teams/{id}/activate`/`.../deactivate`, réservés au rôle `Administrateur`, invalidation des **deux** clés de cache d'équipe déjà couverte par `CachedTeamRepository.UpdateAsync` | 0.6 | `EF-28` | S |
+| 2b.5 ✅ | **Remettre en service un actif au rebut** : nouvelle méthode de domaine `Asset.RestoreFromDecommission(reason)` (distincte de `RestoreToService()`, utilisée par la clôture de ticket pour un autre cas), motif obligatoire, réservée au rôle `Administrateur` dès la création de l'endpoint | 0.4 | `EF-09` | M |
+| 2b.6 ✅ | **Relecture**, resynchronisation `/sync-api-dtos` et mise à jour du contrat documenté | — | — | S |
 
 **Critères d'acceptation du lot**
 
-- Chaque changement de contrat est couvert par un test d'intégration (cas nominal + cas d'erreur) et reporté dans [API-Specification.md](API-Specification.md).
-- Aucune route ne subsiste hors `/api/v1/` : les tests d'intégration et les 3 services frontend n'adressent plus l'ancienne forme.
-- `Resolved` n'apparaît plus **nulle part** — ni domaine, ni validateur, ni tri, ni types TypeScript, ni libellés.
-- Un incident transféré deux fois expose **deux** entrées d'historique, et sa description est exactement celle saisie à l'ouverture.
-- Une équipe désactivée disparaît de `?onlyActive=true` **et** cesse de recevoir des incidents, sans être supprimée.
-- Un actif remis en service redevient éligible à l'ouverture d'un incident, et son numéro de série reste unique.
+- ✅ Chaque changement de contrat est couvert par un test d'intégration (cas nominal + cas d'erreur) et reporté dans [API-Specification.md](API-Specification.md).
+- ✅ Aucune route ne subsiste hors `/api/v1/` : les tests d'intégration et les 3 services frontend n'adressent plus l'ancienne forme.
+- ✅ `Resolved` n'apparaît plus **nulle part** — ni domaine, ni validateur, ni tri, ni types TypeScript, ni libellés.
+- ✅ Un incident transféré deux fois expose **deux** entrées d'historique, et sa description est exactement celle saisie à l'ouverture.
+- ✅ Une équipe désactivée disparaît de `?onlyActive=true` **et** cesse de recevoir des incidents, sans être supprimée.
+- ✅ Un actif remis en service redevient éligible à l'ouverture d'un incident, et son numéro de série reste unique.
+
+**Écarts assumés du lot**
+
+- **Aucun validateur FluentValidation pour `RestoreAssetToServiceCommand`** : le pipeline `MediatR` de validation (`ValidationBehavior`) ne s'exécute jamais pour les commandes sans valeur de retour (`IRequest` void), bug préexistant confirmé aussi sur `RequestTicketTransferCommandValidator` (sans effet observable, court-circuité par une autre erreur métier). Le motif obligatoire est donc validé directement dans `Asset.RestoreFromDecommission`. Corriger ce pipeline est hors périmètre de ce lot ; voir [API-Specification.md §9](API-Specification.md#9-écarts-et-limitations-connus).
+- **Le motif de remise en service d'un actif n'est pas persisté** dans une entité dédiée (à la différence de l'historique de transfert de ticket) : il est journalisé (`ILogger`) mais non exposé par l'API. Le plan ne demandait une entité d'historique que pour 2b.3.
+- **Agent `dotnet-code-reviewer` non disponible dans la session** (nécessite un redémarrage pour charger les agents ajoutés au dépôt) : la relecture de 2b.6 a été réalisée par un agent général guidé par les mêmes critères.
 
 ---
 
@@ -307,7 +313,7 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 
 **Ordre imposé** : `assets` d'abord (les 2 écrans réalisables aujourd'hui, donc validation la plus rapide de la chaîne complète), puis `tickets` (cœur métier), puis `teams` (administration).
 
-⛔ **Prérequis** : §5.1 livrée. Un écran construit sur `/api/...` non versionné, ou affichant un état `Resolved`, serait à reprendre intégralement (Principe 1).
+✅ **Prérequis levé** : §5.1 (Lot 2 bis) est livrée depuis le 2026-08-06. Le contrat est stable — `/api/v1/...`, sans `Resolved`, historique de transfert exposé — avant tout écran (Principe 1).
 
 ### 5.0 Préalables — internationalisation (décision 0.16) et autonomie de développement
 
@@ -580,7 +586,7 @@ flowchart TB
 | Risque | Effet sur le plan | Mesure |
 |---|---|---|
 | ~~Lot 0 non tranché~~ **levé le 2026-08-05** | — | les 16 décisions sont écrites ; le travail qu'elles créent est ordonnancé en §3.1 |
-| **§5.1 livrée après le Lot 5** — risque désormais principal | les 9 écrans adressent des routes non versionnées, affichent un état supprimé et un motif de transfert noyé dans la description : reprise du typage, des services et des tests | §5.1 est un prérequis déclaré du Lot 5 ; ne pas ouvrir 5.A.2 avant la clôture de 2b.1 |
+| ~~§5.1 livrée après le Lot 5~~ **levé le 2026-08-06** | — | §5.1 (Lot 2 bis) est close : le Lot 5 peut s'ouvrir sur un contrat stable (`/api/v1`, sans `Resolved`, historique de transfert exposé) |
 | Lot 2 livré après le Lot 5 | reprise du typage, des services et des tests d'écran | respecter le Principe 1 ; à défaut, geler les écrans concernés |
 | Ruptures de contrat non coordonnées | client cassé sans avertissement | décision 0.15 : URL versionnées (`/api/v1`) dès §5.1, et `/sync-api-dtos` en porte de fusion |
 | **Tenant Entra ID indisponible au moment du Lot 7** (étape 7.0) | le Lot 7 se bloque sur un prérequis d'exploitation, non sur du code | ouvrir l'enregistrement d'application dès maintenant ; à défaut, replier sur un fournisseur OIDC auto-hébergé, l'intégration côté API étant identique |

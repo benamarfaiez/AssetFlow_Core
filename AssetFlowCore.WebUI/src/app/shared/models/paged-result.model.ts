@@ -9,7 +9,7 @@
  * page reçue. `totalPages` est une propriété calculée côté C# (`TotalPages`), donc bien
  * présente dans la charge utile ; elle vaut 0 lorsqu'aucun élément ne correspond.
  *
- * Seul `GET /api/tickets` est paginé : l'inventaire et les équipes sont servis en intégralité.
+ * Seul `GET /api/v1/tickets` est paginé : l'inventaire et les équipes sont servis en intégralité.
  */
 export interface PagedResult<T> {
   readonly items: readonly T[];
