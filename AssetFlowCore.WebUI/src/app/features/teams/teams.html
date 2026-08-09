@@ -1,0 +1,203 @@
+<!--
+  E-07 — Administration des équipes : quatre états (chargement/erreur/vide/contenu). La fenêtre
+  modale de création/édition est déclarée **hors** de ce chaînage (elle doit rester atteignable
+  depuis le déclencheur de l'état vide comme depuis celui de l'état « contenu » — un seul et même
+  `dialogueFormulaireOuvert`) ; suppression et désactivation, elles, ne sont déclenchées que
+  depuis le tableau de l'état « contenu » et restent donc à l'intérieur de cette branche.
+  L'activation est une action directe, sans boîte de dialogue (voir teams.ts).
+-->
+@if (chargement()) {
+  <app-spinner [libelle]="libelleChargement" />
+} @else if (erreur(); as erreurEquipes) {
+  <app-error-message
+    [titre]="titreErreurChargement"
+    [message]="erreurEquipes.message"
+    [traceId]="erreurEquipes.traceId"
+    [reessayable]="true"
+    (reessai)="recharger()"
+  />
+} @else if (equipes().length === 0) {
+  <app-empty-state [titre]="titreVide" [description]="descriptionVide">
+    @if (estAdministrateur()) {
+      <app-button (click)="ouvrirCreation()">{{ libelleCreer }}</app-button>
+    }
+  </app-empty-state>
+} @else {
+  <div class="flex flex-col gap-6">
+    <app-card>
+      <div slot="entete" class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-2xl font-semibold tracking-tight">{{ libelleTitre }}</h1>
+        @if (estAdministrateur()) {
+          <app-button (click)="ouvrirCreation()">{{ libelleCreer }}</app-button>
+        }
+      </div>
+
+      @if (erreurActivation(); as message) {
+        <app-error-message [message]="message" />
+      }
+
+      <div class="flex flex-col gap-3">
+        <h2 class="text-lg font-semibold">{{ libelleTitreCouverture }}</h2>
+
+        @if (nombreCombinaisonsNonCouvertes() > 0) {
+          <p role="alert" class="text-sm font-medium text-danger">
+            {{ messageCombinaisonsNonCouvertes(nombreCombinaisonsNonCouvertes()) }}
+          </p>
+        }
+
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          @for (combinaison of couverture(); track cleCombinaison(combinaison)) {
+            <div
+              class="flex items-center justify-between gap-2 rounded-md border border-bordure p-2 text-sm"
+            >
+              <span>
+                {{ combinaison.assetType | libelleAssetType }} ·
+                {{ combinaison.ticketCriticality | libelleTicketCriticality }}
+              </span>
+              <app-badge
+                [libelle]="combinaison.couverte ? libelleCouverte : libelleNonCouverte"
+                [tonalite]="combinaison.couverte ? 'succes' : 'danger'"
+              />
+            </div>
+          }
+        </div>
+      </div>
+    </app-card>
+
+    <ng-template #gabaritEtat let-equipe>
+      <app-badge
+        [libelle]="equipe.isActive ? libelleActive : libelleInactive"
+        [tonalite]="equipe.isActive ? 'succes' : 'neutre'"
+      />
+    </ng-template>
+
+    <ng-template #gabaritActions let-equipe>
+      @if (estAdministrateur()) {
+        <div class="flex flex-wrap gap-2">
+          <app-button variante="secondaire" taille="compact" (click)="ouvrirEdition(equipe)">
+            {{ libelleModifier }}
+          </app-button>
+          @if (equipe.isActive) {
+            <app-button
+              variante="secondaire"
+              taille="compact"
+              (click)="ouvrirDesactivation(equipe)"
+            >
+              {{ libelleDesactiver }}
+            </app-button>
+          } @else {
+            <app-button
+              variante="secondaire"
+              taille="compact"
+              [enCours]="idEnCoursActivation() === equipe.id"
+              (click)="activerEquipe(equipe)"
+            >
+              {{ libelleActiver }}
+            </app-button>
+          }
+          <app-button variante="danger" taille="compact" (click)="ouvrirSuppression(equipe)">
+            {{ libelleSupprimer }}
+          </app-button>
+        </div>
+      }
+    </ng-template>
+
+    <app-data-table
+      [lignes]="equipes()"
+      [colonnes]="colonnes()"
+      [cleLigne]="cleEquipe"
+      [legende]="legendeTable"
+    />
+  </div>
+
+  <app-confirm-dialog
+    [ouverte]="equipeADesactiver() !== null"
+    [titre]="titreDialogueDesactivation"
+    [message]="messageDialogueDesactivation"
+    tonalite="avertissement"
+    [libelleConfirmation]="libelleConfirmerDesactivation"
+    [enCours]="enCoursDesactivation()"
+    (confirmation)="confirmerDesactivation()"
+    (annulation)="fermerDesactivation()"
+  >
+    @if (erreurDesactivation(); as message) {
+      <app-error-message [message]="message" />
+    }
+
+    @if (avertirDerniereEquipeActiveDuCouple()) {
+      <p role="alert" class="text-sm font-medium text-danger">
+        {{ messageDerniereEquipeCouple }}
+      </p>
+    }
+  </app-confirm-dialog>
+
+  <app-confirm-dialog
+    [ouverte]="equipeASupprimer() !== null"
+    [titre]="titreDialogueSuppression"
+    [message]="messageDialogueSuppression"
+    tonalite="danger"
+    [libelleConfirmation]="libelleConfirmerSuppression"
+    [enCours]="enCoursSuppression()"
+    (confirmation)="confirmerSuppression()"
+    (annulation)="fermerSuppression()"
+  >
+    @if (erreurSuppression(); as message) {
+      <app-error-message [message]="message" />
+    }
+  </app-confirm-dialog>
+}
+
+<app-modal
+  [ouverte]="dialogueFormulaireOuvert()"
+  [titre]="titreDialogueFormulaire()"
+  (fermeture)="fermerDialogueFormulaire()"
+>
+  <form
+    #elementFormulaire
+    novalidate
+    (submit)="soumettreFormulaire($event)"
+    class="flex flex-col gap-4"
+  >
+    @if (erreurFormulaire(); as message) {
+      <app-error-message [message]="message" />
+    }
+
+    <app-text-field
+      [controle]="formulaire.controls.name"
+      [label]="libelleChampNom"
+      [requis]="true"
+      [longueurMax]="100"
+      [compteurCaracteres]="true"
+    />
+
+    <app-select-field
+      [controle]="formulaire.controls.assetType"
+      [label]="libelleChampType"
+      [options]="optionsType"
+      [requis]="true"
+    />
+
+    <app-select-field
+      [controle]="formulaire.controls.ticketCriticality"
+      [label]="libelleChampCriticite"
+      [options]="optionsCriticite"
+      [requis]="true"
+    />
+
+    <app-textarea-field
+      [controle]="formulaire.controls.description"
+      [label]="libelleChampDescription"
+      [longueurMax]="500"
+      [compteurCaracteres]="true"
+    />
+
+    <div class="flex flex-wrap justify-end gap-3">
+      <app-button variante="secondaire" (click)="fermerDialogueFormulaire()">
+        {{ libelleAnnuler }}
+      </app-button>
+      <app-button type="submit" [enCours]="enCoursFormulaire()">
+        {{ libelleEnregistrer }}
+      </app-button>
+    </div>
+  </form>
+</app-modal>

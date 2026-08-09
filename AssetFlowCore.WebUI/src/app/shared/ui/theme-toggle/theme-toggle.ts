@@ -5,9 +5,9 @@ export type ThemePrefere = 'auto' | 'light' | 'dark';
 
 /** Options proposées, dans l'ordre d'affichage. */
 const OPTIONS: readonly { valeur: ThemePrefere; libelle: string }[] = [
-  { valeur: 'auto', libelle: 'Auto' },
-  { valeur: 'light', libelle: 'Clair' },
-  { valeur: 'dark', libelle: 'Sombre' },
+  { valeur: 'auto', libelle: $localize`:@@sharedUi.themeToggle.auto:Auto` },
+  { valeur: 'light', libelle: $localize`:@@sharedUi.themeToggle.clair:Clair` },
+  { valeur: 'dark', libelle: $localize`:@@sharedUi.themeToggle.sombre:Sombre` },
 ];
 
 /** Compteur d'instances : les boutons radio d'un même groupe partagent un `name` unique. */

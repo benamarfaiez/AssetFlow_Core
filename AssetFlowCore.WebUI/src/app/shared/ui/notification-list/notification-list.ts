@@ -40,4 +40,14 @@ export class NotificationList {
 
   /** Émet l'identifiant de la notification que l'utilisateur ferme. */
   readonly rejet = output<string>();
+
+  /**
+   * Nom accessible du bouton de fermeture d'une notification donnée.
+   *
+   * Calculé ici plutôt que concaténé dans le gabarit : `i18n-aria-label` ne marque qu'un
+   * attribut **statique**, il ne peut pas s'appliquer à `[attr.aria-label]="'texte ' + valeur"`.
+   */
+  protected libelleFermeture(notification: NotificationUi): string {
+    return $localize`:@@sharedUi.notificationList.libelleFermeture:Fermer la notification : ${notification.titre}:titre:`;
+  }
 }

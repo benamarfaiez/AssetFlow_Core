@@ -1,0 +1,86 @@
+<!--
+  E-06 — File de travail : quatre états (chargement/erreur/vide/contenu). Filtres et pagination
+  sont posés hors de la branche « contenu » ? Non : contrairement à l'inventaire, ils restent
+  visibles même sur une liste vide (l'utilisateur doit pouvoir changer de filtre depuis l'état
+  vide), donc rendus dans les deux branches « vide » et « contenu ».
+-->
+<div class="flex flex-col gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-wrap gap-4">
+      <app-select-field
+        [controle]="filtreStatut"
+        [label]="libelleFiltreStatut"
+        [options]="optionsFiltreStatut"
+        [libelleVide]="null"
+      />
+      <app-select-field
+        [controle]="filtreCriticite"
+        [label]="libelleFiltreCriticite"
+        [options]="optionsFiltreCriticite"
+        [libelleVide]="null"
+      />
+    </div>
+
+    <a routerLink="/tickets/nouveau" class="font-medium text-primaire underline underline-offset-2">
+      {{ libelleOuvrirIncident }}
+    </a>
+  </div>
+
+  @if (chargement()) {
+    <app-spinner [libelle]="libelleChargement" />
+  } @else if (erreur(); as erreurFile) {
+    <app-error-message
+      [titre]="titreErreur"
+      [message]="erreurFile.message"
+      [traceId]="erreurFile.traceId"
+      [reessayable]="true"
+      (reessai)="recharger()"
+    />
+  } @else if (resultat().items.length === 0) {
+    <app-empty-state [titre]="titreVide" />
+  } @else {
+    <ng-template #gabaritTitre let-ticket>
+      <a
+        [routerLink]="['/tickets', ticket.id]"
+        class="font-medium text-primaire underline underline-offset-2"
+      >
+        {{ ticket.title }}
+      </a>
+    </ng-template>
+
+    <ng-template #gabaritCriticite let-ticket>
+      <app-ticket-criticality-badge [criticite]="ticket.criticality" />
+    </ng-template>
+
+    <ng-template #gabaritStatut let-ticket>
+      <app-ticket-status-badge [statut]="ticket.status" />
+    </ng-template>
+
+    <app-data-table
+      [lignes]="resultat().items"
+      [colonnes]="colonnes()"
+      [cleLigne]="cleTicket"
+      [legende]="legendeTable"
+    />
+
+    <nav class="flex items-center justify-between gap-4" aria-label="Pagination" i18n-aria-label>
+      <button
+        type="button"
+        [disabled]="!peutReculer()"
+        (click)="pagePrecedente()"
+        [attr.aria-label]="libellePagePrecedente"
+      >
+        ←
+      </button>
+      <p aria-live="polite">{{ libellePagination() }}</p>
+      <button
+        type="button"
+        [disabled]="!peutAvancer()"
+        (click)="pageSuivante()"
+        [attr.aria-label]="libellePageSuivante"
+      >
+        →
+      </button>
+    </nav>
+  }
+</div>

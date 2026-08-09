@@ -46,7 +46,7 @@ flowchart LR
     L1 --> L2["Lot 2 ✅<br/>Complétion du contrat"]
     L3 --> L4["Lot 4 ✅<br/>Design system"]
     L2 --> L2B["Lot 2 bis ✅<br/>Contrat débloqué par le Lot 0"]
-    L2B --> L5["Lot 5<br/>Fonctionnalités"]
+    L2B --> L5["Lot 5 ✅<br/>Fonctionnalités"]
     L4 --> L5
     L5 --> L6["Lot 6<br/>Temps réel et IA"]
     L0 --> L7["Lot 7 ✅<br/>Sécurité"]
@@ -309,7 +309,7 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 
 ---
 
-## 8. Lot 5 — Fonctionnalités 🎯 (dépend des lots 2, **2 bis**, 3 et 4)
+## 8. Lot 5 — Fonctionnalités ✅ (2026-08-08, dépend des lots 2, **2 bis**, 3 et 4)
 
 **Ordre imposé** : `assets` d'abord (les 2 écrans réalisables aujourd'hui, donc validation la plus rapide de la chaîne complète), puis `tickets` (cœur métier), puis `teams` (administration).
 
@@ -319,58 +319,115 @@ Récapitulatif du travail **créé** par le Lot 0, avec son point de chute. Aucu
 
 | # | Étape | Réalisation | Exigences |
 |---|---|---|---|
-| 5.0.1 | Installer et configurer l'internationalisation (`@angular/localize`, locales servies, `angular.json`), en reprenant les libellés déjà centralisés dans `shared/i18n/` (Lot 4) comme catalogue de départ | agent **`angular-architect`** | `ENF-22` |
-| 5.0.2 | Fixer la règle d'écriture des écrans : **aucun texte visible en dur** dans un gabarit, y compris les messages d'erreur et les libellés d'accessibilité (`aria-label`) | agent **`angular-architect`** | `ENF-22` |
-| 5.0.3 | ❓ **Décision de dépendance** puis, si retenue, mocks MSW dérivés du contrat : handlers typés contre `shared/models/`, scénarios d'erreur par nature d'`ApiError`, ticket en deux phases (`isAiProcessing` puis note). Racine des routes en constante unique pour absorber `/api/v1` (2b.1) | agent **`angular-qa-mock`** | — |
+| 5.0.1 ✅ | Installer et configurer l'internationalisation — **décision prise le 2026-08-07 : option (A) `@angular/localize`**, locale source `fr-FR` à `subPath` vide, `i18n.locales` laissé vide tant qu'aucune deuxième langue n'est demandée. Reprend les catalogues `Record<Union,string>` de `shared/i18n/` (Lot 4) en littéraux `$localize`, sans en changer la forme | agent **`angular-architect`** | `ENF-22` |
+| 5.0.2 ✅ | Fixer la règle d'écriture des écrans, **reformulée** pour ne pas contredire (A) : **aucun texte non marqué `i18n` / non passé par `$localize`** dans un gabarit ou un composant, aria-label compris. Un script `verifier:i18n` matérialise la règle, faute de garde-fou de compilation côté `@angular/localize` — corrigé en 5.A.8 (retrait des commentaires avant recherche de littéraux) puis exercé sans écart sur les trois features du lot | agent **`angular-architect`** | `ENF-22` |
+| 5.0.3 | ✅ **Décision prise le 2026-08-07 : MSW décliné** — développement et vérification contre l'API réelle uniquement. Playwright/E2E **différé au Lot 8** (couverture intermédiaire par `angular-qa-mock` au niveau de chaque feature) | — | — |
 
 **Motif de l'antériorité de 5.0.1 et 5.0.2** : rétro-extraire les messages de neuf écrans coûte davantage que de poser le mécanisme d'abord, et les libellés d'accessibilité sont les premiers oubliés d'une extraction tardive.
 
-**Motif de 5.0.3** : lancer l'API exige Docker, le secret du mot de passe SQL **et une base migrée** — sans la migration `SeedReferenceTeams`, toute création d'incident échoue. À défaut, l'API démarre mais **aucun endpoint de données ne répond 200**. Un jeu de mocks rend les neuf écrans développables et démontrables sans cette chaîne, et rend reproductibles les états dégradés (409, 5xx, hors ligne) qu'une API saine ne produit pas à la demande. Ce n'est **pas** une entorse au Principe 4 : les mocks servent le développement et les tests, jamais un écran livré sur un endpoint absent.
+**Motif du choix (A) `@angular/localize`** : seule option couvrant gabarits, `aria-label` et messages TypeScript par un même mécanisme, sans dépendance hors du train de release Angular ; coût nul tant qu'une seconde locale n'est pas activée (le runner Vitest injecte `@angular/localize/init` automatiquement — vérifié sur les 172 tests existants). Limite assumée : aucune vérification de compilation contre un texte oublié, compensée par le script `verifier:i18n` (§5.0.2). Le backend n'ayant aucune localisation (`ProblemDetails` en français en dur), le caractère « multilingue » reste partiel quel que soit le mécanisme frontend retenu — à ne pas présenter comme résolu par ce seul lot.
 
-### 5.A Feature `assets`
+**Motif du refus de 5.0.3 (MSW)** : lancer l'API exige Docker, le secret du mot de passe SQL **et une base migrée** — sans la migration `SeedReferenceTeams`, toute création d'incident échoue ; à défaut, l'API démarre mais **aucun endpoint de données ne répond 200** (Docker et SQL Server confirmés indisponibles sur ce poste le 2026-08-07, comme aux lots 3 et 4). Le jeu de mocks aurait rendu les neuf écrans développables et démontrables sans cette chaîne, mais la décision a été de ne pas l'adopter : **conséquence assumée**, aucun écran du Lot 5 ne peut être vérifié contre des données réelles avant que Docker et une base migrée soient disponibles — seules la compilation, les vérifications statiques et les suites `HttpTestingController` font foi, dans la continuité de l'écart déjà assumé aux Lots 3 et 4.
+
+### 5.A Feature `assets` ✅ (2026-08-08)
+
+**Écart transverse à ce sous-lot** : les subagents personnalisés du dépôt (`angular-feature-dev`, `angular-code-reviewer`, etc.) ne se chargent qu'au redémarrage de la session (écart déjà connu depuis le Lot 2 bis, §5.1). Toutes les étapes marquées d'un agent ci-dessous ont donc été réalisées par un agent général guidé par la persona complète du fichier correspondant, corrigée des relevés de contrat périmés qu'elle contenait (routes non versionnées, absence du 404, etc.) — jamais par la persona telle quelle.
 
 | # | Étape | Réalisation | Exigences |
 |---|---|---|---|
-| 5.A.1 | Générer le squelette de la feature | skill **`/scaffold-feature assets`** | — |
-| 5.A.2 | Écran inventaire `E-01` : liste, filtrage et tri **côté client** (ou serveur si 0.14 le prévoit), états chargement/vide/erreur | agent **`angular-feature-dev`** | `EF-04` |
-| 5.A.3 | Formulaire d'actif `E-02` : validation locale alignée sur `RM-01`→`RM-05`, report des erreurs serveur sur les champs | agent **`angular-feature-dev`** | `EF-01`→`EF-03` |
-| 5.A.4 | Mise au rebut avec **confirmation explicite** et message de refus détaillant le nombre d'incidents actifs. La confirmation n'annonce plus une opération irréversible (décision 0.4) mais une sortie du parc **annulable par un administrateur** | agent **`angular-feature-dev`** | `EF-05`, `RM-06` |
-| 5.A.5 | Fiche d'actif `E-03` (après 2.5) | agent **`angular-feature-dev`** | `EF-06` |
-| 5.A.6 | **Remise en service** d'un actif au rebut (après 2b.5) : action présente uniquement pour un profil habilité, motif obligatoire, confirmation | agent **`angular-feature-dev`** | `EF-09`, décision 0.4 |
-| 5.A.7 | **Tests de la feature** : validation de `RM-01`→`RM-05`, report des erreurs serveur sur les champs, les quatre états d'écran, refus de mise au rebut avec incidents actifs | agent **`angular-qa-mock`** | — |
-| 5.A.8 | **Relecture** | agent **`angular-code-reviewer`** | — |
+| 5.A.1 ✅ | Squelette de la feature : `assets.routes.ts` (`''`, `nouveau`, `:id`, câblées dans `app.routes.ts`), 3 écrans + services | skill **`/scaffold-feature assets`** (exécuté en session principale, workspace déjà connu) | — |
+| 5.A.2 ✅ | Écran inventaire `E-01` : `app-data-table`, filtrage client par type et état (`FormControl` + `toSignal`), lien vers la fiche et vers l'enregistrement, quatre états | agent **`angular-feature-dev`** | `EF-04` |
+| 5.A.3 ✅ | Formulaire d'actif `E-02` : `NonNullableFormBuilder`, validation locale `RM-02`/`RM-04`/`RM-05`, report du doublon de numéro de série (`RM-01`) sur le champ, `focusPremierChampInvalide` à la soumission | agent **`angular-feature-dev`** | `EF-01`→`EF-03` |
+| 5.A.4 ✅ | Mise au rebut avec `app-confirm-dialog` (tonalité danger) et message de refus reconstituant le nombre exact d'incidents actifs depuis le message serveur | agent **`angular-feature-dev`** | `EF-05`, `RM-06` |
+| 5.A.5 ✅ | Fiche d'actif `E-03` : en-tête, badges, tableau des incidents (lecture seule, `E-05` n'existe pas encore) | agent **`angular-feature-dev`** | `EF-06` |
+| 5.A.6 ✅ | Remise en service : bouton visible seulement si `status === 'Decommissioned'` **et** `JwtRolesService.estAdministrateur()`, motif obligatoire validé localement (pas de validateur serveur dédié, bug connu), `app-confirm-dialog` (tonalité avertissement) | agent **`angular-feature-dev`** | `EF-09`, décision 0.4 |
+| 5.A.7 ✅ | Tests de la feature — couverts **au fil des étapes 5.A.2→5.A.6** plutôt qu'en passe séparée (232 tests au total sur la feature et son socle) : `RM-01`→`RM-06` validées, erreurs serveur reportées sur les champs, quatre états par écran, refus de mise au rebut avec décompte exact, masquage de la remise en service par rôle | inline avec **`angular-feature-dev`** | — |
+| 5.A.8 ✅ | Relecture — 2 `CRITIQUE` et 4 `AVERTISSEMENT` trouvés et corrigés (détail ci-dessous), 2 `SUGGESTION` non traitées (couverture de test non bloquante) | agent **`angular-code-reviewer`** | — |
+
+**Prérequis transverses posés avant la feature** (non prévus nommément par le plan initial, révélés par la cartographie du Lot 5) :
+- `core/auth/jwt-roles.service.ts` (`JwtRolesService`) : décode la revendication `roles` du jeton déjà détenu par `AuthTokenService` ; `estAdministrateur` vaut `true` tant qu'aucun tenant Entra ID n'est configuré (même laissez-passer qu'`authGuard`, étape 7.0 non levée) — ergonomie uniquement, l'API tranche réellement.
+- `shared/ui/confirm-dialog/` (`ConfirmDialog`) : composition au-dessus de `Modal`, tonalité danger/avertissement, verrouillage de fermeture pendant un appel réseau, slot pour un champ projeté (motif).
+- `shared/forms/focus-invalide.ts` et `shared/forms/options-depuis-libelles.ts` : focus du premier champ invalide à la soumission, construction des options de sélecteur depuis les tables de `shared/i18n/libelles.ts`.
+- Correction d'un défaut réel dans `scripts/verifier-i18n.mjs` (posé par l'étape 5.0) : la recherche de littéraux accentués ne retirait pas les commentaires avant de chercher des chaînes entre guillemets, donc toute apostrophe française dans un commentaire (« qu'il », « l'API ») était lue à tort comme l'ouverture d'un littéral — corrigé par un retrait de commentaires dédié, sans quoi la règle aurait été pratiquement invalidée sur tout le reste du lot.
+
+**Décision de conception notable, révisée en relecture** : `InventaireService` (état partagé de `E-01`/`E-02`) a d'abord été posé en `providedIn: 'root'`, puis **corrigé en fourniture au niveau de la route parente `assets`** (`Route.providers` sur un nœud sans composant enveloppant les 3 écrans, `assets.routes.ts`) — la relecture a montré qu'un singleton racine ne revaliderait plus jamais l'inventaire après un premier chargement, pour le reste de la session. Le provider de route obtient le même partage entre `E-01`/`E-02` (critère P-01 : actif ajouté à la liste **depuis le corps de la réponse `201`**, sans nouvel appel `GET`) tout en étant détruit dès qu'on quitte `/assets/**`.
+
+**Constats de relecture corrigés** (5.A.8) :
+- `CRITIQUE` — Le focus ne se déplaçait jamais vers le premier champ invalide (`Formulaire`, et par extension `Fiche` pour le motif de remise en service) : `focusPremierChampInvalide` était appelée de façon synchrone juste après `markAllAsTouched()`/`setErrors()`, alors que `aria-invalid` n'est écrit dans le DOM qu'au rendu **suivant** (zoneless). Corrigé par `afterNextRender`.
+- `CRITIQUE` — `.subscribe()` sans `takeUntilDestroyed()` sur la création d'actif (`Formulaire.soumettre`) : une navigation manuelle avant la réponse laissait l'abonnement actif, et `router.navigate(['/assets'])` s'exécutait quand même à la réponse tardive, écrasant la navigation de l'utilisateur. Corrigé, et étendu par cohérence aux deux écritures de `Fiche` (`AVERTISSEMENT`, impact vérifié limité en l'état).
+- `AVERTISSEMENT` — Défaut supplémentaire trouvé **pendant la correction** du premier `CRITIQUE`, plus sérieux que celui-ci : les champs `TextField`/`SelectField` posent un `required` HTML natif. Sans `novalidate` sur le `<form>`, la validation de contraintes du **navigateur** interceptait la soumission avant qu'elle n'atteigne `(submit)` — `soumettre()` n'était **jamais appelée** sur un formulaire vide, rendant tout le dispositif applicatif (RM-01→RM-05, messages ARIA, focus) inatteignable par le bouton « Enregistrer ». Corrigé par l'ajout de `novalidate`, vérifié par le test existant (« affiche les erreurs de champs sans aucun appel réseau », rouge sans le correctif, vert avec).
+- `AVERTISSEMENT` (partiellement infirmé) — Le retrait de `ReactiveFormsModule` des `imports` de `Formulaire`, proposé en relecture comme un import mort, a été **testé et écarté** : sa présence n'a plus d'effet une fois `novalidate` posé (confirmé en isolant les deux changements), donc bien un import inutile — mais l'affirmation initiale du relecteur (bare injection de `NonNullableFormBuilder`) ne suffisait pas à le prouver dans ce cas précis ; c'est le test de bout en bout, pas l'isolat du relecteur, qui a tranché.
+
+**Écarts assumés du sous-lot** :
+- Aucun test de bout en bout (E2E différé au Lot 8, décision du 2026-08-07) : la chaîne assets n'est vérifiée qu'au niveau composant (`HttpTestingController`), jamais contre l'API réelle — Docker et SQL Server restent indisponibles sur ce poste.
+- L'action « Ouvrir un incident » n'apparaissait pas encore sur `E-03` au moment de 5.A.8 (elle pointerait vers `E-04`, qui n'existait pas encore) — **ajoutée rétroactivement dans `assets/fiche.ts`/`fiche.html` pendant 5.B** (lien conditionné à `status !== 'Decommissioned'`, vers `/tickets/nouveau?assetId=...`), une fois `E-04` livré. Voir 5.B.3.
+- Le rendu à 320 px / 200 % de zoom n'a pas été observé (aucun navigateur pilotable dans cette session) — même écart que les Lots 3 et 4.
+- Les 2 `SUGGESTION` de la relecture ne sont pas traitées : divergence de placement des `<ng-template>` de gabarit entre `inventaire.html` et `fiche.html` (fonctionne aujourd'hui, vérifié) ; absence de test dédié à l'anti-double-soumission et au croisement des deux filtres de l'inventaire.
 
 **Critères d'acceptation** : les critères de `P-01` de [PRODUCT-SPECIFICATIONS.md](PRODUCT-SPECIFICATIONS.md) §9 sont tous vérifiés, dont **la liste mise à jour depuis le corps de la réponse `201`** et non par rechargement (jusqu'à correction 1.1, puis à conserver comme bonne pratique).
 
-### 5.B Feature `tickets`
+### 5.B Feature `tickets` ✅ (2026-08-08)
 
 | # | Étape | Réalisation | Exigences |
 |---|---|---|---|
-| 5.B.1 | Générer le squelette | skill **`/scaffold-feature tickets`** | — |
-| 5.B.2 | File de travail `E-06` : liste filtrable et paginée | agent **`angular-feature-dev`** | `EF-19` (après 2.1) |
-| 5.B.3 | Formulaire d'ouverture `E-04` : criticité en liste fermée, compteur sur le titre (150), affichage de l'équipe retenue **après** création | agent **`angular-feature-dev`** | `EF-10`→`EF-12` |
-| 5.B.4 | Fiche d'incident `E-05` : description, compte rendu, équipe, état | agent **`angular-feature-dev`** | `EF-18`, `EF-20` (après 2.3) |
-| 5.B.5 | Actions prise en charge et clôture, avec compte rendu obligatoire et annonce du retour en service de l'actif | agent **`angular-feature-dev`** | `EF-14`→`EF-16` |
-| 5.B.6 | Transfert avec **sélecteur d'équipe** (après 2.2) et motif | agent **`angular-feature-dev`** | `EF-17` |
-| 5.B.7 | Gestion du **conflit 409** : proposition de rechargement **sans perte de la saisie** | agent **`angular-feature-dev`** | `EF-22`, `RM-22` |
-| 5.B.8 | **Historique de routage** sur la fiche d'incident (après 2b.3) : équipe d'origine, équipe cible, motif et date de chaque transfert. La description affichée est celle saisie à l'ouverture, jamais un texte augmenté | agent **`angular-feature-dev`** | `RM-21`, décision 0.5 |
-| 5.B.9 | **Tests de la feature** : construction des paramètres de filtrage et de pagination, **conflit 409 sans perte de saisie**, état « analyse IA en cours », distinction erreur de saisie / anomalie de référentiel (`RM-12`) | agent **`angular-qa-mock`** | — |
-| 5.B.10 | **Relecture** | agent **`angular-code-reviewer`** | — |
+| 5.B.1 ✅ | Squelette : `tickets.routes.ts` (`''`, `nouveau`, `:id`, câblées dans `app.routes.ts`), aucun état partagé entre écrans (à la différence d'`assets` : la liste est paginée/filtrée serveur, un incident créé n'a pas de position évidente dans une page déjà chargée) | skill **`/scaffold-feature tickets`** (session principale) | — |
+| 5.B.2 ✅ | File de travail `E-06` : filtres état/criticité **délégués au serveur** (`FileDeTravailService`, `rxResource` réactif aux signaux de filtre/page), pagination précédent/suivant, remise à la page 1 sur changement de filtre | agent **`angular-feature-dev`** | `EF-19` (après 2.1) |
+| 5.B.3 ✅ | Formulaire d'ouverture `E-04` : actif choisi dans une liste excluant les actifs au rebut (RM-09), pré-remplissage depuis `assetId` (query param lié par `withComponentInputBinding()`, venant de la fiche d'un actif), compteur sur le titre (150), équipe **jamais** affichée avant l'envoi | agent **`angular-feature-dev`** | `EF-10`→`EF-12` |
+| 5.B.4 ✅ | Fiche d'incident `E-05` : description (jamais réécrite), compte rendu, équipe, état, indicateur « analyse IA en cours » (`isAiProcessing`, sans la note — Lot 6) | agent **`angular-feature-dev`** | `EF-18`, `EF-20` (après 2.3) |
+| 5.B.5 ✅ | Prise en charge (action directe) et clôture (`app-confirm-dialog` + compte rendu obligatoire) ; le retour en service de l'actif se déduit du rechargement de la fiche, le backend ne le signale pas explicitement | agent **`angular-feature-dev`** | `EF-14`→`EF-16` |
+| 5.B.6 ✅ | Transfert avec sélecteur d'équipes actives (`GET /api/v1/teams?onlyActive=true`, équipe déjà assignée exclue — RM-19) et motif obligatoire | agent **`angular-feature-dev`** | `EF-17` |
+| 5.B.7 ✅ | Conflit **409** sur les trois actions (prise en charge, clôture, transfert) : boîte de dialogue conservée **ouverte**, saisie intacte, message imposé + bouton « Recharger » dédié qui ne referme rien | agent **`angular-feature-dev`** | `EF-22`, `RM-22` |
+| 5.B.8 ✅ | Historique de routage affiché sur la fiche (peuplé uniquement par `GET /api/v1/tickets/{id}`, jamais par la liste ni la création) | agent **`angular-feature-dev`** | `RM-21`, décision 0.5 |
+| 5.B.9 ✅ | Tests couverts **au fil des étapes** (263 tests au total sur l'application, après les 4 tests ajoutés en 5.B.10) : filtres et pagination serveur, conflit 409 sans perte de saisie sur les trois actions, état « analyse IA en cours », anomalie de référentiel (`RM-12`) distincte d'une erreur de saisie, exclusion RM-09/RM-19 | inline avec **`angular-feature-dev`** | — |
+| 5.B.10 ✅ | Relecture — 1 `CRITIQUE` et 3 `AVERTISSEMENT` trouvés et corrigés (détail ci-dessous), 1 `SUGGESTION` traitée par cohérence, 1 non retenue (justifiée) | agent **`angular-code-reviewer`** | — |
+
+**Décision de conception** : contrairement à `InventaireService` (assets), aucun service partagé entre `E-06`/`E-04`/`E-05` — `GET /api/v1/tickets` étant paginé/filtré/trié côté serveur, un incident nouvellement créé n'a pas de position évidente dans une page déjà chargée ; `Formulaire` navigue donc vers la fiche du ticket créé (`/tickets/:id`) plutôt que de tenter une mise à jour en mémoire de la file de travail.
+
+**Défaut réel trouvé et corrigé pendant ce sous-lot** (avant même la relecture 5.B.10, par comparaison avec le même défaut détecté sur `assets` en 5.A.8) : le message d'erreur du chargement initial d'une fiche (`erreur().message`) relayait tel quel le `detail` du backend sur un 404, qui contient littéralement le GUID de la ressource (« Le ticket {id} est introuvable. ») — `errorInterceptor` préfère le `detail` du backend quand il existe. Corrigé dans `tickets/fiche.ts` **et rétroactivement dans `assets/fiche.ts`**, qui portait le même défaut ; test renforcé sur les deux fiches pour vérifier l'absence du GUID, pas seulement la présence de `role="alert"`.
+
+**Constats de relecture corrigés (5.B.10)** :
+- `CRITIQUE` — Même défaut que celui trouvé en 5.A.8 sur `Formulaire`/remise en service, mais réintroduit ici sur une troisième action : `Fiche.confirmerTransfert()` ne déplaçait jamais le focus vers le champ invalide (équipe cible ou motif) quand la validation locale du dialogue de transfert échouait, à la différence de `confirmerCloture()` et de `Formulaire.soumettre()`, qui appliquent déjà `afterNextRender` + `focusPremierChampInvalide`. Corrigé par l'ajout d'un `viewChild('zoneTransfert')` enveloppant les deux champs projetés du dialogue, sur le même modèle que `zoneCompteRendu`.
+- `AVERTISSEMENT` — Le bouton « Confirmer le transfert » restait cliquable sans aucun effet visible quand `optionsEquipesCibles()` est vide (aucune équipe active hors celle déjà assignée) : le sélecteur est alors remplacé par le message `messageAucuneAutreEquipe`, mais un clic sur le bouton ne produisait ni action ni retour. Non atteignable avec les 9 équipes de seed actuelles, mais réel dès qu'une équipe peut être désactivée (5.C.4). Corrigé par un retour anticipé dans `confirmerTransfert()` quand la liste est vide.
+- `AVERTISSEMENT` — Aucun test ne couvrait le conflit 409 sur le transfert (assignation et clôture en avaient un chacune). Ajouté dans `tickets/fiche.spec.ts`, avec au passage le test de validation locale (motif vide) qui manquait symétriquement.
+- `AVERTISSEMENT` — Aucun test ne couvrait les états erreur/vide du chargement des actifs dans `tickets/formulaire.spec.ts` (seul le succès était exercé). Deux tests ajoutés : échec réseau (500, formulaire absent) et liste vide (message dédié, formulaire absent).
+- `SUGGESTION` (traitée) — Cast `as TicketCriticality` évitable dans `Formulaire.soumettre()` (`formulaire.ts:160`) : remplacé par un retour anticipé sur `valeur.criticality === ''` juste après lecture de `getRawValue()`, qui laisse TypeScript rétrécir le type sans assertion.
+- `SUGGESTION` (non retenue, justifiée) — Le relecteur s'interrogeait sur la robustesse du pré-remplissage `assetId` (`afterNextRender` dans le constructeur, exécuté une seule fois) si l'instance de `Formulaire` était réutilisée pour un second `assetId` sans destruction. Vérification faite sur les routes réellement câblées : la seule origine d'un `assetId` est le lien conditionnel de `assets/fiche.ts` vers `/tickets/nouveau?assetId=...` (5.A, ajouté rétroactivement), qui suppose une navigation depuis **une autre route** (`/assets/:id`) — Angular détruit alors l'instance de `Formulaire` avant toute recréation avec un nouvel `assetId`, plutôt que de la réutiliser en place. Le scénario que soulève la suggestion n'a pas de chemin d'accès dans l'interface actuelle ; remplacer `afterNextRender` par un `effect()` pour un cas inatteignable aurait ajouté de la complexité (garde de type « pristine » pour ne pas écraser une sélection déjà modifiée par l'utilisateur) sans bénéfice vérifiable.
+
+**Écarts assumés du sous-lot** : mêmes que 5.A (aucun test de bout en bout, rendu à 320 px/200 % non observé). Filtres de la file de travail limités à état et criticité — l'API accepte aussi `teamId`/`assetId`, non exposés dans l'interface (décision de portée, pas un oubli : aucun sélecteur d'équipe ou d'actif n'était demandé pour ce filtre).
 
 **Critères d'acceptation** : critères de `P-02` et `P-04` vérifiés ; distinction visible entre erreur de saisie et **anomalie de configuration du référentiel** (`RM-12`) ; aucune branche de code conditionnée à un 404 avant la livraison de 2.6.
 
-### 5.C Feature `teams`
+### 5.C Feature `teams` ✅ (2026-08-08)
 
 | # | Étape | Réalisation | Exigences |
 |---|---|---|---|
-| 5.C.1 | Générer le squelette | skill **`/scaffold-feature teams`** | — |
-| 5.C.2 | Écran d'administration `E-07` : liste, création, modification partielle, suppression avec confirmation | agent **`angular-feature-dev`** | `EF-23`→`EF-26` (après 2.2 et 2.4) |
-| 5.C.3 | **Contrôle de couverture des 9 combinaisons** (type × criticité) avec alerte sur les combinaisons non couvertes — une équipe **désactivée** ne compte pas comme couvrante | agent **`angular-feature-dev`** | prérequis de `RM-12` |
-| 5.C.4 | Activation / désactivation — **retenue en 0.6** (après 2b.4). La suppression est conservée en parallèle, avec son refus explicite dès qu'un incident référence l'équipe. **Avertir avant confirmation** lorsque la désactivation retire la dernière équipe d'un couple (type × criticité) : l'ouverture d'incidents devient alors impossible pour ce couple | agent **`angular-feature-dev`** | `EF-28`, `RM-12` |
-| 5.C.5 | **Tests de la feature** : contrôle de couverture des 9 combinaisons (une équipe désactivée ne couvre pas), avertissement avant retrait de la dernière équipe d'un couple, refus de suppression référencée | agent **`angular-qa-mock`** | — |
-| 5.C.6 | **Relecture** | agent **`angular-code-reviewer`** | — |
+| 5.C.1 ✅ | Squelette : `teams.routes.ts` (route unique `''`, câblée dans `app.routes.ts`) | skill **`/scaffold-feature teams`** (session principale) | — |
+| 5.C.2 ✅ | Écran d'administration `E-07` : liste (`app-data-table`, équipes actives **et** désactivées), création et modification partielle partageant **une seule fenêtre modale** (`app-modal`, pas de route dédiée — à la différence d'`assets`/`tickets`, cet écran ne navigue jamais), suppression avec confirmation (`app-confirm-dialog`) | agent **`angular-feature-dev`** | `EF-23`→`EF-26` (après 2.2 et 2.4) |
+| 5.C.3 ✅ | **Contrôle de couverture des 9 combinaisons** (type × criticité) sous forme de grille, alerte dédiée si au moins une combinaison n'est couverte par aucune équipe **active** (une équipe désactivée ne compte jamais comme couvrante) | agent **`angular-feature-dev`** | prérequis de `RM-12` |
+| 5.C.4 ✅ | Activation (action directe, non destructive, comme « Prendre en charge » côté tickets) / désactivation (`app-confirm-dialog`, RM-30). Suppression conservée en parallèle (`EF-26`), refusée si des incidents actifs référencent l'équipe (RM-25). **Avertissement supplémentaire, calculé côté client à partir de la liste déjà chargée** (l'API ne le signale pas), quand la désactivation retirerait la dernière équipe active d'une combinaison (RM-31) | agent **`angular-feature-dev`** | `EF-28`, `RM-12` |
+| 5.C.5 ✅ | **Tests de la feature** (20 tests) : couverture des 9 combinaisons en ignorant une équipe désactivée, singulier/pluriel de l'alerte, avertissement RM-31 avant confirmation (présent/absent selon qu'une autre équipe couvre encore le couple), refus de suppression référencée sans fermeture de la boîte, refus de nom déjà pris reporté sur le champ (RM-23), masquage des actions de mutation selon le rôle, échec de l'activation sans perte de la liste | inline avec **`angular-feature-dev`** | — |
+| 5.C.6 ✅ | Relecture — agent délégué en échec (voir écart ci-dessous), **relecture menée en session principale** avec la même grille : 2 constats réels trouvés et corrigés (détail ci-dessous) | session principale (échec de délégation) | — |
+
+**Décision de conception notable** : à la différence d'`assets/formulaire.ts` (qui fusionne la réponse `201` en mémoire plutôt que de recharger, précisément parce qu'aucune écriture n'invalide le cache serveur des actifs), chaque mutation de `teams.ts` recharge la liste via `recharger()`. Ce choix est **sûr ici** : `CachedTeamRepository` invalide bien les deux listes en cache (`Teams_List_Active`, `Teams_List_All`) sur les cinq chemins d'écriture (créer/modifier/supprimer/activer/désactiver) — `ActivateTeamCommandHandler`/`DeactivateTeamCommandHandler` passent explicitement par `unitOfWork.Team.UpdateAsync(...)`, qui déclenche cette invalidation. Documenté en tête de `teams.ts` pour ne pas être « corrigé » par analogie avec `assets` lors d'une relecture future.
+
+**Écart de méthode sur 5.C.6** : l'agent `angular-code-reviewer` délégué (persona complète en prompt, comme pour 5.A/5.B) a échoué avant de produire une revue — limite de session atteinte pendant son exécution (même classe d'incident que les échecs de délégation déjà rencontrés sur ce lot, cf. §5.1). La notification de fin renvoyait par ailleurs un contenu sans rapport avec la mission confiée (un audit de contraste WCAG sur `shared/ui`, jamais demandé) — écarté sans être exploité, sa provenance étant incertaine. La relecture a donc été conduite directement en session principale, avec la même grille de critères transmise à l'agent. Deux constats réels en sont ressortis :
+- `AVERTISSEMENT` — `estDerniereEquipeActiveDuCouple(equipe)` (RM-31) était une méthode appelée avec un paramètre depuis le gabarit, réévaluée à chaque cycle de détection de changements — alors que le seul appel réel portait toujours sur `equipeADesactiver()`, déjà un signal du composant. Remplacée par un `computed()` sans paramètre (`avertirDerniereEquipeActiveDuCouple`), qui se dispense du paramètre plutôt que de le conserver inutilement.
+- `AVERTISSEMENT` — Aucun test ne couvrait l'échec de l'activation (seul le succès l'était), alors que l'action directe analogue côté tickets (« Prendre en charge ») a bien un test sur son cas d'erreur. Ajouté, avec au passage un test du singulier de l'alerte de couverture (« 1 combinaison… » vs « N combinaisons… »), seconde branche non exercée jusque-là.
+
+**Écarts assumés du sous-lot** : mêmes limites transverses que 5.A/5.B (aucun test de bout en bout, rendu à 320 px/200 % non observé). Une équipe ne portant que des incidents **clôturés** peut être supprimée jusqu'à échec en 500 (contrainte de clé étrangère, RM-26 — écart backend connu, non corrigé ici : le frontend affiche le message générique d'erreur serveur dans ce cas résiduel, sans branche dédiée).
 
 **Critères d'acceptation** : `P-08` réalisable de bout en bout ; l'écran signale explicitement toute combinaison non couverte, cause première des refus d'ouverture d'incident.
+
+### 5.D Retrait de `diagnostic`/`design-system` et réaffectation de la route racine ✅ (2026-08-08)
+
+Dernière étape du lot, réalisée une fois `assets`, `tickets` et `teams` livrées — voir la note de tête d'`app.routes.ts` : basculer la racine une seule fois plutôt qu'à chaque feature ajoutée.
+
+- `features/diagnostic/` et `features/design-system/` supprimés en totalité (preuves d'exécution des Lots 3 et 4, jamais des écrans `E-01`→`E-09`).
+- `app.routes.ts` : les deux routes retirées ; `{ path: '', redirectTo: 'diagnostic' }` devient `{ path: '', redirectTo: 'assets' }` (premier écran du parcours le plus courant).
+- `app.html` : la navigation « provisoire » vers `/diagnostic`/`/design-system` remplacée par des liens vers les trois écrans produits (`/assets`, `/tickets`, `/teams`).
+- Commentaires devenus obsolètes corrigés à cette occasion (référence à `diagnostic`/`design-system` comme « seules routes existantes » dans `auth.guard.ts`, exemples cités dans `assets/inventaire.service.ts` et `shared/forms/options-depuis-libelles.ts`, tableau de `features/README.md` et `shared/README.md`).
+
+**Écart assumé** : aucun écran dédié « page introuvable » n'existe (`{ path: '**', redirectTo: '' }` reste un repli silencieux) — non demandé par les critères d'acceptation du Lot 5, laissé pour un lot ultérieur.
 
 ### Critères d'acceptation communs au Lot 5
 

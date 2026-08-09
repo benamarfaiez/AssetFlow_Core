@@ -20,10 +20,10 @@ import { EntraAuthService } from '../auth/entra-auth.service';
  * revenir après connexion — construite depuis les `UrlSegment` de la route, jamais depuis une
  * chaîne externe, ce qui exclut par construction toute redirection ouverte.
  *
- * Câblage de fondation, pas de protection réelle aujourd'hui : `diagnostic` et `design-system`
- * sont les deux seules routes existantes (Lot 5 non construit) et aucune n'est réservée à un
- * rôle particulier — voir le compte-rendu de livraison pour ce qui est actif ou inerte tant que
- * le tenant Entra ID (étape 7.0) n'existe pas.
+ * Câblage de fondation, pas de protection réelle aujourd'hui : aucune des routes de premier
+ * niveau (`assets`, `tickets`, `teams`) n'est réservée à un rôle particulier — voir le
+ * compte-rendu de livraison pour ce qui est actif ou inerte tant que le tenant Entra ID
+ * (étape 7.0) n'existe pas.
  */
 export const authGuard: CanMatchFn = async (_route, segments): Promise<boolean | UrlTree> => {
   const jetons = inject(AuthTokenService);

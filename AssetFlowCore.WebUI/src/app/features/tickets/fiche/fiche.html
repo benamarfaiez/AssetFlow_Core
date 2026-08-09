@@ -1,0 +1,163 @@
+<!--
+  E-05 — Fiche d'un incident : quatre états (chargement/erreur/vide/contenu). Les trois actions
+  (prendre en charge, clôturer, transférer) gèrent chacune leur propre conflit 409 sans jamais
+  fermer une boîte de dialogue ouverte ni réinitialiser la saisie en cours (RM-22).
+-->
+@if (chargement()) {
+  <app-spinner [libelle]="libelleChargement" />
+} @else if (erreur(); as erreurFiche) {
+  <app-error-message
+    [titre]="titreErreurChargement"
+    [message]="messageErreurChargement(erreurFiche)"
+    [traceId]="erreurFiche.traceId"
+    [reessayable]="true"
+    (reessai)="recharger()"
+  />
+} @else if (incident(); as incident) {
+  <div class="flex flex-col gap-6">
+    <app-card>
+      <div slot="entete" class="flex flex-wrap items-center gap-3">
+        <h1 class="text-2xl font-semibold tracking-tight">{{ incident.title }}</h1>
+        <app-ticket-status-badge [statut]="incident.status" />
+        <app-ticket-criticality-badge [criticite]="incident.criticality" />
+        @if (incident.isAiProcessing) {
+          <span class="text-sm text-texte-discret" role="status" i18n>Analyse IA en cours…</span>
+        }
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <p class="whitespace-pre-line">{{ incident.description }}</p>
+
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-texte-discret">
+          <dt i18n>Équipe</dt>
+          <dd>{{ incident.assignedTeamName || libelleEquipeNonAssignee }}</dd>
+          <dt i18n>Ouvert le</dt>
+          <dd>{{ dateCreation(incident.createdAt) }}</dd>
+          @if (incident.resolutionComment !== null) {
+            <dt i18n>Compte rendu</dt>
+            <dd>{{ incident.resolutionComment }}</dd>
+          }
+        </dl>
+      </div>
+
+      <div slot="actions" class="flex flex-wrap gap-2">
+        @if (peutPrendreEnCharge()) {
+          <app-button [enCours]="enCoursPriseEnCharge()" (click)="prendreEnCharge()">
+            {{ libellePrendreEnCharge }}
+          </app-button>
+        }
+        @if (peutCloturer()) {
+          <app-button variante="secondaire" (click)="ouvrirDialogueCloture()">
+            {{ titreDialogueCloture }}
+          </app-button>
+        }
+        @if (peutTransferer()) {
+          <app-button variante="secondaire" (click)="ouvrirDialogueTransfert()">
+            {{ titreDialogueTransfert }}
+          </app-button>
+        }
+      </div>
+
+      @if (erreurPriseEnCharge(); as message) {
+        <app-error-message [message]="message" />
+        @if (conflitPriseEnCharge()) {
+          <app-button variante="secondaire" taille="compact" (click)="recharger()" i18n>
+            Recharger
+          </app-button>
+        }
+      }
+    </app-card>
+
+    <section class="flex flex-col gap-3">
+      <h2 class="text-lg font-semibold" i18n>Historique de routage</h2>
+
+      @if (incident.transferHistory.length === 0) {
+        <p class="text-sm text-texte-discret" i18n>Aucun transfert n'a eu lieu.</p>
+      } @else {
+        <ol class="flex flex-col gap-2">
+          @for (entree of incident.transferHistory; track entree.transferredAt + entree.toTeamId) {
+            <li class="rounded-md border border-bordure p-3 text-sm">
+              <p>
+                <span class="font-medium">{{ entree.fromTeamName || libelleEquipeInconnue }}</span>
+                →
+                <span class="font-medium">{{ entree.toTeamName || libelleEquipeInconnue }}</span>
+                — {{ dateTransfert(entree.transferredAt) }}
+              </p>
+              <p class="text-texte-discret">{{ entree.reason }}</p>
+            </li>
+          }
+        </ol>
+      }
+    </section>
+
+    <app-confirm-dialog
+      [ouverte]="dialogueClotureOuvert()"
+      [titre]="titreDialogueCloture"
+      [message]="messageDialogueCloture"
+      tonalite="danger"
+      [libelleConfirmation]="libelleConfirmerCloture"
+      [enCours]="enCoursCloture()"
+      (confirmation)="confirmerCloture()"
+      (annulation)="fermerDialogueCloture()"
+    >
+      @if (erreurCloture(); as message) {
+        <app-error-message [message]="message" />
+        @if (conflitCloture()) {
+          <app-button variante="secondaire" taille="compact" (click)="recharger()" i18n>
+            Recharger
+          </app-button>
+        }
+      }
+
+      <app-textarea-field
+        #zoneCompteRendu
+        [controle]="compteRendu"
+        [label]="libelleChampCompteRendu"
+        [requis]="true"
+        [messages]="messagesCompteRendu"
+      />
+    </app-confirm-dialog>
+
+    <app-confirm-dialog
+      [ouverte]="dialogueTransfertOuvert()"
+      [titre]="titreDialogueTransfert"
+      [message]="messageDialogueTransfert"
+      tonalite="avertissement"
+      [libelleConfirmation]="libelleConfirmerTransfert"
+      [enCours]="enCoursTransfert()"
+      (confirmation)="confirmerTransfert()"
+      (annulation)="fermerDialogueTransfert()"
+    >
+      @if (erreurTransfert(); as message) {
+        <app-error-message [message]="message" />
+        @if (conflitTransfert()) {
+          <app-button variante="secondaire" taille="compact" (click)="recharger()" i18n>
+            Recharger
+          </app-button>
+        }
+      }
+
+      <div #zoneTransfert class="flex flex-col gap-4">
+        @if (optionsEquipesCibles().length === 0) {
+          <p role="alert">{{ messageAucuneAutreEquipe }}</p>
+        } @else {
+          <app-select-field
+            [controle]="equipeCible"
+            [label]="libelleChampEquipeCible"
+            [options]="optionsEquipesCibles()"
+            [requis]="true"
+          />
+        }
+
+        <app-textarea-field
+          [controle]="motifTransfert"
+          [label]="libelleChampMotifTransfert"
+          [requis]="true"
+          [messages]="messagesMotifTransfert"
+        />
+      </div>
+    </app-confirm-dialog>
+  </div>
+} @else {
+  <app-empty-state [titre]="messageIncidentIntrouvableVide" />
+}

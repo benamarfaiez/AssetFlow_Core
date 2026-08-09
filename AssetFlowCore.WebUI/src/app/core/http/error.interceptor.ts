@@ -9,17 +9,18 @@ import { ProblemDetails } from '../../shared/models/problem-details.model';
  * Ceux du backend sont déjà en français et restent prioritaires quand ils existent.
  */
 const MESSAGES = {
-  validation: 'Certaines informations saisies sont invalides.',
-  business: "L'opération a été refusée.",
-  unauthorized: 'Votre session a expiré ou est invalide. Reconnectez-vous pour continuer.',
-  forbidden: "Vous n'avez pas les droits nécessaires pour effectuer cette action.",
-  notFound: "La ressource demandée n'existe pas ou plus.",
-  conflict:
-    'Ces données ont été modifiées entre-temps. Rechargez-les avant de valider vos modifications.',
-  server:
-    "Le service a rencontré une erreur inattendue. Réessayez ; si le problème persiste, communiquez l'identifiant de trace au support.",
-  network: 'Le serveur est injoignable. Vérifiez votre connexion réseau, puis réessayez.',
-} as const satisfies Record<ApiErrorKind, string>;
+  validation: $localize`:@@errorInterceptor.validation:Certaines informations saisies sont invalides.`,
+  business: $localize`:@@errorInterceptor.business:L'opération a été refusée.`,
+  unauthorized: $localize`:@@errorInterceptor.unauthorized:Votre session a expiré ou est invalide. Reconnectez-vous pour continuer.`,
+  forbidden: $localize`:@@errorInterceptor.forbidden:Vous n'avez pas les droits nécessaires pour effectuer cette action.`,
+  notFound: $localize`:@@errorInterceptor.notFound:La ressource demandée n'existe pas ou plus.`,
+  conflict: $localize`:@@errorInterceptor.conflict:Ces données ont été modifiées entre-temps. Rechargez-les avant de valider vos modifications.`,
+  server: $localize`:@@errorInterceptor.server:Le service a rencontré une erreur inattendue. Réessayez ; si le problème persiste, communiquez l'identifiant de trace au support.`,
+  network: $localize`:@@errorInterceptor.network:Le serveur est injoignable. Vérifiez votre connexion réseau, puis réessayez.`,
+  // `$localize` retourne `string`, jamais un littéral : `as const` n'aurait plus rien à figer et
+  // devient trompeur (il laisserait croire à des valeurs connues à la compilation). `satisfies`
+  // suffit à garder l'exhaustivité vis-à-vis d'`ApiErrorKind`.
+} satisfies Record<ApiErrorKind, string>;
 
 /**
  * Traduit toute erreur HTTP en {@link ApiError}. C'est le **seul** endroit où le format
@@ -51,7 +52,7 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) =>
           : new ApiError({
               kind: 'server',
               status: 0,
-              title: 'Erreur inattendue',
+              title: $localize`:@@errorInterceptor.title.inattendue:Erreur inattendue`,
               message: MESSAGES.server,
             });
 
@@ -72,7 +73,10 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) =>
 function toApiError(response: HttpErrorResponse): ApiError {
   const problemDetails = extractProblemDetails(response);
   const detail = problemDetails?.detail?.trim() ?? '';
-  const title = problemDetails?.title?.trim() ?? response.statusText ?? 'Erreur';
+  const title =
+    problemDetails?.title?.trim() ??
+    response.statusText ??
+    $localize`:@@errorInterceptor.title.generique:Erreur`;
   const traceId = problemDetails?.traceId ?? null;
 
   // `status` 0 signale qu'aucune réponse n'est parvenue : réseau coupé, service arrêté, ou
@@ -81,7 +85,7 @@ function toApiError(response: HttpErrorResponse): ApiError {
     return new ApiError({
       kind: 'network',
       status: 0,
-      title: 'Serveur injoignable',
+      title: $localize`:@@errorInterceptor.title.serveurInjoignable:Serveur injoignable`,
       message: MESSAGES.network,
     });
   }

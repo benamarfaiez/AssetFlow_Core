@@ -1,0 +1,68 @@
+<!--
+  E-04 — Formulaire d'ouverture d'un incident. `(submit)` natif + `novalidate` : mêmes motifs que
+  `features/assets/formulaire/formulaire.html` (approche A partout, et surtout `novalidate`
+  indispensable — sans lui, la validation HTML5 native du navigateur intercepterait la soumission
+  d'un champ requis vide avant qu'elle n'atteigne `(submit)`, empêchant tout le dispositif RM-08
+  →RM-12 de s'exécuter).
+-->
+<app-card [ariaLabel]="libelleTitre">
+  <h1 slot="entete" class="text-xl font-semibold" i18n>Ouvrir un incident</h1>
+
+  @if (chargementActifs()) {
+    <app-spinner [libelle]="libelleChargementActifs" />
+  } @else if (erreurActifs(); as erreurChargement) {
+    <app-error-message [message]="erreurChargement.message" [traceId]="erreurChargement.traceId" />
+  } @else if (optionsActifs().length === 0) {
+    <app-error-message [message]="messageAucunActifDisponible" />
+  } @else {
+    <form #elementFormulaire novalidate (submit)="soumettre($event)" class="flex flex-col gap-4">
+      @if (erreurGlobale(); as message) {
+        <app-error-message [message]="message" />
+      }
+
+      @if (erreurReferentiel(); as message) {
+        <app-error-message [titre]="titreErreurReferentiel" [message]="message" />
+      }
+
+      <app-select-field
+        [controle]="formulaire.controls.assetId"
+        [label]="libelleChampActif"
+        [options]="optionsActifs()"
+        [requis]="true"
+      />
+
+      <app-text-field
+        [controle]="formulaire.controls.title"
+        [label]="libelleChampTitre"
+        [requis]="true"
+        [longueurMax]="150"
+        [compteurCaracteres]="true"
+      />
+
+      <app-textarea-field
+        [controle]="formulaire.controls.description"
+        [label]="libelleChampDescription"
+        [requis]="true"
+      />
+
+      <app-select-field
+        [controle]="formulaire.controls.criticality"
+        [label]="libelleChampCriticite"
+        [options]="optionsCriticite"
+        [requis]="true"
+      />
+
+      <p class="text-sm text-texte-discret" role="status">{{ avisAffectationAutomatique }}</p>
+
+      <div class="flex flex-wrap gap-3">
+        <app-button type="submit" [enCours]="enCours()">{{ libelleSoumettre }}</app-button>
+        <a
+          routerLink="/tickets"
+          class="inline-flex min-h-(--cible-tactile) items-center px-2 text-primaire underline underline-offset-2"
+        >
+          {{ libelleAnnuler }}
+        </a>
+      </div>
+    </form>
+  }
+</app-card>

@@ -6,9 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 API .NET 8 de gestion de parc informatique (assets, équipes, tickets de maintenance) en Clean Architecture / DDD / CQRS, avec assistance IA (RAG) asynchrone. Le code, les commentaires, les messages d'exception, les logs et les messages de commit sont **en français** — conserver cette convention.
 
-Depuis le 2026-08-05, le dépôt contient aussi un **frontend Angular 22** dans `AssetFlowCore.WebUI/` : son socle est en place (types du contrat, services d'API, intercepteurs, client SignalR), **aucun écran produit** ne l'est encore. Voir la section « Frontend Angular » plus bas.
-
-**Évolutions de contrat décidées mais non implémentées** (Lot 0 clos le 2026-08-05 ; détail dans [doc/IMPLEMENTATION-PLAN.md](doc/IMPLEMENTATION-PLAN.md) §3 et §5.1) : passage des routes sous `/api/v1/...`, suppression de `TicketStatus.Resolved`, historisation du motif de transfert dans une entité dédiée (au lieu de la concaténation à `Description` par `MaintenanceTicket.TransferToTeam`), endpoints d'activation/désactivation d'équipe, remise en service d'un actif au rebut. Ces cinq changements sont à livrer **avant** les premiers écrans : ne pas construire de code d'écran sur la forme actuelle du contrat.
+Depuis le 2026-08-05, le dépôt contient aussi un **frontend Angular 22** dans `AssetFlowCore.WebUI/` : le socle (types du contrat, services d'API, intercepteurs, client SignalR, sécurité) est en place, et le **Lot 5 (clos le 2026-08-08)** y a livré les trois premières features d'écrans produits — `assets`, `tickets`, `teams` (`E-01`→`E-07`, voir [doc/IMPLEMENTATION-PLAN.md](doc/IMPLEMENTATION-PLAN.md) §8). Voir la section « Frontend Angular » plus bas.
 
 ## Commandes
 
@@ -61,7 +59,7 @@ cd AssetFlowCore.WebUI
 npm install
 npm start                        # ng serve sur http://localhost:4200, proxy vers https://localhost:7138
 npm run build                    # ng build (configuration production par défaut)
-npm run test:ci                  # ng test --watch=false (Vitest, 47 tests)
+npm run test:ci                  # ng test --watch=false (Vitest, 277 tests)
 npm run format:verify            # Prettier — pendant de `dotnet format`, futur gate de CI
 npm run verifier:dependances     # règles core/ shared/ features/ — pendant des ArchitectureTests
 npm run verifier:contrastes      # contrastes WCAG des jetons, dans les deux thèmes
@@ -133,11 +131,10 @@ Flux : `CreateMaintenanceTicketHandler` met le `ticketId` dans `AIAssistanceQueu
 - **Contrat d'API** : les types de `shared/models/` sont dérivés du C# et portent leurs sources en en-tête. Ne pas les éditer à la main — toute évolution backend passe par `/sync-api-dtos`. Rappel du piège de casse : les **noms de propriétés** sont en `camelCase`, mais les **valeurs d'énumérations** et les **clés du dictionnaire `errors`** restent en `PascalCase`.
 - **Erreurs** : `errorInterceptor` est le seul point qui interprète `ProblemDetails`. Il lève une `ApiError` porteuse d'une nature (`validation`, `business`, `notFound`, `conflict`, `server`, `network`) et d'un `fieldErrors` **converti en `camelCase`** pour correspondre aux contrôles d'un formulaire. Les écrans ne voient jamais de `HttpErrorResponse`. Le `detail` d'une 5xx n'est jamais affiché, seul le `traceId` l'est.
 - **Temps réel** : `TicketHubService` ne se connecte pas au démarrage ; l'appelant décide. Les groupes rejoints sont mémorisés et **restaurés après reconnexion**, le serveur ne les conservant pas. Le hub ne diffuse qu'à l'ouverture d'un incident (Lot 6 pour le reste).
-- **Jeton** : `authTokenInterceptor` et `AuthTokenService` sont en place mais **sans source** — l'API n'a aucune authentification. Le Lot 7 n'aura qu'à alimenter le service.
+- **Jeton** : `authTokenInterceptor` et `AuthTokenService` alimentent chaque requête depuis le Lot 7 (JWT Bearer / Entra ID, MSAL en bibliothèque de flux). `core/auth/jwt-roles.service.ts` (`JwtRolesService`, Lot 5) décode côté client le rôle `Administrateur` porté par ce jeton pour masquer une action non autorisée — **ergonomie uniquement**, laissez-passer tant qu'aucun tenant Entra ID n'est enregistré (étape 7.0) : l'API tranche réellement, indépendamment de ce que l'interface affiche.
 - **Design system (Lot 4)** : Tailwind 4, jetons dans `src/styles.css`. Les composants n'ont **aucune feuille de styles** — que des utilitaires — et aucune couleur, taille ou durée n'y est écrite en dur. Les jetons sont déclarés une seule fois via `light-dark()` : ne **jamais** ajouter un bloc de thème sombre parallèle, et repasser `npm run verifier:contrastes` après toute retouche de couleur. La feuille racine est en `.css` et non `.scss` : Tailwind 4 ne passe pas par un préprocesseur.
 - **Champs de formulaire** : approche A — le composant reçoit le `FormControl` en entrée, donc pas d'usage avec `formControlName`. `FormControl` n'étant pas réactif au sens des signaux, les champs passent par `suivreEtatControle()` (`shared/forms/`) : sans lui, un `markAsTouched()` de soumission n'afficherait aucun message en mode zoneless. Charge de la feature : déplacer le focus sur le premier champ invalide à la soumission.
 - **API des composants partagés** : documentée dans [AssetFlowCore.WebUI/src/app/shared/README.md](AssetFlowCore.WebUI/src/app/shared/README.md). Les badges du domaine encapsulent traduction **et** tonalité — ne pas refaire ces correspondances dans un écran.
-- `features/diagnostic/` et `features/design-system/` ne sont pas des écrans produits : ce sont les preuves d'exécution du socle et la page de revue du design system, à retirer quand les écrans du Lot 5 prendront leur place.
 - **Limites de l'environnement de test** : `window.localStorage` n'existe pas (origine opaque) et jsdom ne calcule aucune géométrie — le CDK considère alors tout élément comme non focusable. Les deux se contournent dans les tests concernés (`theme.service.spec.ts`, `modal.spec.ts`), jamais dans le code de production.
 
 ## Tests

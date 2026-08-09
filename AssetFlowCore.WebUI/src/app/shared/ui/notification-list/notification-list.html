@@ -17,7 +17,7 @@
       <button
         type="button"
         class="flex size-(--cible-tactile) shrink-0 items-center justify-center rounded-md text-texte-discret transition-colors duration-(--duree-rapide) hover:bg-surface-creuse hover:text-texte"
-        [attr.aria-label]="'Fermer la notification : ' + notification.titre"
+        [attr.aria-label]="libelleFermeture(notification)"
         (click)="rejet.emit(notification.id)"
       >
         <span aria-hidden="true">&times;</span>
