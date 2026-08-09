@@ -53,7 +53,7 @@ export class Modal {
   readonly fermetureParArrierePlan = input(true, { transform: booleanAttribute });
 
   /** Libellé du bouton de fermeture, pour les lecteurs d'écran. */
-  readonly libelleFermeture = input('Fermer');
+  readonly libelleFermeture = input($localize`:@@sharedUi.modal.libelleFermeture:Fermer`);
 
   /** Demande de fermeture émise par l'utilisateur (Échap, arrière-plan, bouton). */
   readonly fermeture = output<void>();

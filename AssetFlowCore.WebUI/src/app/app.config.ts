@@ -1,6 +1,9 @@
+import { registerLocaleData } from '@angular/common';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import localeFr from '@angular/common/locales/fr';
 import {
   ApplicationConfig,
+  LOCALE_ID,
   inject,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
@@ -11,6 +14,13 @@ import { EntraAuthService } from './core/auth/entra-auth.service';
 import { authTokenInterceptor } from './core/http/auth-token.interceptor';
 import { errorInterceptor } from './core/http/error.interceptor';
 import { sessionRenewalInterceptor } from './core/http/session-renewal.interceptor';
+
+// Nécessaire à tout pipe `date`/`number`/`currency` : sans elle, Angular retombe sur son
+// locale par défaut (`en-US`) et un format de date anglais apparaîtrait au premier écran du
+// Lot 5 qui en affiche une (historique de transfert, ouverture d'incident). `@angular/common`
+// n'embarque que les données de la locale source par défaut ; l'enregistrer explicitement est
+// requis même en l'absence de toute autre locale compilée.
+registerLocaleData(localeFr);
 
 /**
  * Providers racine de l'application.
@@ -23,6 +33,12 @@ import { sessionRenewalInterceptor } from './core/http/session-renewal.intercept
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+
+    // `fr-FR`, alors que `localeFr` provient du module générique `@angular/common/locales/fr` :
+    // Angular retombe automatiquement sur les données de la locale de base (`fr`) lorsqu'aucune
+    // variante régionale (`fr-FR`) n'est enregistrée séparément — comportement documenté de
+    // `findLocaleData`, pas une approximation de notre part.
+    { provide: LOCALE_ID, useValue: 'fr-FR' },
 
     // Traite un éventuel retour de redirection Entra ID et tente une connexion silencieuse
     // (compte déjà en cache MSAL) **avant** que le routeur ne s'exécute — sans quoi la garde de

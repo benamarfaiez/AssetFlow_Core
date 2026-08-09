@@ -62,7 +62,9 @@ export class DataTable<T> {
    */
   readonly legende = input.required<string>();
 
-  readonly messageVide = input('Aucune donnée à afficher.');
+  readonly messageVide = input(
+    $localize`:@@sharedUi.dataTable.messageVide:Aucune donnée à afficher.`,
+  );
 
   protected readonly colonnesEnCarte = computed(() =>
     this.colonnes().filter((colonne) => colonne.masquerEnCarte !== true),

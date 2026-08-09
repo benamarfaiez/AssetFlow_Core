@@ -1,0 +1,117 @@
+<!--
+  E-03 — Fiche d'un actif : quatre états (chargement/erreur/vide/contenu), section incidents en
+  lecture seule (aucun lien vers E-05 depuis le tableau : non demandé, voir le commentaire de tête
+  de fiche.ts) et trois actions (« Ouvrir un incident », « Mettre au rebut », « Remettre en
+  service »). Les gabarits des badges de la table d'incidents sont déclarés hors de la branche
+  `@else if` pour que `viewChild.required` les résolve dès le premier rendu.
+-->
+<ng-template #gabaritCriticite let-ticket>
+  <app-ticket-criticality-badge [criticite]="ticket.criticality" />
+</ng-template>
+
+<ng-template #gabaritStatutTicket let-ticket>
+  <app-ticket-status-badge [statut]="ticket.status" />
+</ng-template>
+
+@if (chargement()) {
+  <app-spinner [libelle]="libelleChargement" />
+} @else if (erreur(); as erreurFiche) {
+  <app-error-message
+    [titre]="titreErreurChargement"
+    [message]="messageErreurChargement(erreurFiche)"
+    [traceId]="erreurFiche.traceId"
+    [reessayable]="true"
+    (reessai)="recharger()"
+  />
+} @else if (actif(); as actif) {
+  <div class="flex flex-col gap-6">
+    <app-card>
+      <div slot="entete" class="flex flex-wrap items-center gap-3">
+        <h1 class="text-2xl font-semibold tracking-tight">{{ actif.name }}</h1>
+        <app-asset-status-badge [statut]="actif.status" />
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 text-sm text-texte-discret">
+        <span>{{ actif.type | libelleAssetType }}</span>
+        <span aria-hidden="true">·</span>
+        <span i18n>Numéro de série : {{ actif.serialNumber }}</span>
+        <span aria-hidden="true">·</span>
+        <span i18n>Créé le {{ dateCreation(actif.createdAt) }}</span>
+      </div>
+
+      <div slot="actions" class="flex flex-wrap gap-2">
+        @if (peutOuvrirIncident()) {
+          <a
+            [routerLink]="lienOuvrirIncident()"
+            [queryParams]="parametresOuvrirIncident()"
+            class="inline-flex min-h-(--cible-tactile) items-center px-2 text-primaire underline underline-offset-2"
+          >
+            {{ libelleOuvrirIncident }}
+          </a>
+        }
+        @if (peutMettreAuRebut()) {
+          <app-button variante="danger" (click)="ouvrirDialogueRebut()" i18n>
+            Mettre au rebut
+          </app-button>
+        }
+        @if (peutRemettreEnService()) {
+          <app-button variante="secondaire" (click)="ouvrirDialogueRemiseEnService()" i18n>
+            Remettre en service
+          </app-button>
+        }
+      </div>
+    </app-card>
+
+    <section class="flex flex-col gap-3">
+      <h2 class="text-lg font-semibold" i18n>Incidents</h2>
+
+      <app-data-table
+        [lignes]="actif.tickets"
+        [colonnes]="colonnesIncidents()"
+        [cleLigne]="cleTicket"
+        [legende]="legendeIncidents"
+        [messageVide]="messageAucunIncident"
+      />
+    </section>
+
+    <app-confirm-dialog
+      [ouverte]="dialogueRebutOuvert()"
+      [titre]="titreDialogueRebut"
+      [message]="messageDialogueRebut"
+      tonalite="danger"
+      [libelleConfirmation]="libelleConfirmerRebut"
+      [enCours]="enCoursRebut()"
+      (confirmation)="confirmerMiseAuRebut()"
+      (annulation)="fermerDialogueRebut()"
+    >
+      @if (erreurRebut(); as messageErreur) {
+        <app-error-message [message]="messageErreur" />
+      }
+    </app-confirm-dialog>
+
+    <app-confirm-dialog
+      [ouverte]="dialogueRemiseEnServiceOuvert()"
+      [titre]="titreDialogueRemiseEnService"
+      [message]="messageDialogueRemiseEnService"
+      tonalite="avertissement"
+      [libelleConfirmation]="libelleConfirmerRemiseEnService"
+      [enCours]="enCoursRemiseEnService()"
+      (confirmation)="confirmerRemiseEnService()"
+      (annulation)="fermerDialogueRemiseEnService()"
+    >
+      @if (erreurRemiseEnService(); as messageErreur) {
+        <app-error-message [message]="messageErreur" />
+      }
+
+      <app-textarea-field
+        #zoneMotif
+        [controle]="motifRemiseEnService"
+        [label]="libelleChampMotif"
+        [requis]="true"
+        [messages]="messagesMotif"
+      />
+    </app-confirm-dialog>
+  </div>
+} @else {
+  <app-empty-state [titre]="messageActifIntrouvable" />
+}

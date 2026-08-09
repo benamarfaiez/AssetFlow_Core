@@ -26,7 +26,7 @@ const CLASSES_TAILLE: Readonly<Record<TailleSpinner, string>> = {
 })
 export class Spinner {
   /** Ce que l'utilisateur attend, formulé pour être lu à voix haute. */
-  readonly libelle = input('Chargement en cours');
+  readonly libelle = input($localize`:@@sharedUi.spinner.libelle:Chargement en cours`);
 
   readonly taille = input<TailleSpinner>('normal');
 

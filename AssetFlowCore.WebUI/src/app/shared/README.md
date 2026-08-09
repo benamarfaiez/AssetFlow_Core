@@ -40,8 +40,6 @@ Style : **Tailwind 4**, jetons déclarés dans `src/styles.css`. Aucun composant
 feuille de styles ; aucune couleur, taille ou durée n'y est codée en dur. Accessibilité :
 `@angular/cdk` fournit le piège de focus de la modale.
 
-Une page de revue rassemble tous les composants : `/design-system` (à retirer au Lot 5).
-
 ### Composants de base
 
 | Composant            | Entrées                                                                                                                                                                  | Sorties        |
@@ -108,3 +106,7 @@ casse la compilation tant qu'elle n'est pas traduite.
 
 `messages-validation.ts` fournit les messages de validation par défaut. La clé `serveur` est
 réservée aux erreurs rapportées par l'API.
+
+Depuis le Lot 5.0, les littéraux de `libelles.ts` et de `messages-validation.ts` sont portés par
+`$localize` (`@angular/localize`), avec un `@@id` explicite et stable par valeur — voir
+`npm run verifier:i18n`.

@@ -1,0 +1,29 @@
+<app-modal
+  [ouverte]="ouverte()"
+  [titre]="titre()"
+  [description]="message()"
+  [fermetureParArrierePlan]="fermetureParArrierePlan()"
+  (fermeture)="annuler()"
+>
+  <ng-content />
+
+  <app-button
+    slot="actions"
+    type="button"
+    variante="secondaire"
+    [disabled]="enCours()"
+    (click)="annuler()"
+  >
+    {{ libelleAnnulation() }}
+  </app-button>
+
+  <app-button
+    slot="actions"
+    type="button"
+    [variante]="varianteConfirmation()"
+    [enCours]="enCours()"
+    (click)="confirmer()"
+  >
+    {{ libelleConfirmation() }}
+  </app-button>
+</app-modal>

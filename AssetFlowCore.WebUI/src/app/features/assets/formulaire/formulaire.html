@@ -1,0 +1,56 @@
+<!--
+  E-02 — Formulaire d'enregistrement d'un actif. `(submit)` natif plutôt que `(ngSubmit)` : aucun
+  champ n'utilise `formControlName` (approche A partout, `[controle]` en entrée de composant),
+  donc ni `[formGroup]` ni `ReactiveFormsModule` ne sont nécessaires ici — vérifié :
+  `NonNullableFormBuilder` s'injecte sans eux (aucun `providedIn` ni provider de module en jeu).
+
+  `novalidate` est **indispensable**, pas cosmétique : `TextField`/`SelectField` posent un
+  attribut HTML natif `required` (`[required]="requis()"`) sur les champs vides. Sans
+  `novalidate`, la validation de contraintes HTML5 du navigateur intercepte la soumission
+  **avant** qu'elle n'atteigne `(submit)` — `soumettre()` ne serait jamais appelée, et tout le
+  dispositif applicatif (messages ARIA, focus sur le premier champ invalide, RM-01→RM-05) resterait
+  inatteignable au clavier comme à la souris. Vérifié empiriquement (un clic sur « Enregistrer »
+  formulaire vide n'invoquait `soumettre()` dans aucun navigateur/jsdom sans cet attribut).
+-->
+<app-card [ariaLabel]="libelleTitre">
+  <h1 slot="entete" class="text-xl font-semibold" i18n>Enregistrer un actif</h1>
+
+  <form #elementFormulaire novalidate (submit)="soumettre($event)" class="flex flex-col gap-4">
+    @if (erreurGlobale(); as message) {
+      <app-error-message [message]="message" />
+    }
+
+    <app-text-field
+      [controle]="formulaire.controls.nom"
+      [label]="libelleChampNom"
+      [requis]="true"
+      [longueurMax]="100"
+    />
+
+    <app-text-field
+      [controle]="formulaire.controls.numeroSerie"
+      [label]="libelleChampNumeroSerie"
+      [requis]="true"
+      [longueurMax]="50"
+      [messages]="messagesNumeroSerie"
+    />
+
+    <app-select-field
+      [controle]="formulaire.controls.type"
+      [label]="libelleChampType"
+      [options]="optionsType"
+      [libelleVide]="null"
+      [requis]="true"
+    />
+
+    <div class="flex flex-wrap gap-3">
+      <app-button type="submit" [enCours]="enCours()">{{ libelleSoumettre }}</app-button>
+      <a
+        routerLink="/assets"
+        class="inline-flex min-h-(--cible-tactile) items-center px-2 text-primaire underline underline-offset-2"
+      >
+        {{ libelleAnnuler }}
+      </a>
+    </div>
+  </form>
+</app-card>

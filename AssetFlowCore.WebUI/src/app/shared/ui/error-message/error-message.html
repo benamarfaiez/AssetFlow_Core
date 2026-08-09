@@ -9,7 +9,7 @@
   <p>{{ message() }}</p>
 
   @if (traceId(); as trace) {
-    <p class="text-sm">
+    <p class="text-sm" i18n="@@sharedUi.errorMessage.traceId">
       Identifiant de trace à communiquer au support :
       <code class="font-mono">{{ trace }}</code>
     </p>
@@ -20,6 +20,7 @@
       type="button"
       class="mt-1 min-h-(--cible-tactile) self-start rounded-md border border-current px-3 py-1.5 text-sm font-medium transition-colors duration-(--duree-rapide) hover:bg-danger-contenu/10"
       (click)="reessai.emit()"
+      i18n="@@sharedUi.errorMessage.reessayer"
     >
       Réessayer
     </button>

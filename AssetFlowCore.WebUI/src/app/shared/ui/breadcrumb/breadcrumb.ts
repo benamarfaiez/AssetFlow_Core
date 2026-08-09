@@ -30,7 +30,7 @@ export class Breadcrumb {
   readonly etapes = input.required<readonly EtapeFilAriane[]>();
 
   /** Nom accessible du fil, distinct d'une éventuelle autre navigation de la page. */
-  readonly ariaLabel = input("Fil d'Ariane");
+  readonly ariaLabel = input($localize`:@@sharedUi.breadcrumb.ariaLabel:Fil d'Ariane`);
 
   protected readonly derniereEtape = computed(() => this.etapes().length - 1);
 }

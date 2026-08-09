@@ -13,31 +13,31 @@ import { TicketCriticality, TicketStatus } from '../models/ticket.model';
 
 /** Libellés des types d'actifs. */
 export const LIBELLES_ASSET_TYPE: Readonly<Record<AssetType, string>> = {
-  Server: 'Serveur',
-  Laptop: 'Ordinateur portable',
-  NetworkDevice: 'Équipement réseau',
+  Server: $localize`:@@libelles.assetType.server:Serveur`,
+  Laptop: $localize`:@@libelles.assetType.laptop:Ordinateur portable`,
+  NetworkDevice: $localize`:@@libelles.assetType.networkDevice:Équipement réseau`,
 };
 
 /** Libellés des états d'un actif. */
 export const LIBELLES_ASSET_STATUS: Readonly<Record<AssetStatus, string>> = {
-  InService: 'En service',
-  Down: 'En panne',
-  InMaintenance: 'En maintenance',
-  Decommissioned: 'Mis au rebut',
+  InService: $localize`:@@libelles.assetStatus.inService:En service`,
+  Down: $localize`:@@libelles.assetStatus.down:En panne`,
+  InMaintenance: $localize`:@@libelles.assetStatus.inMaintenance:En maintenance`,
+  Decommissioned: $localize`:@@libelles.assetStatus.decommissioned:Mis au rebut`,
 };
 
 /** Libellés des états d'un incident. */
 export const LIBELLES_TICKET_STATUS: Readonly<Record<TicketStatus, string>> = {
-  Opened: 'Ouvert',
-  InProgress: 'En cours',
-  Closed: 'Clôturé',
+  Opened: $localize`:@@libelles.ticketStatus.opened:Ouvert`,
+  InProgress: $localize`:@@libelles.ticketStatus.inProgress:En cours`,
+  Closed: $localize`:@@libelles.ticketStatus.closed:Clôturé`,
 };
 
 /** Libellés des niveaux de criticité d'un incident. */
 export const LIBELLES_TICKET_CRITICALITY: Readonly<Record<TicketCriticality, string>> = {
-  Low: 'Faible',
-  Medium: 'Moyenne',
-  High: 'Haute',
+  Low: $localize`:@@libelles.ticketCriticality.low:Faible`,
+  Medium: $localize`:@@libelles.ticketCriticality.medium:Moyenne`,
+  High: $localize`:@@libelles.ticketCriticality.high:Haute`,
 };
 
 /**

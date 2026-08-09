@@ -8,23 +8,38 @@
 <header class="border-b border-bordure bg-surface">
   <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
     <p class="text-lg font-semibold tracking-tight">{{ nomProduit }}</p>
-    <span class="text-sm text-texte-discret">Gestion du parc informatique</span>
+    <span class="text-sm text-texte-discret" i18n="@@app.sousTitre"
+      >Gestion du parc informatique</span
+    >
 
-    <!-- Navigation provisoire vers les écrans de vérification du socle et du design system. -->
-    <nav aria-label="Navigation principale" class="flex flex-wrap items-center gap-1 text-sm">
+    <nav
+      aria-label="Navigation principale"
+      i18n-aria-label="@@app.nav.ariaLabel"
+      class="flex flex-wrap items-center gap-1 text-sm"
+    >
       <a
-        routerLink="/diagnostic"
+        routerLink="/assets"
         routerLinkActive="bg-surface-creuse font-medium"
         class="flex min-h-(--cible-tactile) items-center rounded-md px-2.5 text-primaire underline underline-offset-2"
+        i18n="@@app.nav.assets"
       >
-        Diagnostic
+        Actifs
       </a>
       <a
-        routerLink="/design-system"
+        routerLink="/tickets"
         routerLinkActive="bg-surface-creuse font-medium"
         class="flex min-h-(--cible-tactile) items-center rounded-md px-2.5 text-primaire underline underline-offset-2"
+        i18n="@@app.nav.tickets"
       >
-        Design system
+        Incidents
+      </a>
+      <a
+        routerLink="/teams"
+        routerLinkActive="bg-surface-creuse font-medium"
+        class="flex min-h-(--cible-tactile) items-center rounded-md px-2.5 text-primaire underline underline-offset-2"
+        i18n="@@app.nav.teams"
+      >
+        Équipes
       </a>
     </nav>
 

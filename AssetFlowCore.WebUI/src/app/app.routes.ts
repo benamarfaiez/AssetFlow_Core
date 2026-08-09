@@ -2,32 +2,33 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 
 /**
- * Routes racine, **entièrement chargées à la demande** (`loadChildren`) : aucune feature n'est
- * incluse dans le lot initial.
+ * Routes racine, **entièrement chargées à la demande** (`loadChildren`).
  *
- * Les routes `assets`, `tickets` et `teams` seront ajoutées au Lot 5, sur le même modèle. La
- * route d'accueil désigne pour l'instant l'écran de diagnostic du socle, à remplacer par
- * l'inventaire (`E-01`) dès qu'il existera.
+ * `diagnostic` et `design-system` (preuves d'exécution du socle et des Lots 3/4) ont été retirées
+ * une fois les trois features du Lot 5 livrées, comme prévu dès leur création — voir
+ * doc/IMPLEMENTATION-PLAN.md. La route d'accueil pointe désormais vers l'inventaire des actifs
+ * (`E-01`), premier écran du parcours le plus courant.
  *
- * `authGuard` (`canMatch`, Lot 7 étape 7.6) est câblé sur les deux routes existantes à titre de
- * fondation : ni `diagnostic` ni `design-system` n'est un écran réservé à un rôle (aucun écran du
- * Lot 5 n'existe encore) — voir le compte-rendu de livraison pour ce que ce câblage rend actif
- * ou laisse inerte tant que le tenant Entra ID (étape 7.0) n'existe pas.
+ * `authGuard` (`canMatch`, Lot 7 étape 7.6) est câblé sur chaque route de premier niveau : le
+ * masquage d'actions selon le rôle reste, lui, à la charge de chaque écran (`JwtRolesService`).
  */
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'diagnostic' },
+  { path: '', pathMatch: 'full', redirectTo: 'assets' },
   {
-    path: 'diagnostic',
+    path: 'assets',
     canMatch: [authGuard],
-    loadChildren: () =>
-      import('./features/diagnostic/diagnostic.routes').then((m) => m.DIAGNOSTIC_ROUTES),
+    loadChildren: () => import('./features/assets/assets.routes').then((m) => m.ASSETS_ROUTES),
   },
   {
-    path: 'design-system',
+    path: 'tickets',
     canMatch: [authGuard],
-    loadChildren: () =>
-      import('./features/design-system/design-system.routes').then((m) => m.DESIGN_SYSTEM_ROUTES),
+    loadChildren: () => import('./features/tickets/tickets.routes').then((m) => m.TICKETS_ROUTES),
   },
-  // Repli provisoire : l'écran « page introuvable » relève du Lot 4 (composants d'état).
+  {
+    path: 'teams',
+    canMatch: [authGuard],
+    loadChildren: () => import('./features/teams/teams.routes').then((m) => m.TEAMS_ROUTES),
+  },
+  // Repli provisoire : aucun écran dédié « page introuvable » n'existe encore.
   { path: '**', redirectTo: '' },
 ];

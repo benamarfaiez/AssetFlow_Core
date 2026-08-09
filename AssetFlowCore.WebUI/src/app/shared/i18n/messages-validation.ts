@@ -12,33 +12,36 @@ const MESSAGES: Readonly<Record<string, (detail: unknown) => string>> = {
   // `Validators.requiredTrue` publie aussi son erreur sous la clé `required` : il n'existe donc
   // pas de clé `requiredTrue` à traiter. `CheckboxField` remplace ce message par une formulation
   // adaptée à une case à cocher.
-  required: () => 'Ce champ est obligatoire.',
-  email: () => "L'adresse électronique n'est pas valide.",
+  required: () => $localize`:@@messagesValidation.required:Ce champ est obligatoire.`,
+  email: () => $localize`:@@messagesValidation.email:L'adresse électronique n'est pas valide.`,
   minlength: (detail) => {
     const attendu = (detail as { requiredLength?: number } | null)?.requiredLength;
     return attendu === undefined
-      ? 'La valeur saisie est trop courte.'
-      : `Saisissez au moins ${attendu} caractères.`;
+      ? $localize`:@@messagesValidation.minlength.sansDetail:La valeur saisie est trop courte.`
+      : $localize`:@@messagesValidation.minlength:Saisissez au moins ${attendu}:valeur: caractères.`;
   },
   maxlength: (detail) => {
     const attendu = (detail as { requiredLength?: number } | null)?.requiredLength;
     return attendu === undefined
-      ? 'La valeur saisie est trop longue.'
-      : `Ne dépassez pas ${attendu} caractères.`;
+      ? $localize`:@@messagesValidation.maxlength.sansDetail:La valeur saisie est trop longue.`
+      : $localize`:@@messagesValidation.maxlength:Ne dépassez pas ${attendu}:valeur: caractères.`;
   },
   min: (detail) => {
     const attendu = (detail as { min?: number } | null)?.min;
     return attendu === undefined
-      ? 'La valeur est trop petite.'
-      : `La valeur doit être supérieure ou égale à ${attendu}.`;
+      ? $localize`:@@messagesValidation.min.sansDetail:La valeur est trop petite.`
+      : $localize`:@@messagesValidation.min:La valeur doit être supérieure ou égale à ${attendu}:valeur:.`;
   },
   max: (detail) => {
     const attendu = (detail as { max?: number } | null)?.max;
     return attendu === undefined
-      ? 'La valeur est trop grande.'
-      : `La valeur doit être inférieure ou égale à ${attendu}.`;
+      ? $localize`:@@messagesValidation.max.sansDetail:La valeur est trop grande.`
+      : $localize`:@@messagesValidation.max:La valeur doit être inférieure ou égale à ${attendu}:valeur:.`;
   },
-  pattern: () => "Le format attendu n'est pas respecté.",
+  pattern: () => $localize`:@@messagesValidation.pattern:Le format attendu n'est pas respecté.`,
+  // Échappe volontairement à la conversion `$localize` : ce message affiche tel quel le texte
+  // déjà en français renvoyé par l'API (`errors` d'une réponse 400), et le repli ne sert qu'à
+  // défaut de detail exploitable — traduire une chaîne qui n'est pas la nôtre n'aurait pas de sens.
   serveur: (detail) => (typeof detail === 'string' ? detail : "L'opération a été refusée."),
 };
 

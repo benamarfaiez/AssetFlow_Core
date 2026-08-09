@@ -1,0 +1,69 @@
+<!--
+  E-01 — Inventaire des actifs : quatre états (chargement/erreur/vide/contenu). Une liste
+  filtrée vide reste dans l'état « contenu » (voir inventaire.ts) : `app-data-table` l'affiche
+  via son propre `messageVide`, sans passer par `app-empty-state`.
+-->
+@if (chargement()) {
+  <app-spinner [libelle]="libelleChargement" />
+} @else if (erreur(); as erreurInventaire) {
+  <app-error-message
+    [titre]="titreErreur"
+    [message]="erreurInventaire.message"
+    [traceId]="erreurInventaire.traceId"
+    [reessayable]="true"
+    (reessai)="recharger()"
+  />
+} @else if (actifs().length === 0) {
+  <app-empty-state [titre]="titreVide" [description]="descriptionVide">
+    <a routerLink="/assets/nouveau" class="font-medium text-primaire underline underline-offset-2">
+      {{ libelleEnregistrer }}
+    </a>
+  </app-empty-state>
+} @else {
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-wrap gap-4">
+        <app-select-field
+          [controle]="filtreType"
+          [label]="libelleFiltreType"
+          [options]="optionsFiltreType"
+          [libelleVide]="null"
+        />
+        <app-select-field
+          [controle]="filtreStatut"
+          [label]="libelleFiltreStatut"
+          [options]="optionsFiltreStatut"
+          [libelleVide]="null"
+        />
+      </div>
+
+      <a
+        routerLink="/assets/nouveau"
+        class="font-medium text-primaire underline underline-offset-2"
+      >
+        {{ libelleEnregistrer }}
+      </a>
+    </div>
+
+    <ng-template #gabaritNom let-actif>
+      <a
+        [routerLink]="['/assets', actif.id]"
+        class="font-medium text-primaire underline underline-offset-2"
+      >
+        {{ actif.name }}
+      </a>
+    </ng-template>
+
+    <ng-template #gabaritStatut let-actif>
+      <app-asset-status-badge [statut]="actif.status" />
+    </ng-template>
+
+    <app-data-table
+      [lignes]="actifsFiltres()"
+      [colonnes]="colonnes()"
+      [cleLigne]="cleActif"
+      [legende]="legendeTable"
+      [messageVide]="messageAucunResultatFiltre"
+    />
+  </div>
+}
